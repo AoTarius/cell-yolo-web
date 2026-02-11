@@ -544,18 +544,35 @@ export default defineConfig({
    - 检查路由配置是否正确
    - 确认路由名称或路径是否匹配
 
+## API 集成状态
+
+### ✅ 已实现
+- [x] API 服务封装 (src/api/analysis.ts)
+- [x] Composable 函数 (src/composables/useAnalysisApi.ts)
+- [x] WebSocket 实时更新支持
+- [x] 上传进度显示
+- [x] 数据导出功能（CSV/JSON）
+- [x] 视频下载功能
+- [x] 状态轮询机制
+- [x] Store 集成支持
+
+### 🔄 待对接
+- [ ] 后端 API 实现（当前使用模拟数据）
+- [ ] WebSocket 服务端实现
+- [ ] 切换到真实 API 调用
+
+详细信息请查看 [API-INTEGRATION.md](./API-INTEGRATION.md)
+
 ## 待实现功能
 
-- [ ] 对接后端 API
-- [ ] 实现真实的视频上传
+- [ ] 对接后端 API（API 封装已完成）
 - [ ] 添加 3D 轨迹可视化（Three.js / D3.js）
-- [ ] 实现数据导出功能
 - [ ] 添加数据筛选和排序
 - [ ] 实现轨迹动画播放
 - [ ] 添加用户认证
-- [ ] 实现实时分析进度显示
 - [ ] 添加错误处理和重试机制
 - [ ] 优化大数据集的渲染性能
+- [ ] 添加单元测试
 
 ## 参考文档
 

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import type { AnalysisRecord } from '@/stores/analysisStore'
+import { useAnalysisApi } from '@/composables/useAnalysisApi'
 import CellDetailPanel from './CellDetailPanel.vue'
 
 const props = defineProps<{
@@ -8,6 +10,10 @@ const props = defineProps<{
 }>()
 
 const store = useAnalysisStore()
+const api = useAnalysisApi()
+
+const isExporting = ref(false)
+const exportError = ref<string | null>(null)
 
 // 处理查看细胞详情
 function handleViewCell(cellId: string) {
@@ -17,6 +23,34 @@ function handleViewCell(cellId: string) {
 // 处理返回结果列表
 function handleBackToList() {
   store.backToResultList()
+}
+
+// 处理数据导出
+async function handleExport(format: 'csv' | 'json' = 'csv') {
+  try {
+    isExporting.value = true
+    exportError.value = null
+    await api.exportData(props.record.task_id, format)
+  } catch (error: any) {
+    exportError.value = error.message || '导出失败'
+    console.error('Export error:', error)
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// 处理视频下载
+async function handleDownloadVideo() {
+  try {
+    isExporting.value = true
+    exportError.value = null
+    await api.downloadVideo(props.record.task_id, props.record.video_name)
+  } catch (error: any) {
+    exportError.value = error.message || '下载失败'
+    console.error('Download error:', error)
+  } finally {
+    isExporting.value = false
+  }
 }
 </script>
 
@@ -36,7 +70,7 @@ function handleBackToList() {
         <p class="header-subtitle">任务ID: {{ record.task_id }}</p>
       </div>
       <div class="header-actions">
-        <button class="btn-action">
+        <button class="btn-action" @click="handleExport('csv')" :disabled="isExporting">
           <svg
             fill="none"
             stroke="currentColor"
@@ -50,7 +84,39 @@ function handleBackToList() {
               d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
             ></path>
           </svg>
-          导出数据
+          {{ isExporting ? '导出中...' : '导出 CSV' }}
+        </button>
+        <button class="btn-action" @click="handleExport('json')" :disabled="isExporting">
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            ></path>
+          </svg>
+          导出 JSON
+        </button>
+        <button class="btn-action" @click="handleDownloadVideo" :disabled="isExporting">
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+            ></path>
+          </svg>
+          下载视频
         </button>
       </div>
     </div>

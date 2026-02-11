@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import { useAnalysisApi } from '@/composables/useAnalysisApi'
 
 const store = useAnalysisStore()
+const api = useAnalysisApi()
+
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
+
+// 是否正在上传或已上传
+const isProcessing = computed(() => api.isUploading.value || api.uploadProgress.value === 100)
 
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
@@ -29,8 +35,12 @@ function handleDragLeave() {
   isDragging.value = false
 }
 
-function submitUpload() {
+async function submitUpload() {
   if (selectedFile.value) {
+    // 使用真实 API 上传（如果后端已实现）
+    // const result = await api.uploadAndAnalyze(selectedFile.value)
+
+    // 目前使用模拟数据
     store.addRecord(selectedFile.value.name, selectedFile.value)
     selectedFile.value = null
   }
@@ -116,9 +126,39 @@ function clearFile() {
         </div>
       </div>
 
+      <!-- 上传进度 -->
+      <div v-if="api.isUploading.value" class="upload-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: `${api.uploadProgress.value}%` }"></div>
+        </div>
+        <p class="progress-text">上传中: {{ api.uploadProgress.value }}%</p>
+      </div>
+
+      <!-- 错误提示 -->
+      <div v-if="api.uploadError.value" class="upload-error">
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          ></path>
+        </svg>
+        <span>{{ api.uploadError.value }}</span>
+      </div>
+
       <div class="upload-actions">
-        <button class="btn-submit" :disabled="!selectedFile" @click="submitUpload">
-          开始分析
+        <button
+          class="btn-submit"
+          :disabled="!selectedFile || isProcessing"
+          @click="submitUpload"
+        >
+          {{ api.isUploading.value ? '上传中...' : '开始分析' }}
         </button>
       </div>
     </div>
@@ -266,6 +306,55 @@ h2 {
 .btn-clear svg {
   width: 16px;
   height: 16px;
+}
+
+.upload-progress {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #161b22;
+  border-radius: 8px;
+  border: 1px solid #30363d;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #21262d;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #238636, #2ea043);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  color: #58a6ff;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+.upload-error {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #1c1917;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #f87171;
+  font-size: 0.875rem;
+}
+
+.upload-error svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .upload-actions {

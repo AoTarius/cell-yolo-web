@@ -239,6 +239,46 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }, 3000)
   }
 
+  // 添加上传后的记录（用于 API 集成）
+  function addUploadedRecord(record: AnalysisRecord) {
+    records.value.unshift(record)
+    selectedId.value = record.task_id
+    showUploadPanel.value = false
+  }
+
+  // 更新任务状态（用于 API 集成）
+  function updateTaskStatus(
+    taskId: string,
+    updates: {
+      status?: AnalysisStatus
+      progress?: number
+    }
+  ) {
+    const record = records.value.find((r) => r.task_id === taskId)
+    if (record) {
+      if (updates.status !== undefined) {
+        record.status = updates.status
+      }
+      if (updates.progress !== undefined) {
+        record.progress = updates.progress
+      }
+      if (updates.status === 'completed') {
+        record.end_time = new Date()
+      }
+    }
+  }
+
+  // 更新任务结果（用于 API 集成）
+  function updateTaskResult(taskId: string, result: ProcessResult) {
+    const record = records.value.find((r) => r.task_id === taskId)
+    if (record) {
+      record.result = result
+      record.status = 'completed'
+      record.progress = 100
+      record.end_time = new Date()
+    }
+  }
+
   return {
     records,
     selectedId,
@@ -251,5 +291,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
     addRecord,
     selectCell,
     backToResultList,
+    addUploadedRecord,
+    updateTaskStatus,
+    updateTaskResult,
   }
 })
