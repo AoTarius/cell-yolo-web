@@ -7,7 +7,7 @@
 ```
 src/
 ├── api/
-│   └── analysis.ts          # API 服务封装
+│   └── analysisApi.ts       # API 服务封装
 ├── composables/
 │   └── useAnalysisApi.ts    # API 使用的组合式函数
 └── stores/
@@ -133,7 +133,7 @@ Video file stream
 ### 方式一：直接使用 API 服务
 
 ```typescript
-import { analysisApi } from '@/api/analysis'
+import { analysisApi } from '@/api/analysisApi'
 
 // 上传视频
 const record = await analysisApi.upload(file, (progressEvent) => {
@@ -215,7 +215,7 @@ async function handleUpload(file: File) {
 ### 连接 WebSocket
 
 ```typescript
-import { AnalysisWebSocket } from '@/api/analysis'
+import { AnalysisWebSocket } from '@/api/analysisApi'
 
 const ws = new AnalysisWebSocket('ws://localhost:8000/ws')
 
