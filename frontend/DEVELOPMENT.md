@@ -19,6 +19,8 @@ CellTrack 前端是基于 Vue 3 + TypeScript + Vite 构建的现代化 SPA 应�
 ```
 frontend/
 ├── src/
+│   ├── api/              # API 服务层
+│   │   └── analysisApi.ts        # 分析 API 封装
 │   ├── assets/           # 静态资源
 │   │   └── main.css      # 全局样式 (TailwindCSS)
 │   ├── components/       # 组件
@@ -27,10 +29,13 @@ frontend/
 │   │   ├── LoadingPanel.vue      # 处理中加载面板
 │   │   ├── ResultPanel.vue       # 分析结果面板
 │   │   └── CellDetailPanel.vue   # 细胞详情面板
+│   ├── composables/      # 组合式函数
+│   │   └── useAnalysisApi.ts     # API 使用的组合式函数
 │   ├── router/           # 路由配置
 │   │   └── index.ts
 │   ├── stores/           # Pinia 状态管理
-│   │   └── analysisStore.ts      # 分析记录状态
+│   │   ├── analysisStore.ts      # 分析记录状态
+│   │   └── counter.ts            # 示例计数器（可删除）
 │   ├── views/            # 页面视图
 │   │   ├── CellTrackingView.vue  # 主页面
 │   │   └── HomeView.vue          # 测试页面
@@ -376,7 +381,7 @@ function generateMockCells(count: number, frameCount: number): CellData[] {
 
 #### Axios 配置示例
 
-在 `src/api/analysis.ts` 中（需创建）：
+在 `src/api/analysisApi.ts` 中（已创建）：
 
 ```typescript
 import axios from 'axios'
@@ -547,7 +552,7 @@ export default defineConfig({
 ## API 集成状态
 
 ### ✅ 已实现
-- [x] API 服务封装 (src/api/analysis.ts)
+- [x] API 服务封装 (src/api/analysisApi.ts)
 - [x] Composable 函数 (src/composables/useAnalysisApi.ts)
 - [x] WebSocket 实时更新支持
 - [x] 上传进度显示
@@ -559,7 +564,7 @@ export default defineConfig({
 ### 🔄 待对接
 - [ ] 后端 API 实现（当前使用模拟数据）
 - [ ] WebSocket 服务端实现
-- [ ] 切换到真实 API 调用
+- [ ] 在 UploadPanel.vue 中启用真实 API 调用（当前被注释）
 
 详细信息请查看 [API-INTEGRATION.md](./API-INTEGRATION.md)
 

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { analysisApi, AnalysisWebSocket, type WSMessage } from '@/api/analysis'
+import { analysisApi, AnalysisWebSocket, type WSMessage } from '@/api/analysisApi'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 
