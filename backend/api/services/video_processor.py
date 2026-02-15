@@ -9,7 +9,7 @@ import json
 import sys
 import subprocess
 from pathlib import Path
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Dict, Any, Tuple
 from datetime import datetime
 
 # 添加模型路径到 sys.path
@@ -17,7 +17,7 @@ from datetime import datetime
 BACKEND_DIR = Path(__file__).parent.parent.parent
 MODEL_DIR = BACKEND_DIR / 'models'
 YOLO_SOURCE_DIR = BACKEND_DIR  # YOLO 源码在 backend 目录下
-MODEL_NAME = 'best.pt' # 选择模型名称，从models文件夹挑选
+MODEL_NAME = 'best_split.pt' # 选择模型名称，从models文件夹挑选
 
 # 添加 backend 目录到 sys.path，以便导入 ultralytics
 sys.path.insert(0, str(YOLO_SOURCE_DIR))
@@ -31,7 +31,7 @@ class VideoProcessor:
         self.output_base_dir = Path(output_base_dir)
         self.output_base_dir.mkdir(parents=True, exist_ok=True)
 
-    def extract_frames(self, video_path: str, output_dir: Path, progress_callback: Optional[Callable[[int, int], None]] = None) -> int:
+    def extract_frames(self, video_path: str, output_dir: Path, progress_callback: Optional[Callable[[int, int], None]] = None) -> Tuple[int, float]:
         """
         将视频分解为帧图像
 
@@ -41,7 +41,7 @@ class VideoProcessor:
             progress_callback: 进度回调函数 (current_frame, total_frames)
 
         Returns:
-            提取的帧数
+            (提取的帧数, 视频时长秒数)
         """
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -49,7 +49,8 @@ class VideoProcessor:
 
         # 获取视频信息
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        video_fps = cap.get(cv2.CAP_PROP_FPS)
+        video_duration = total_frames / video_fps if video_fps > 0 else 0
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -71,7 +72,7 @@ class VideoProcessor:
 
         cap.release()
 
-        return frame_count
+        return frame_count, video_duration
 
     def process_video(
         self,
@@ -104,7 +105,7 @@ class VideoProcessor:
             progress_callback('extracting', 0, {'message': '开始分解视频...'})
 
         frames_dir = task_dir / 'frames'
-        total_frames = self.extract_frames(
+        total_frames, video_duration = self.extract_frames(
             video_path,
             frames_dir,
             progress_callback=lambda current, total: progress_callback(
@@ -193,6 +194,7 @@ class VideoProcessor:
             output_dir,
             total_frames,
             video_path,
+            video_duration,
             progress_callback=lambda prog: progress_callback('packaging', prog, {'message': '生成 JSON 结果...'})
         )
 
@@ -207,6 +209,7 @@ class VideoProcessor:
         output_dir: Path,
         total_frames: int,
         video_path: str,
+        video_duration: float,
         progress_callback: Optional[Callable[[int], None]] = None
     ) -> Dict[str, Any]:
         """
@@ -226,6 +229,9 @@ class VideoProcessor:
         summary_path = output_dir / 'tracking_summary.txt'
         summary = self._parse_summary(summary_path)
 
+        # 从 summary 中获取总帧数（更准确）
+        actual_total_frames = summary.get('总帧数', total_frames)
+
         # 读取 tracking_results_mot.txt
         mot_path = output_dir / 'tracking_results_mot.txt'
         tracking_data = self._parse_mot_file(mot_path)
@@ -235,7 +241,9 @@ class VideoProcessor:
         frame_labels = self._parse_labels(labels_dir)
 
         # 统计信息
-        cell_count = len(tracking_data) if tracking_data else 0
+        # 细胞总数应该是唯一 track_id 的数量，而不是总检测记录数
+        track_ids = set(row['track_id'] for row in tracking_data) if tracking_data else set()
+        cell_count = len(track_ids)
 
         # 获取标注视频路径
         annotated_video_path = output_dir / 'tracking_result.mp4'
@@ -245,8 +253,9 @@ class VideoProcessor:
             'task_id': task_id,
             'status': 'completed',
             'progress': 100,
-            'total_frames': total_frames,
+            'total_frames': actual_total_frames,
             'cell_count': cell_count,
+            'video_duration': round(video_duration, 2),  # 保留两位小数
             'annotated_video_path': str(annotated_video_path),
             'annotated_video_url': annotated_video_url,
             'original_video_path': video_path,
