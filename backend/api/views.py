@@ -268,3 +268,41 @@ class AnnotatedVideoView(APIView):
             as_attachment=True,
             filename=filename
         )
+
+
+class TaskListView(APIView):
+    """获取所有任务列表接口"""
+
+    def get(self, request):
+        """获取所有已完成任务的结果列表"""
+        media_root = Path(settings.MEDIA_ROOT)
+        tasks_dir = media_root / 'tasks'
+
+        if not tasks_dir.exists():
+            return Response({'tasks': [], 'count': 0}, status=status.HTTP_200_OK)
+
+        tasks = []
+        
+        # 遍历所有任务目录
+        for task_dir in tasks_dir.iterdir():
+            if not task_dir.is_dir():
+                continue
+
+            # 读取 result.json
+            json_path = task_dir / 'result.json'
+            if json_path.exists():
+                try:
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        result = json.load(f)
+                        tasks.append(result)
+                except Exception as e:
+                    print(f"读取任务 {task_dir.name} 结果失败: {e}")
+                    continue
+
+        # 按创建时间排序（最新的在前）
+        tasks.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        return Response({
+            'tasks': tasks,
+            'count': len(tasks)
+        }, status=status.HTTP_200_OK)

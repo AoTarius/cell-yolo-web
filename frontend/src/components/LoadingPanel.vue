@@ -106,6 +106,11 @@ const props = defineProps<{
   justify-content: center;
   padding: 2rem;
   background: #0d1117;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .loading-panel {
+  background: #f5f5f5;
 }
 
 .loading-container {
@@ -128,6 +133,12 @@ const props = defineProps<{
   border-top-color: #58a6ff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  transition: border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .spinner {
+  border-color: #e0e0e0;
+  border-top-color: #2196f3;
 }
 
 .spinner-glow {
@@ -168,11 +179,21 @@ h2 {
   font-weight: 600;
   color: #fff;
   margin: 0 0 0.5rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) h2 {
+  color: #333;
 }
 
 .loading-subtitle {
   color: #8b949e;
   margin: 0 0 1rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .loading-subtitle {
+  color: #666;
 }
 
 .progress-bar-container {
@@ -185,6 +206,11 @@ h2 {
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.5rem;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-bar {
+  background: #e0e0e0;
 }
 
 .progress-fill {
@@ -199,6 +225,11 @@ h2 {
   color: #58a6ff;
   font-weight: 600;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-text {
+  color: #2196f3;
 }
 
 .progress-info {
@@ -208,6 +239,12 @@ h2 {
   padding: 1.5rem;
   margin: 2rem 0;
   text-align: left;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-info {
+  background: #fff;
+  border-color: #ccc;
 }
 
 .progress-step {
@@ -218,6 +255,11 @@ h2 {
 
 .progress-step:not(:last-child) {
   border-bottom: 1px solid #21262d;
+  transition: border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-step:not(:last-child) {
+  border-bottom-color: #e0e0e0;
 }
 
 .step-icon {
@@ -228,6 +270,11 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .step-icon {
+  color: #2196f3;
 }
 
 .step-icon svg {
@@ -244,17 +291,32 @@ h2 {
   font-weight: 500;
   color: #c9d1d9;
   margin: 0 0 0.25rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .step-title {
+  color: #333;
 }
 
 .step-desc {
   font-size: 0.875rem;
   color: #8b949e;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .step-desc {
+  color: #666;
 }
 
 .loading-hint {
   color: #6e7681;
   font-size: 0.875rem;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .loading-hint {
+  color: #999;
 }
 </style>

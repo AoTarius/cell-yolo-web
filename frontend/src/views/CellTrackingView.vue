@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import Sidebar from '@/components/Sidebar.vue'
 import UploadPanel from '@/components/UploadPanel.vue'
@@ -7,6 +7,11 @@ import LoadingPanel from '@/components/LoadingPanel.vue'
 import ResultPanel from '@/components/ResultPanel.vue'
 
 const store = useAnalysisStore()
+
+// 组件挂载时加载历史任务
+onMounted(async () => {
+  await store.loadHistoryTasks()
+})
 
 // 当前显示的主面板
 const currentPanel = computed(() => {

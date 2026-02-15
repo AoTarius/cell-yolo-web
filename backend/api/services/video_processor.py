@@ -193,8 +193,8 @@ class VideoProcessor:
             task_id,
             output_dir,
             total_frames,
-            video_path,
             video_duration,
+            video_path,
             progress_callback=lambda prog: progress_callback('packaging', prog, {'message': '生成 JSON 结果...'})
         )
 
@@ -208,8 +208,8 @@ class VideoProcessor:
         task_id: str,
         output_dir: Path,
         total_frames: int,
-        video_path: str,
         video_duration: float,
+        video_path: str,
         progress_callback: Optional[Callable[[int], None]] = None
     ) -> Dict[str, Any]:
         """
@@ -219,6 +219,7 @@ class VideoProcessor:
             task_id: 任务ID
             output_dir: YOLO 输出目录
             total_frames: 总帧数
+            video_duration: 视频时长（秒）
             video_path: 原始视频路径
             progress_callback: 进度回调函数
 
@@ -241,7 +242,7 @@ class VideoProcessor:
         frame_labels = self._parse_labels(labels_dir)
 
         # 统计信息
-        # 细胞总数应该是唯一 track_id 的数量，而不是总检测记录数
+        # 细胞总数应该是唯一 track_id 的数量
         track_ids = set(row['track_id'] for row in tracking_data) if tracking_data else set()
         cell_count = len(track_ids)
 
@@ -255,7 +256,7 @@ class VideoProcessor:
             'progress': 100,
             'total_frames': actual_total_frames,
             'cell_count': cell_count,
-            'video_duration': round(video_duration, 2),  # 保留两位小数
+            'video_duration': round(video_duration, 2),
             'annotated_video_path': str(annotated_video_path),
             'annotated_video_url': annotated_video_url,
             'original_video_path': video_path,

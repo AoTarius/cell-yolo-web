@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import axios from 'axios'
 
 export type AnalysisStatus = 'uploading' | 'processing' | 'completed' | 'failed'
 
@@ -44,6 +45,7 @@ export interface ProcessResult {
   output_video_path: string // 标注视频路径
   cell_count: number // 细胞总数
   total_frames: number // 总帧数
+  video_duration: number // 视频时长（秒）
   cells: CellData[] // 细胞列表数据
 }
 
@@ -110,11 +112,10 @@ export const useAnalysisStore = defineStore('analysis', () => {
     })
   }
 
-  // 所有分析记录
-  const records = ref<AnalysisRecord[]>([
-    // 模拟一些历史记录
+  // 预制记录（示例数据）
+  const PRESET_RECORDS: AnalysisRecord[] = [
     {
-      task_id: 'task_001',
+      task_id: 'demo_001',
       video_name: 'sample_video_1.mp4',
       video_path: '/uploads/sample_video_1.mp4',
       status: 'completed',
@@ -125,11 +126,12 @@ export const useAnalysisStore = defineStore('analysis', () => {
         output_video_path: '/outputs/sample_video_1_annotated.mp4',
         cell_count: 25,
         total_frames: 120,
+        video_duration: 4.0, // 120帧 / 30fps
         cells: generateMockCells(25, 120),
       },
     },
     {
-      task_id: 'task_002',
+      task_id: 'demo_002',
       video_name: 'sample_video_2.mp4',
       video_path: '/uploads/sample_video_2.mp4',
       status: 'completed',
@@ -140,10 +142,14 @@ export const useAnalysisStore = defineStore('analysis', () => {
         output_video_path: '/outputs/sample_video_2_annotated.mp4',
         cell_count: 18,
         total_frames: 200,
+        video_duration: 6.67, // 200帧 / 30fps
         cells: generateMockCells(18, 200),
       },
     },
-  ])
+  ]
+
+  // 所有分析记录
+  const records = ref<AnalysisRecord[]>([])
 
   // 当前选中的分析记录ID
   const selectedId = ref<string | null>(null)
@@ -195,6 +201,49 @@ export const useAnalysisStore = defineStore('analysis', () => {
     selectedCellId.value = null
   }
 
+  // 加载历史任务
+  async function loadHistoryTasks() {
+    try {
+      const response = await axios.get('/api/tasks/')
+      const historyTasks = response.data.tasks || []
+
+      // 转换后端数据为前端格式
+      const convertedRecords: AnalysisRecord[] = historyTasks.map((task: any) => {
+        // 确保 result 对象存在且格式正确
+        const result: ProcessResult = {
+          output_video_path: task.annotated_video_path || '',
+          cell_count: task.cell_count || 0,
+          total_frames: task.total_frames || 0,
+          video_duration: task.video_duration || 0,
+          cells: [], // 从 summary 解析细胞数据
+        }
+
+        // 如果有 summary，尝试解析细胞数据
+        if (task.summary && typeof task.summary === 'object') {
+          // summary 可能包含细胞统计信息
+        }
+
+        return {
+          task_id: task.task_id,
+          video_name: task.original_video_path.split('/').pop() || 'Unknown',
+          video_path: task.original_video_path,
+          status: 'completed' as AnalysisStatus,
+          progress: 100,
+          start_time: new Date(task.created_at),
+          end_time: new Date(),
+          result,
+        }
+      })
+
+      // 合并历史任务和预制记录（历史任务在前）
+      records.value = [...convertedRecords, ...PRESET_RECORDS]
+    } catch (error) {
+      console.error('加载历史任务失败:', error)
+      // 加载失败时只显示预制记录
+      records.value = PRESET_RECORDS
+    }
+  }
+
   // 添加新记录（模拟上传）
   function addRecord(videoName: string, _videoFile: File) {
     // videoFile 参数保留用于后续实现真实上传功能
@@ -233,6 +282,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
           output_video_path: `/outputs/${videoName.replace(/\.[^/.]+$/, '')}_annotated.mp4`,
           cell_count: cellCount,
           total_frames: totalFrames,
+          video_duration: totalFrames / 30, // 假设 30fps
           cells: generateMockCells(cellCount, totalFrames),
         }
       }
@@ -294,5 +344,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     addUploadedRecord,
     updateTaskStatus,
     updateTaskResult,
+    loadHistoryTasks,
   }
 })

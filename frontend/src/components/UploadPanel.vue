@@ -377,6 +377,11 @@ function getStageLabel(stage: string): string {
   justify-content: center;
   padding: 2rem;
   background: #0d1117;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-panel {
+  background: #f5f5f5;
 }
 
 .upload-container {
@@ -390,12 +395,22 @@ h2 {
   color: #fff;
   margin: 0 0 0.5rem 0;
   text-align: center;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) h2 {
+  color: #333;
 }
 
 .upload-description {
   text-align: center;
   color: #8b949e;
   margin: 0 0 2rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-description {
+  color: #666;
 }
 
 .upload-area {
@@ -407,14 +422,29 @@ h2 {
   position: relative;
 }
 
+:global(:root:not(.dark)) .upload-area {
+  border-color: #ccc;
+  background: #fff;
+}
+
 .upload-area.dragging {
   border-color: #1f6feb;
   background: #0d1520;
 }
 
+:global(:root:not(.dark)) .upload-area.dragging {
+  border-color: #2196f3;
+  background: #e3f2fd;
+}
+
 .upload-area.has-file {
   border-color: #238636;
   background: #0d1520;
+}
+
+:global(:root:not(.dark)) .upload-area.has-file {
+  border-color: #4caf50;
+  background: #e8f5e9;
 }
 
 .upload-placeholder {
@@ -428,18 +458,33 @@ h2 {
   height: 64px;
   color: #8b949e;
   margin: 0 auto 1rem;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-icon {
+  color: #999;
 }
 
 .upload-text {
   font-size: 1.1rem;
   color: #c9d1d9;
   margin: 0 0 0.5rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-text {
+  color: #333;
 }
 
 .upload-hint {
   font-size: 0.9rem;
   color: #8b949e;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-hint {
+  color: #666;
 }
 
 .file-input {
@@ -459,6 +504,11 @@ h2 {
   padding: 1rem;
   background: #0d1117;
   border-radius: 8px;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .file-info {
+  background: #f5f5f5;
 }
 
 .file-icon {
@@ -480,12 +530,22 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .file-name {
+  color: #333;
 }
 
 .file-size {
   font-size: 0.875rem;
   color: #8b949e;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .file-size {
+  color: #666;
 }
 
 .btn-clear {
@@ -501,10 +561,21 @@ h2 {
   flex-shrink: 0;
 }
 
+:global(:root:not(.dark)) .btn-clear {
+  border-color: #ccc;
+  color: #666;
+}
+
 .btn-clear:hover {
   background: #21262d;
   border-color: #8b949e;
   color: #c9d1d9;
+}
+
+:global(:root:not(.dark)) .btn-clear:hover {
+  background: #e0e0e0;
+  border-color: #999;
+  color: #333;
 }
 
 .btn-clear svg {
@@ -532,9 +603,20 @@ h2 {
   gap: 0.5rem;
 }
 
+:global(:root:not(.dark)) .btn-toggle-settings {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
+}
+
 .btn-toggle-settings:hover {
   background: #21262d;
   border-color: #58a6ff;
+}
+
+:global(:root:not(.dark)) .btn-toggle-settings:hover {
+  background: #f5f5f5;
+  border-color: #2196f3;
 }
 
 .chevron-icon {
@@ -554,6 +636,12 @@ h2 {
   border: 1px solid #30363d;
   border-radius: 6px;
   animation: slideDown 0.3s ease;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .settings-content {
+  background: #fff;
+  border-color: #ccc;
 }
 
 @keyframes slideDown {
@@ -582,6 +670,11 @@ h2 {
   font-size: 0.9rem;
   color: #c9d1d9;
   margin-bottom: 0.5rem;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .setting-label {
+  color: #333;
 }
 
 .setting-value {
@@ -591,6 +684,12 @@ h2 {
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
   font-size: 0.8rem;
   color: #58a6ff;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .setting-value {
+  background: #e0e0e0;
+  color: #2196f3;
 }
 
 .setting-slider {
@@ -602,6 +701,11 @@ h2 {
   border-radius: 3px;
   outline: none;
   cursor: pointer;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .setting-slider {
+  background: #e0e0e0;
 }
 
 .setting-slider::-webkit-slider-thumb {
@@ -642,11 +746,21 @@ h2 {
   color: #c9d1d9;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.3s;
+}
+
+:global(:root:not(.dark)) .setting-select {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
 }
 
 .setting-select:hover {
   border-color: #58a6ff;
+}
+
+:global(:root:not(.dark)) .setting-select:hover {
+  border-color: #2196f3;
 }
 
 .setting-select:focus {
@@ -658,6 +772,11 @@ h2 {
   font-size: 0.8rem;
   color: #8b949e;
   margin-top: 0.5rem;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .setting-hint {
+  color: #666;
 }
 
 .upload-progress {
@@ -666,6 +785,12 @@ h2 {
   background: #161b22;
   border-radius: 8px;
   border: 1px solid #30363d;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-progress {
+  background: #fff;
+  border-color: #ccc;
 }
 
 .progress-bar {
@@ -674,6 +799,11 @@ h2 {
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.5rem;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-bar {
+  background: #e0e0e0;
 }
 
 .progress-fill {
@@ -688,6 +818,11 @@ h2 {
   font-weight: 600;
   margin: 0 0 0.5rem 0;
   text-align: center;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-text {
+  color: #2196f3;
 }
 
 .progress-details {
@@ -698,6 +833,11 @@ h2 {
   font-size: 0.8rem;
   color: #8b949e;
   margin: 0 0 0.25rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-message {
+  color: #666;
 }
 
 .progress-frame-info {
@@ -705,6 +845,11 @@ h2 {
   color: #58a6ff;
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .progress-frame-info {
+  color: #2196f3;
 }
 
 .upload-error {
@@ -718,6 +863,12 @@ h2 {
   gap: 0.5rem;
   color: #f87171;
   font-size: 0.875rem;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-error {
+  background: #fff5f5;
+  border-color: #ef4444;
 }
 
 .upload-error svg {
@@ -751,5 +902,10 @@ h2 {
   background: #21262d;
   color: #6e7681;
   cursor: not-allowed;
+}
+
+:global(:root:not(.dark)) .btn-submit:disabled {
+  background: #e0e0e0;
+  color: #999;
 }
 </style>

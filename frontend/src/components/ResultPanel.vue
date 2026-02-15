@@ -198,7 +198,7 @@ function handleVideoError(event: Event) {
           <div class="stat-content">
             <p class="stat-label">视频时长</p>
             <p class="stat-value">
-              {{ ((record.result?.total_frames || 0) / 30).toFixed(1) }}s
+              {{ record.result?.video_duration || 0 }}s
             </p>
           </div>
         </div>
@@ -303,6 +303,11 @@ function handleVideoError(event: Event) {
   flex-direction: column;
   background: #0d1117;
   overflow: hidden;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .result-panel {
+  background: #f5f5f5;
 }
 
 .result-header {
@@ -312,6 +317,12 @@ function handleVideoError(event: Event) {
   justify-content: space-between;
   align-items: center;
   background: #161b22;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+:global(:root:not(.dark)) .result-header {
+  border-bottom-color: #e0e0e0;
+  background: #fff;
 }
 
 .result-header h2 {
@@ -319,11 +330,21 @@ function handleVideoError(event: Event) {
   font-weight: 600;
   color: #fff;
   margin: 0 0 0.25rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .result-header h2 {
+  color: #333;
 }
 
 .header-subtitle {
   color: #8b949e;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .header-subtitle {
+  color: #666;
 }
 
 .header-actions {
@@ -345,9 +366,20 @@ function handleVideoError(event: Event) {
   gap: 0.5rem;
 }
 
+:global(:root:not(.dark)) .btn-action {
+  background: #fff;
+  color: #333;
+  border-color: #ccc;
+}
+
 .btn-action:hover {
   background: #30363d;
   border-color: #8b949e;
+}
+
+:global(:root:not(.dark)) .btn-action:hover {
+  background: #f5f5f5;
+  border-color: #999;
 }
 
 .btn-action svg {
@@ -376,6 +408,12 @@ function handleVideoError(event: Event) {
   display: flex;
   gap: 1rem;
   align-items: center;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .stat-card {
+  background: #fff;
+  border-color: #e0e0e0;
 }
 
 .stat-icon {
@@ -388,6 +426,12 @@ function handleVideoError(event: Event) {
   justify-content: center;
   color: #58a6ff;
   flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .stat-icon {
+  background: #2196f320;
+  color: #2196f3;
 }
 
 .stat-icon svg {
@@ -403,6 +447,11 @@ function handleVideoError(event: Event) {
   font-size: 0.875rem;
   color: #8b949e;
   margin: 0 0 0.25rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .stat-label {
+  color: #666;
 }
 
 .stat-value {
@@ -410,6 +459,11 @@ function handleVideoError(event: Event) {
   font-weight: 600;
   color: #fff;
   margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .stat-value {
+  color: #333;
 }
 
 .video-section {
@@ -421,6 +475,11 @@ function handleVideoError(event: Event) {
   font-weight: 600;
   color: #fff;
   margin: 0 0 1rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .video-section h3 {
+  color: #333;
 }
 
 .video-container {
@@ -428,6 +487,11 @@ function handleVideoError(event: Event) {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #30363d;
+  transition: border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .video-container {
+  border-color: #ccc;
 }
 
 .video-player {
@@ -448,6 +512,12 @@ function handleVideoError(event: Event) {
   font-weight: 600;
   color: #fff;
   margin: 0 0 1rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .visualization-section h3,
+:global(:root:not(.dark)) .cell-list-section h3 {
+  color: #333;
 }
 
 .visualization-placeholder {
@@ -457,6 +527,13 @@ function handleVideoError(event: Event) {
   padding: 4rem 2rem;
   text-align: center;
   color: #8b949e;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .visualization-placeholder {
+  background: #fff;
+  border-color: #ccc;
+  color: #666;
 }
 
 .placeholder-icon {
@@ -464,17 +541,32 @@ function handleVideoError(event: Event) {
   height: 64px;
   margin: 0 auto 1rem;
   color: #30363d;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .placeholder-icon {
+  color: #ccc;
 }
 
 .visualization-placeholder p {
   margin: 0.5rem 0;
   font-size: 1rem;
   color: #c9d1d9;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .visualization-placeholder p {
+  color: #333;
 }
 
 .placeholder-hint {
   font-size: 0.875rem !important;
   color: #6e7681 !important;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .placeholder-hint {
+  color: #999 !important;
 }
 
 .table-placeholder {
@@ -482,6 +574,12 @@ function handleVideoError(event: Event) {
   border: 1px solid #30363d;
   border-radius: 8px;
   overflow: hidden;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .table-placeholder {
+  background: #fff;
+  border-color: #e0e0e0;
 }
 
 .cell-table {
@@ -497,6 +595,13 @@ function handleVideoError(event: Event) {
   font-weight: 600;
   color: #8b949e;
   border-bottom: 1px solid #30363d;
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+
+:global(:root:not(.dark)) .cell-table th {
+  background: #f5f5f5;
+  border-bottom-color: #e0e0e0;
+  color: #666;
 }
 
 .cell-table td {
@@ -504,10 +609,21 @@ function handleVideoError(event: Event) {
   border-bottom: 1px solid #21262d;
   color: #c9d1d9;
   font-size: 0.875rem;
+  transition: border-color 0.3s, color 0.3s;
+}
+
+:global(:root:not(.dark)) .cell-table td {
+  border-bottom-color: #e0e0e0;
+  color: #333;
 }
 
 .cell-table tbody tr:hover {
   background: #0d1117;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .cell-table tbody tr:hover {
+  background: #f5f5f5;
 }
 
 .btn-view {
@@ -521,9 +637,20 @@ function handleVideoError(event: Event) {
   transition: all 0.2s;
 }
 
+:global(:root:not(.dark)) .btn-view {
+  background: #fff;
+  color: #2196f3;
+  border-color: #ccc;
+}
+
 .btn-view:hover {
   background: #1f6feb20;
   border-color: #58a6ff;
+}
+
+:global(:root:not(.dark)) .btn-view:hover {
+  background: #e3f2fd;
+  border-color: #2196f3;
 }
 
 /* 滚动条样式 */
@@ -533,14 +660,29 @@ function handleVideoError(event: Event) {
 
 .result-content::-webkit-scrollbar-track {
   background: #0d1117;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .result-content::-webkit-scrollbar-track {
+  background: #f5f5f5;
 }
 
 .result-content::-webkit-scrollbar-thumb {
   background: #30363d;
   border-radius: 5px;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .result-content::-webkit-scrollbar-thumb {
+  background: #ccc;
 }
 
 .result-content::-webkit-scrollbar-thumb:hover {
   background: #484f58;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .result-content::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
 }
 </style>
