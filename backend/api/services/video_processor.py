@@ -81,6 +81,7 @@ class VideoProcessor:
         conf: float = 0.3,
         imgsz: int = 1024,
         fps: int = 10,
+        model_name: str = 'best_split.pt',
         progress_callback: Optional[Callable[[str, int, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
@@ -92,6 +93,7 @@ class VideoProcessor:
             conf: 置信度阈值
             imgsz: 图像尺寸
             fps: 输出视频帧率
+            model_name: 模型文件名
             progress_callback: 进度回调函数 (stage, progress, data)
 
         Returns:
@@ -126,12 +128,15 @@ class VideoProcessor:
         output_dir = task_dir / 'output'
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # 构建模型路径
+        model_path = str(MODEL_DIR / model_name)
+
         # 构建命令
         convert_script = Path(__file__).parent / 'convert_results.py'
         cmd = [
             sys.executable,
             str(convert_script),
-            '--model', self.model_path,
+            '--model', model_path,
             '--source', str(frames_dir),
             '--output', str(output_dir),
             '--conf', str(conf),
@@ -195,6 +200,7 @@ class VideoProcessor:
             total_frames,
             video_duration,
             video_path,
+            model_name,
             progress_callback=lambda prog: progress_callback('packaging', prog, {'message': '生成 JSON 结果...'})
         )
 
@@ -210,6 +216,7 @@ class VideoProcessor:
         total_frames: int,
         video_duration: float,
         video_path: str,
+        model_name: str,
         progress_callback: Optional[Callable[[int], None]] = None
     ) -> Dict[str, Any]:
         """
@@ -221,6 +228,7 @@ class VideoProcessor:
             total_frames: 总帧数
             video_duration: 视频时长（秒）
             video_path: 原始视频路径
+            model_name: 模型文件名
             progress_callback: 进度回调函数
 
         Returns:
@@ -257,6 +265,7 @@ class VideoProcessor:
             'total_frames': actual_total_frames,
             'cell_count': cell_count,
             'video_duration': round(video_duration, 2),
+            'model_name': model_name,
             'annotated_video_path': str(annotated_video_path),
             'annotated_video_url': annotated_video_url,
             'original_video_path': video_path,

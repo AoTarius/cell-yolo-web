@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
+import { analysisApi } from '@/api/analysisApi'
 import axios from 'axios'
 
 const store = useAnalysisStore()
@@ -10,6 +11,11 @@ const api = useAnalysisApi()
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
 const showAdvancedSettings = ref(false)
+
+// 模型相关
+const models = ref<Array<{ name: string; size_mb: number; path: string }>>([])
+const selectedModel = ref('best_split.pt')
+const isLoadingModels = ref(false)
 
 // 模型参数
 const modelParams = ref({
@@ -30,6 +36,25 @@ const uploadStage = ref<string>('')
 const uploadMessage = ref<string>('')
 const currentFrame = ref<number | null>(null)
 const totalFrames = ref<number | null>(null)
+
+// 加载模型列表
+async function loadModels() {
+  try {
+    isLoadingModels.value = true
+    const data = await analysisApi.getModels()
+    models.value = data.models
+    selectedModel.value = data.default
+  } catch (error) {
+    console.error('加载模型列表失败:', error)
+  } finally {
+    isLoadingModels.value = false
+  }
+}
+
+// 组件挂载时加载模型列表
+onMounted(() => {
+  loadModels()
+})
 
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
@@ -86,6 +111,7 @@ async function submitUpload() {
       conf: modelParams.value.conf,
       imgsz: modelParams.value.imgsz,
       fps: modelParams.value.fps,
+      model_name: selectedModel.value,
     })
 
     // 3. 开始轮询任务状态
@@ -244,6 +270,22 @@ function getStageLabel(stage: string): string {
             </svg>
           </button>
         </div>
+      </div>
+
+      <!-- 模型选择 -->
+      <div class="model-selector">
+        <label for="model-select" class="model-label">选择模型</label>
+        <select
+          id="model-select"
+          v-model="selectedModel"
+          class="model-select"
+          :disabled="isLoadingModels || uploadStatus !== 'idle'"
+        >
+          <option v-if="isLoadingModels" value="">加载中...</option>
+          <option v-for="model in models" :key="model.name" :value="model.name">
+            {{ model.name }} ({{ model.size_mb }} MB)
+          </option>
+        </select>
       </div>
 
       <!-- 高级参数设置 -->
@@ -581,6 +623,72 @@ h2 {
 .btn-clear svg {
   width: 16px;
   height: 16px;
+}
+
+.model-selector {
+  margin-top: 1.5rem;
+}
+
+.model-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #c9d1d9;
+  margin-bottom: 0.5rem;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .model-label {
+  color: #333;
+}
+
+.model-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+:global(:root:not(.dark)) .model-select {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+.model-select:hover:not(:disabled) {
+  background: #21262d;
+  border-color: #58a6ff;
+}
+
+:global(:root:not(.dark)) .model-select:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #2196f3;
+}
+
+.model-select:focus {
+  outline: none;
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+}
+
+:global(:root:not(.dark)) .model-select:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.model-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .advanced-settings {

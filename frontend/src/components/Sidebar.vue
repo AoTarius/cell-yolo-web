@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const store = useAnalysisStore()
+
+const showDeleteDialog = ref(false)
+const taskToDelete = ref<string | null>(null)
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -10,6 +15,28 @@ function formatDate(date: Date) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function showDeleteConfirm(taskId: string, event: Event) {
+  event.stopPropagation() // 阻止触发记录选择
+  taskToDelete.value = taskId
+  showDeleteDialog.value = true
+}
+
+async function handleDeleteConfirm() {
+  if (taskToDelete.value) {
+    try {
+      await store.deleteRecord(taskToDelete.value)
+    } catch (error) {
+      console.error('删除失败:', error)
+    } finally {
+      taskToDelete.value = null
+    }
+  }
+}
+
+function handleDeleteCancel() {
+  taskToDelete.value = null
 }
 </script>
 
@@ -46,10 +73,44 @@ function formatDate(date: Date) {
             </span>
           </div>
           <div class="record-video">任务ID: {{ record.task_id }}</div>
-          <div class="record-time">{{ formatDate(record.start_time) }}</div>
+          <div class="record-footer">
+            <span class="record-time">{{ formatDate(record.start_time) }}</span>
+            <button
+              class="btn-delete"
+              @click="showDeleteConfirm(record.task_id, $event)"
+              title="删除记录"
+              :disabled="record.status === 'processing'"
+            >
+              <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                ></path>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- 删除确认对话框 -->
+    <ConfirmDialog
+      v-model:visible="showDeleteDialog"
+      title="删除记录"
+      message="确定要删除这条记录吗？此操作将删除所有相关文件（包括原始视频、处理结果等），且无法恢复。"
+      type="danger"
+      confirm-text="删除"
+      cancel-text="取消"
+      @confirm="handleDeleteConfirm"
+      @cancel="handleDeleteCancel"
+    />
   </aside>
 </template>
 
@@ -184,6 +245,46 @@ function formatDate(date: Date) {
 .record-time {
   font-size: 0.75rem;
   color: #777;
+}
+
+.record-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  color: #777;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.record-item:hover .btn-delete {
+  opacity: 1;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+}
+
+.btn-delete:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-delete svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* 滚动条样式 */

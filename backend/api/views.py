@@ -109,6 +109,7 @@ class ProcessTaskView(APIView):
             conf = data.get('conf', 0.3)
             imgsz = data.get('imgsz', 1024)
             fps = data.get('fps', 10)
+            model_name = data.get('model_name', 'best_split.pt')
 
             # 检查任务是否存在
             with task_lock:
@@ -131,13 +132,14 @@ class ProcessTaskView(APIView):
                 task_status[task_id]['params'] = {
                     'conf': conf,
                     'imgsz': imgsz,
-                    'fps': fps
+                    'fps': fps,
+                    'model_name': model_name
                 }
 
             # 在后台线程中处理视频
             thread = threading.Thread(
                 target=self._process_video,
-                args=(task_id, conf, imgsz, fps),
+                args=(task_id, conf, imgsz, fps, model_name),
                 daemon=True
             )
             thread.start()
@@ -154,7 +156,7 @@ class ProcessTaskView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def _process_video(self, task_id: str, conf: float, imgsz: int, fps: int):
+    def _process_video(self, task_id: str, conf: float, imgsz: int, fps: int, model_name: str):
         """后台处理视频"""
         try:
             # 获取任务信息
@@ -182,6 +184,7 @@ class ProcessTaskView(APIView):
                 conf=conf,
                 imgsz=imgsz,
                 fps=fps,
+                model_name=model_name,
                 progress_callback=progress_callback
             )
 
@@ -306,3 +309,79 @@ class TaskListView(APIView):
             'tasks': tasks,
             'count': len(tasks)
         }, status=status.HTTP_200_OK)
+
+
+class ModelListView(APIView):
+    """获取可用模型列表接口"""
+
+    def get(self, request):
+        """获取 models 目录下所有 .pt 模型文件"""
+        backend_dir = Path(settings.BASE_DIR).parent
+        models_dir = backend_dir / 'backend' / 'models'
+
+        if not models_dir.exists():
+            return Response({'models': [], 'count': 0}, status=status.HTTP_200_OK)
+
+        models = []
+        
+        # 遍历所有 .pt 文件
+        for model_file in models_dir.glob('*.pt'):
+            models.append({
+                'name': model_file.name,
+                'size_mb': round(model_file.stat().st_size / (1024 * 1024), 2),
+                'path': str(model_file.relative_to(backend_dir))
+            })
+
+        # 按名称排序
+        models.sort(key=lambda x: x['name'])
+
+        return Response({
+            'models': models,
+            'count': len(models),
+            'default': 'best_split.pt'
+        }, status=status.HTTP_200_OK)
+
+
+class DeleteTaskView(APIView):
+    """删除任务接口"""
+
+    def delete(self, request, task_id: str):
+        """删除指定任务的所有数据"""
+        try:
+            import shutil
+
+            media_root = Path(settings.MEDIA_ROOT)
+            task_dir = media_root / 'tasks' / task_id
+
+            # 检查任务是否存在
+            if not task_dir.exists():
+                return Response(
+                    {'error': '任务不存在'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # 检查任务是否正在处理中
+            with task_lock:
+                if task_id in task_status and task_status[task_id]['status'] == 'processing':
+                    return Response(
+                        {'error': '任务正在处理中，无法删除'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # 从内存中移除任务状态
+                if task_id in task_status:
+                    del task_status[task_id]
+
+            # 删除任务目录及其所有内容
+            shutil.rmtree(task_dir)
+
+            return Response({
+                'message': '任务已成功删除',
+                'task_id': task_id
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {'error': f'删除任务失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

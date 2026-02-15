@@ -10,7 +10,11 @@ urlpatterns = [
     path('status/<str:task_id>/', views.TaskStatusView.as_view(), name='task_status'),
     path('result/<str:task_id>/', views.TaskResultView.as_view(), name='task_result'),
     path('video/<str:task_id>/', views.AnnotatedVideoView.as_view(), name='annotated_video'),
+    path('delete/<str:task_id>/', views.DeleteTaskView.as_view(), name='delete_task'),
     
     # 任务列表接口
     path('tasks/', views.TaskListView.as_view(), name='task_list'),
+    
+    # 模型列表接口
+    path('models/', views.ModelListView.as_view(), name='model_list'),
 ]

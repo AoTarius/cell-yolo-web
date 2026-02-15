@@ -46,6 +46,7 @@ export interface ProcessResult {
   cell_count: number // 细胞总数
   total_frames: number // 总帧数
   video_duration: number // 视频时长（秒）
+  model_name: string // 使用的模型名称
   cells: CellData[] // 细胞列表数据
 }
 
@@ -127,6 +128,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
         cell_count: 25,
         total_frames: 120,
         video_duration: 4.0, // 120帧 / 30fps
+        model_name: 'best_split.pt',
         cells: generateMockCells(25, 120),
       },
     },
@@ -143,6 +145,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
         cell_count: 18,
         total_frames: 200,
         video_duration: 6.67, // 200帧 / 30fps
+        model_name: 'best_split.pt',
         cells: generateMockCells(18, 200),
       },
     },
@@ -215,6 +218,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
           cell_count: task.cell_count || 0,
           total_frames: task.total_frames || 0,
           video_duration: task.video_duration || 0,
+          model_name: task.model_name || 'best_split.pt', // 从后端获取模型名称
           cells: [], // 从 summary 解析细胞数据
         }
 
@@ -283,6 +287,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
           cell_count: cellCount,
           total_frames: totalFrames,
           video_duration: totalFrames / 30, // 假设 30fps
+          model_name: 'best_split.pt', // 模拟数据使用默认模型
           cells: generateMockCells(cellCount, totalFrames),
         }
       }
@@ -329,6 +334,30 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
+  // 删除记录
+  async function deleteRecord(taskId: string) {
+    try {
+      // 调用后端 API 删除任务
+      await axios.delete(`/api/delete/${taskId}/`)
+
+      // 从前端列表中移除记录
+      const index = records.value.findIndex((r) => r.task_id === taskId)
+      if (index !== -1) {
+        records.value.splice(index, 1)
+      }
+
+      // 如果删除的是当前选中的记录，清空选中状态
+      if (selectedId.value === taskId) {
+        selectedId.value = null
+      }
+
+      return true
+    } catch (error: any) {
+      console.error('删除记录失败:', error)
+      throw new Error(error.response?.data?.error || '删除失败')
+    }
+  }
+
   return {
     records,
     selectedId,
@@ -345,5 +374,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     updateTaskStatus,
     updateTaskResult,
     loadHistoryTasks,
+    deleteRecord,
   }
 })

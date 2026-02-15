@@ -179,6 +179,16 @@ export const analysisApi = {
 
     return data
   },
+
+  /**
+   * 获取可用模型列表
+   * GET /api/models
+   * @returns 模型列表
+   */
+  async getModels(): Promise<{ models: Array<{ name: string; size_mb: number; path: string }>; count: number; default: string }> {
+    const { data } = await api.get('/models')
+    return data
+  },
 }
 
 /**
