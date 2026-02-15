@@ -52,6 +52,17 @@ async function handleDownloadVideo() {
     isExporting.value = false
   }
 }
+
+// 获取视频 URL
+function getVideoUrl(taskId: string): string {
+  return `/api/video/${taskId}/`
+}
+
+// 处理视频错误
+function handleVideoError(event: Event) {
+  console.error('Video playback error:', event)
+  exportError.value = '视频加载失败'
+}
 </script>
 
 <template>
@@ -190,6 +201,21 @@ async function handleDownloadVideo() {
               {{ ((record.result?.total_frames || 0) / 30).toFixed(1) }}s
             </p>
           </div>
+        </div>
+      </div>
+
+      <!-- 标注视频播放器 -->
+      <div v-if="record.result?.output_video_path" class="video-section">
+        <h3>标注视频</h3>
+        <div class="video-container">
+          <video
+            :src="getVideoUrl(record.task_id)"
+            controls
+            class="video-player"
+            @error="handleVideoError"
+          >
+            您的浏览器不支持视频播放
+          </video>
         </div>
       </div>
 
@@ -384,6 +410,31 @@ async function handleDownloadVideo() {
   font-weight: 600;
   color: #fff;
   margin: 0;
+}
+
+.video-section {
+  margin-bottom: 2rem;
+}
+
+.video-section h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.video-container {
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #30363d;
+}
+
+.video-player {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 600px;
 }
 
 .visualization-section,

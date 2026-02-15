@@ -1,239 +1,70 @@
-# CellTrack Web 快速启动指南
+# CellTrack Web
 
-## 📋 前置准备
+细胞分割与追踪系统的 Web 应用，基于 YOLOv8 和 DeepSORT 实现。
 
-在开始之前，请确保已安装以下软件：
+## ✨ 功能特性
 
-- **Node.js**: v20.19.0+ 或 v22.12.0+
-- **Python**: 3.11+
-- **Conda**: Anaconda 或 Miniconda（推荐）
-- **Git**: 用于版本控制（可选）
+- **视频上传**: 支持 MP4、AVI、MOV 等格式的视频上传
+- **细胞检测**: 使用 YOLOv8 进行细胞分割检测
+- **细胞追踪**: 基于 DeepSORT 算法实现细胞轨迹追踪
+- **参数自定义**: 支持调整置信度阈值、图像尺寸、输出帧率等参数
+- **实时进度**: 通过 WebSocket 实时推送处理进度
+- **结果展示**: 标注视频播放、细胞统计、轨迹数据查看
+- **数据导出**: 支持 CSV 和 JSON 格式数据导出
+- **视频下载**: 下载标注后的视频文件
 
-## 🚀 快速开始
+## 🏗️ 项目结构
 
-### 第一步：创建并激活 Python 虚拟环境
-
-使用 Conda 创建名为 `cell-yolo` 的虚拟环境：
-
-```bash
-# 创建虚拟环境（指定 Python 版本）
-conda create -n cell-yolo python=3.8 -y
-
-# 激活虚拟环境
-conda activate cell-yolo
 ```
-
-### 第二步：安装 Python 依赖
-
-进入 backend 目录并安装所需的 Python 库：
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-需要安装的主要依赖包括：
-- Django >= 4.2.28
-- djangorestframework >= 3.15.0
-- django-cors-headers >= 4.4.0
-- python-dotenv >= 1.0.0
-
-### 第三步：安装前端 npm 包
-
-进入 frontend 目录并安装 Node.js 依赖：
-
-```bash
-cd ../frontend
-npm install
-```
-
-主要依赖包括：
-- Vue 3.5.27
-- TypeScript 5.9.3
-- Vite 7.3.1
-- TailwindCSS 4.1.18
-- Vue Router 5.0.1
-- Pinia 3.0.4
-- Axios 1.13.5
-
-### 第四步：初始化数据库
-
-返回 backend 目录并执行数据库迁移：
-
-```bash
-cd ../backend
-python manage.py migrate
-```
-
-（可选）创建超级用户以访问 Django 管理后台：
-
-```bash
-python manage.py createsuperuser
-```
-
-## ▶️ 启动前后端服务
-
-### 方式一：同时启动（推荐）
-
-在 web 目录下，打开两个终端：
-
-**终端 1 - 启动后端：**
-```bash
-cd backend
-conda activate cell-yolo
-python manage.py runserver
-```
-
-后端将运行在: http://localhost:8000
-
-**终端 2 - 启动前端：**
-```bash
-cd frontend
-npm run dev
-```
-
-前端将运行在: http://localhost:5173
-
-
-## 🌐 访问应用
-
-启动成功后，可以通过以下地址访问：
-
-- **前端应用**: http://localhost:5173
-- **后端 API**: http://localhost:8000/api/test/
-- **Django 管理后台**: http://localhost:8000/admin/
-
-## 🛤️ 现有路由
-
-前端当前配置了以下路由：
-
-| 路径 | 名称 | 组件 | 说明 |
-|------|------|------|------|
-| `/` | cellTracking | CellTrackingView | 细胞追踪主页面 |
-| `/test` | test | HomeView | 测试页面，用于测试前后端连接 |
-
-## ✅ 验证前后端连接
-
-访问测试页面验证前后端是否正常连接：
-
-1. 在浏览器中打开 http://localhost:5173/test
-2. 点击页面上的"测试后端连接"按钮
-3. 如果看到绿色成功消息，说明前后端连接正常
-
-你也可以直接访问后端 API 测试端点：
-- http://localhost:8000/api/test/
-
-应该返回 JSON 响应：
-```json
-{
-  "message": "Django + Vue 前后端分离项目已启动！",
-  "status": "success"
-}
-```
-
-## 🛠️ 常用开发命令
-
-### 前端开发
-
-```bash
-cd frontend
-
-# 启动开发服务器（热重载）
-npm run dev
-
-# 构建生产版本
-npm run build
-
-# 预览生产版本
-npm run preview
-
-# 代码检查和修复
-npm run lint
-```
-
-### 后端开发
-
-```bash
-cd backend
-
-# 确保激活了虚拟环境
-conda activate cell-yolo
-
-# 启动开发服务器
-python manage.py runserver
-
-# 创建数据库迁移文件
-python manage.py makemigrations
-
-# 执行数据库迁移
-python manage.py migrate
-
-# 进入 Django Shell
-python manage.py shell
-
-# 创建新的 Django 应用
-python manage.py startapp app_name
-```
-
-## ⚠️ 常见问题
-
-### Q1: npm install 失败
-
-**解决方案：**
-```bash
-# 清除 npm 缓存
-npm cache clean --force
-
-# 删除 node_modules 和 package-lock.json
-rm -rf node_modules package-lock.json
-
-# 重新安装
-npm install
-```
-
-### Q2: Python 依赖安装失败
-
-**解决方案：**
-```bash
-# 确保虚拟环境已激活
-conda activate cell-yolo
-
-# 升级 pip
-pip install --upgrade pip
-
-# 重新安装依赖
-pip install -r requirements.txt
-```
-
-### Q3: 端口被占用
-
-**后端 (8000)：**
-```bash
-# Linux/Mac
-lsof -ti:8000 | xargs kill -9
-
-# Windows
-netstat -ano | findstr :8000
-taskkill /PID <PID> /F
-```
-
-**前端 (5173)：**
-```bash
-# Linux/Mac
-lsof -ti:5173 | xargs kill -9
-
-# Windows
-netstat -ano | findstr :5173
-taskkill /PID <PID> /F
-```
-
-### Q4: CORS 错误
-
-确保 Django 的 CORS 设置正确（backend/backend/settings.py）：
-```python
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+web/
+├── backend/                 # Django 后端
+│   ├── api/                # API 应用
+│   │   ├── services/       # 业务逻辑服务
+│   │   │   ├── video_processor.py  # 视频处理服务
+│   │   │   └── convert_results.py  # YOLO 追踪结果转换
+│   │   ├── views.py        # API 视图
+│   │   ├── urls.py         # API 路由
+│   │   ├── websocket.py    # WebSocket 消费者
+│   │   └── routing.py      # WebSocket 路由
+│   ├── backend/            # Django 配置
+│   │   ├── settings.py     # 设置文件（已配置 sys.path）
+│   │   ├── urls.py         # 主路由
+│   │   └── asgi.py         # ASGI 配置（WebSocket）
+│   ├── models/             # YOLO 模型文件
+│   ├── media/              # 媒体文件存储
+│   │   └── tasks/          # 任务数据
+│   ├── requirements.txt    # Python 依赖
+│   └── manage.py           # Django 管理脚本
+├── libs/                   # 本地库文件
+│   └── ultralytics/        # YOLOv8 和 DeepSORT 库
+│       ├── yolo/           # YOLO 核心模块
+│       │   └── v8/segment/deep_sort_pytorch/  # DeepSORT 追踪
+│       ├── hub/            # HUB 模块
+│       ├── models/         # 模型定义
+│       ├── nn/             # 神经网络模块
+│       ├── setup.py        # 安装配置
+│       └── __init__.py     # 包初始化
+├── frontend/               # Vue 前端
+│   ├── src/
+│   │   ├── api/            # API 服务层
+│   │   ├── components/     # Vue 组件
+│   │   │   ├── UploadPanel.vue      # 上传组件
+│   │   │   ├── ResultPanel.vue      # 结果展示组件
+│   │   │   ├── CellDetailPanel.vue  # 细胞详情组件
+│   │   │   └── ...
+│   │   ├── composables/    # 组合式函数
+│   │   ├── stores/         # Pinia 状态管理
+│   │   ├── views/          # 页面视图
+│   │   └── router/         # 路由配置
+│   └── package.json        # Node 依赖
+├── tools/                  # 实用工具
+│   └── tif-mp4/           # 图像转视频工具
+│       ├── convert.py      # 转换脚本
+│       ├── README.md       # 工具说明
+│       └── output/         # 输出目录
+├── docs/                   # 项目文档
+└── .vscode/                # VSCode 配置
+    └── settings.json       # Python 路径配置
 ```
 
 ## 📚 技术栈
@@ -252,6 +83,82 @@ CORS_ALLOWED_ORIGINS = [
 ### 后端
 - Django 5.1+
 - Django REST Framework
+- Channels (WebSocket)
+- OpenCV (cv2)
+- NumPy
 - django-cors-headers
 - python-dotenv
 - SQLite
+
+### AI 模型
+- **ultralytics 8.0.3** (本地库，位于 `web/libs/ultralytics`)
+  - YOLOv8 (细胞分割)
+  - DeepSORT (目标追踪)
+- PyTorch 2.4.1+
+- torchvision 0.19.1+
+
+### 依赖说明
+项目使用本地化的 ultralytics 库，通过以下方式配置：
+1. `web/libs/ultralytics/` - 本地 ultralytics 源码
+2. `.pth` 文件 - 自动将 libs 目录添加到 Python 路径
+3. `backend/settings.py` - Django 配置中自动添加路径
+
+## 🔌 API 接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/test/` | 测试接口 |
+| POST | `/api/upload/` | 上传视频 |
+| POST | `/api/process/` | 启动处理任务 |
+| GET | `/api/status/:task_id/` | 查询任务状态 |
+| GET | `/api/result/:task_id/` | 获取处理结果 |
+| GET | `/api/video/:task_id/` | 获取标注视频 |
+| WS | `/ws/task/:task_id/` | WebSocket 实时进度 |
+
+## 🛠️ 工具
+
+### TIF 转 MP4 工具
+
+位置: `web/tools/tif-mp4/`
+
+将图像序列（如 tif、png、jpg 等）组合成 MP4 视频文件。
+
+**使用方法:**
+```bash
+cd web/tools/tif-mp4
+python3 convert.py --input /path/to/images --fps 10
+```
+
+详细说明见: [web/tools/tif-mp4/README.md](./tools/tif-mp4/README.md)
+
+## 🚀 快速开始
+
+详细的安装和启动步骤请参考: [QUICK-START.md](./QUICK-START.md)
+
+## 📖 文档
+
+- [软件需求分析文档](./docs/软件需求分析文档_v1.md)
+- [项目日志](./docs/项目日志.md)
+- [原型设计文档](./docs/原型设计文档.md)
+
+## ⚠️ 注意事项
+
+1. **YOLO 模型**: 确保 `web/backend/models/` 目录下有 `yolov8s-seg.pt` 模型文件
+2. **依赖安装**: 
+   - 需要安装 OpenCV 和 Channels 支持 WebSocket
+   - 需要安装 PyTorch 和 torchvision
+   - ultralytics 和 deep_sort_pytorch 使用本地库（`web/libs/ultralytics`）
+3. **Python 路径配置**:
+   - 项目自动通过 `.pth` 文件和 `settings.py` 配置 Python 路径
+   - VSCode 用户：已配置 `.vscode/settings.json`，可能需要重新加载窗口
+4. **Conda 环境**: 推荐使用 Conda 虚拟环境，便于管理依赖
+5. **内存要求**: 视频处理需要较多内存，建议 8GB+ RAM
+6. **处理时间**: 视频处理可能需要几分钟到几十分钟
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -18,6 +19,12 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 添加 web/libs 到 Python 路径，以便导入 ultralytics 和 deep_sort_pytorch
+WEB_ROOT = BASE_DIR.parent
+LIBS_DIR = WEB_ROOT / 'libs'
+if LIBS_DIR.exists():
+    sys.path.insert(0, str(LIBS_DIR))
 
 
 # Quick-start development settings - unsuitable for production
@@ -154,3 +161,24 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
     ],
 }
+
+
+# Channels 配置（用于 WebSocket）
+ASGI_APPLICATION = 'backend.asgi.application'
+
+# 使用内存层作为消息代理（开发环境）
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+# 生产环境应使用 Redis
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             "hosts": [("127.0.0.1", 6379)],
+#         },
+#     },
+# }

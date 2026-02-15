@@ -1,0 +1,13 @@
+DEEPSORT:
+  REID_CKPT: "ultralytics/yolo/v8/segment/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7"
+  MAX_DIST: 0.5          # ReID 余弦距离阈值, 越大越宽松(允许外观差异更大的匹配), 仅 USE_REID=true 时生效
+  MIN_CONFIDENCE: 0.25    # 最低检测置信度, 低于此值的检测框直接丢弃, 越小保留越多检测
+  NMS_MAX_OVERLAP: 0.5    # NMS 重叠阈值, 越小抑制越激进(去掉更多重叠框)
+  MAX_IOU_DISTANCE: 0.85  # IoU 匹配代价阈值, = 1-IoU, 0.85 表示 IoU>0.15 即可匹配, 越大越宽松
+  MAX_AGE: 70             # 轨迹最大丢失帧数, 超过则删除ID, 越大允许遮挡/漏检时间越长
+  N_INIT: 1               # 新轨迹确认所需连续检测帧数, 1=立即确认, 越大越严格(减少误检轨迹)
+  NN_BUDGET: 100          # ReID 特征库每个ID最多保存的特征数, 仅 USE_REID=true 时生效
+  # ====== ReID 外观特征开关 ======
+  # true  = DeepSORT 模式: 外观级联匹配 + IoU 兜底 (需要 ReID 模型)
+  # false = 纯 SORT 模式: 仅级联 IoU 匹配 (适合细胞追踪, 更快且更准)
+  USE_REID: false

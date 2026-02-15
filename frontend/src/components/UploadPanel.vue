@@ -2,15 +2,34 @@
 import { ref, computed } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
+import axios from 'axios'
 
 const store = useAnalysisStore()
 const api = useAnalysisApi()
 
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
+const showAdvancedSettings = ref(false)
+
+// 模型参数
+const modelParams = ref({
+  conf: 0.3,
+  imgsz: 1024,
+  fps: 10
+})
 
 // 是否正在上传或已上传
 const isProcessing = computed(() => api.isUploading.value || api.uploadProgress.value === 100)
+
+// 上传状态
+const uploadProgress = ref(0)
+const uploadStatus = ref<'idle' | 'uploading' | 'processing' | 'completed' | 'error'>('idle')
+const uploadError = ref<string | null>(null)
+const taskId = ref<string | null>(null)
+const uploadStage = ref<string>('')
+const uploadMessage = ref<string>('')
+const currentFrame = ref<number | null>(null)
+const totalFrames = ref<number | null>(null)
 
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
@@ -36,18 +55,119 @@ function handleDragLeave() {
 }
 
 async function submitUpload() {
-  if (selectedFile.value) {
-    // 使用真实 API 上传（如果后端已实现）
-    // const result = await api.uploadAndAnalyze(selectedFile.value)
+  if (!selectedFile.value) return
 
-    // 目前使用模拟数据
-    store.addRecord(selectedFile.value.name, selectedFile.value)
+  try {
+    uploadStatus.value = 'uploading'
+    uploadProgress.value = 0
+    uploadError.value = null
+
+    // 1. 上传视频
+    const formData = new FormData()
+    formData.append('video', selectedFile.value)
+
+    const uploadResponse = await axios.post('/api/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        }
+      },
+    })
+
+    taskId.value = uploadResponse.data.task_id
+    uploadStatus.value = 'processing'
+
+    // 2. 启动处理任务
+    await axios.post('/api/process/', {
+      task_id: taskId.value,
+      conf: modelParams.value.conf,
+      imgsz: modelParams.value.imgsz,
+      fps: modelParams.value.fps,
+    })
+
+    // 3. 开始轮询任务状态
+    pollTaskStatus()
+
+    // 清理
     selectedFile.value = null
+
+  } catch (error: any) {
+    uploadStatus.value = 'error'
+    uploadError.value = error.response?.data?.error || error.message || '处理失败'
+    console.error('Upload error:', error)
   }
+}
+
+async function pollTaskStatus() {
+  if (!taskId.value) return
+
+  const pollInterval = setInterval(async () => {
+    try {
+      const response = await axios.get(`/api/status/${taskId.value}/`)
+      const data = response.data
+
+      // 更新进度
+      uploadProgress.value = data.progress || 0
+      uploadStage.value = data.stage || ''
+      uploadMessage.value = data.message || ''
+      currentFrame.value = data.current_frame || null
+      totalFrames.value = data.total_frames || null
+
+      // 如果任务完成
+      if (data.status === 'completed') {
+        clearInterval(pollInterval)
+        uploadStatus.value = 'completed'
+
+        // 获取完整结果
+        const resultResponse = await axios.get(`/api/result/${taskId.value}/`)
+        const result = resultResponse.data
+
+        // 添加到 store
+        store.addUploadedRecord({
+          task_id: result.task_id,
+          video_name: result.original_video_path.split('/').pop() || 'Unknown',
+          video_path: result.original_video_path,
+          status: 'completed',
+          progress: 100,
+          start_time: new Date(result.created_at),
+          result: {
+            output_video_path: result.annotated_video_path,
+            cell_count: result.cell_count,
+            total_frames: result.total_frames,
+            cells: [], // 可以根据 frame_labels 解析出细胞数据
+          },
+        })
+      } else if (data.status === 'failed') {
+        clearInterval(pollInterval)
+        uploadStatus.value = 'error'
+        uploadError.value = data.error || '处理失败'
+      }
+    } catch (error: any) {
+      clearInterval(pollInterval)
+      uploadStatus.value = 'error'
+      uploadError.value = error.response?.data?.error || error.message || '查询状态失败'
+    }
+  }, 2000) // 每2秒轮询一次
+
+  return pollInterval
 }
 
 function clearFile() {
   selectedFile.value = null
+}
+
+function getStageLabel(stage: string): string {
+  const stageMap: Record<string, string> = {
+    'extracting': '分解视频',
+    'processing': 'YOLO 推理',
+    'packaging': '生成结果',
+    'status': '状态更新',
+    'complete': '完成'
+  }
+  return stageMap[stage] || '处理中'
 }
 </script>
 
@@ -126,16 +246,96 @@ function clearFile() {
         </div>
       </div>
 
-      <!-- 上传进度 -->
-      <div v-if="api.isUploading.value" class="upload-progress">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${api.uploadProgress.value}%` }"></div>
+      <!-- 高级参数设置 -->
+      <div class="advanced-settings">
+        <button class="btn-toggle-settings" @click="showAdvancedSettings = !showAdvancedSettings">
+          <span>高级参数设置</span>
+          <svg
+            class="chevron-icon"
+            :class="{ expanded: showAdvancedSettings }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            ></path>
+          </svg>
+        </button>
+
+        <div v-show="showAdvancedSettings" class="settings-content">
+          <div class="setting-item">
+            <label for="conf" class="setting-label">
+              置信度阈值 (Confidence)
+              <span class="setting-value">{{ modelParams.conf }}</span>
+            </label>
+            <input
+              id="conf"
+              type="range"
+              min="0.1"
+              max="0.9"
+              step="0.05"
+              v-model.number="modelParams.conf"
+              class="setting-slider"
+            />
+            <div class="setting-hint">值越大，检测越严格</div>
+          </div>
+
+          <div class="setting-item">
+            <label for="imgsz" class="setting-label">
+              图像尺寸 (Image Size)
+              <span class="setting-value">{{ modelParams.imgsz }}px</span>
+            </label>
+            <select id="imgsz" v-model.number="modelParams.imgsz" class="setting-select">
+              <option value="640">640px (快速)</option>
+              <option value="1024">1024px (平衡)</option>
+              <option value="1280">1280px (精确)</option>
+            </select>
+            <div class="setting-hint">影响检测精度和处理速度</div>
+          </div>
+
+          <div class="setting-item">
+            <label for="fps" class="setting-label">
+              输出视频帧率 (FPS)
+              <span class="setting-value">{{ modelParams.fps }}</span>
+            </label>
+            <select id="fps" v-model.number="modelParams.fps" class="setting-select">
+              <option value="5">5 fps</option>
+              <option value="10">10 fps</option>
+              <option value="15">15 fps</option>
+              <option value="30">30 fps</option>
+            </select>
+            <div class="setting-hint">输出标注视频的帧率</div>
+          </div>
         </div>
-        <p class="progress-text">上传中: {{ api.uploadProgress.value }}%</p>
+      </div>
+
+      <!-- 上传进度 -->
+      <div v-if="uploadStatus === 'uploading' || uploadStatus === 'processing'" class="upload-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
+        </div>
+        <p class="progress-text">
+          <span v-if="uploadStatus === 'uploading'">上传中: {{ uploadProgress }}%</span>
+          <span v-else>
+            {{ getStageLabel(uploadStage) }}: {{ uploadProgress }}%
+          </span>
+        </p>
+        <!-- 详细进度信息 -->
+        <div v-if="uploadStatus === 'processing' && uploadMessage" class="progress-details">
+          <p class="progress-message">{{ uploadMessage }}</p>
+          <p v-if="currentFrame !== null && totalFrames !== null" class="progress-frame-info">
+            帧: {{ currentFrame }} / {{ totalFrames }}
+          </p>
+        </div>
       </div>
 
       <!-- 错误提示 -->
-      <div v-if="api.uploadError.value" class="upload-error">
+      <div v-if="uploadError" class="upload-error">
         <svg
           fill="none"
           stroke="currentColor"
@@ -149,16 +349,20 @@ function clearFile() {
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           ></path>
         </svg>
-        <span>{{ api.uploadError.value }}</span>
+        <span>{{ uploadError }}</span>
       </div>
 
       <div class="upload-actions">
         <button
           class="btn-submit"
-          :disabled="!selectedFile || isProcessing"
+          :disabled="!selectedFile || uploadStatus === 'uploading' || uploadStatus === 'processing'"
           @click="submitUpload"
         >
-          {{ api.isUploading.value ? '上传中...' : '开始分析' }}
+          {{
+            uploadStatus === 'uploading' ? '上传中...' :
+            uploadStatus === 'processing' ? '处理中...' :
+            '开始分析'
+          }}
         </button>
       </div>
     </div>
@@ -308,6 +512,154 @@ h2 {
   height: 16px;
 }
 
+.advanced-settings {
+  margin-top: 1.5rem;
+}
+
+.btn-toggle-settings {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-toggle-settings:hover {
+  background: #21262d;
+  border-color: #58a6ff;
+}
+
+.chevron-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s;
+}
+
+.chevron-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.settings-content {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.setting-item {
+  margin-bottom: 1.5rem;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #c9d1d9;
+  margin-bottom: 0.5rem;
+}
+
+.setting-value {
+  background: #21262d;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.8rem;
+  color: #58a6ff;
+}
+
+.setting-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #21262d;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.setting-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #58a6ff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.setting-slider::-webkit-slider-thumb:hover {
+  background: #1f6feb;
+}
+
+.setting-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #58a6ff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.setting-slider::-moz-range-thumb:hover {
+  background: #1f6feb;
+}
+
+.setting-select {
+  width: 100%;
+  padding: 0.5rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.setting-select:hover {
+  border-color: #58a6ff;
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: #58a6ff;
+}
+
+.setting-hint {
+  font-size: 0.8rem;
+  color: #8b949e;
+  margin-top: 0.5rem;
+}
+
 .upload-progress {
   margin-top: 1.5rem;
   padding: 1rem;
@@ -334,8 +686,25 @@ h2 {
   font-size: 0.875rem;
   color: #58a6ff;
   font-weight: 600;
-  margin: 0;
+  margin: 0 0 0.5rem 0;
   text-align: center;
+}
+
+.progress-details {
+  text-align: center;
+}
+
+.progress-message {
+  font-size: 0.8rem;
+  color: #8b949e;
+  margin: 0 0 0.25rem 0;
+}
+
+.progress-frame-info {
+  font-size: 0.8rem;
+  color: #58a6ff;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  margin: 0;
 }
 
 .upload-error {
