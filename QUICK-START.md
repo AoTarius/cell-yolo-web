@@ -160,7 +160,7 @@ npm run dev
 
 **使用方法:**
 ```bash
-cd web/tools/tif-mp4
+cd web/libs/tif-mp4
 python3 convert.py --input /path/to/images --fps 10
 ```
 
@@ -176,4 +176,4 @@ python3 convert.py --input /path/to/images --fps 15
 python3 convert.py --input /path/to/images --output my_video.mp4
 ```
 
-详细说明见: [web/tools/tif-mp4/README.md](./tools/tif-mp4/README.md)
+详细说明见: [web/libs/tif-mp4/README.md](./libs/tif-mp4/README.md)

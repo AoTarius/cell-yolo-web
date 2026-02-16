@@ -36,14 +36,18 @@ web/
 │   ├── requirements.txt    # Python 依赖
 │   └── manage.py           # Django 管理脚本
 ├── libs/                   # 本地库文件
-│   └── ultralytics/        # YOLOv8 和 DeepSORT 库
-│       ├── yolo/           # YOLO 核心模块
-│       │   └── v8/segment/deep_sort_pytorch/  # DeepSORT 追踪
-│       ├── hub/            # HUB 模块
-│       ├── models/         # 模型定义
-│       ├── nn/             # 神经网络模块
-│       ├── setup.py        # 安装配置
-│       └── __init__.py     # 包初始化
+│   ├── ultralytics/        # YOLOv8 和 DeepSORT 库
+│   │   ├── yolo/           # YOLO 核心模块
+│   │   │   └── v8/segment/deep_sort_pytorch/  # DeepSORT 追踪
+│   │   ├── hub/            # HUB 模块
+│   │   ├── models/         # 模型定义
+│   │   ├── nn/             # 神经网络模块
+│   │   ├── setup.py        # 安装配置
+│   │   └── __init__.py     # 包初始化
+│   └── tif-mp4/           # 图像转视频工具
+│       ├── convert.py      # 转换脚本
+│       ├── README.md       # 工具说明
+│       └── output/         # 输出目录
 ├── frontend/               # Vue 前端
 │   ├── src/
 │   │   ├── api/            # API 服务层
@@ -57,11 +61,6 @@ web/
 │   │   ├── views/          # 页面视图
 │   │   └── router/         # 路由配置
 │   └── package.json        # Node 依赖
-├── tools/                  # 实用工具
-│   └── tif-mp4/           # 图像转视频工具
-│       ├── convert.py      # 转换脚本
-│       ├── README.md       # 工具说明
-│       └── output/         # 输出目录
 ├── docs/                   # 项目文档
 └── .vscode/                # VSCode 配置
     └── settings.json       # Python 路径配置
@@ -100,7 +99,7 @@ web/
 ### 依赖说明
 项目使用本地化的 ultralytics 库，通过以下方式配置：
 1. `web/libs/ultralytics/` - 本地 ultralytics 源码
-2. `.pth` 文件 - 自动将 libs 目录添加到 Python 路径
+2. `.pth` 文件 - 自动将 web/libs 目录添加到 Python 路径
 3. `backend/settings.py` - Django 配置中自动添加路径
 
 ## 🔌 API 接口
@@ -119,17 +118,17 @@ web/
 
 ### TIF 转 MP4 工具
 
-位置: `web/tools/tif-mp4/`
+位置: `web/libs/tif-mp4/`
 
 将图像序列（如 tif、png、jpg 等）组合成 MP4 视频文件。
 
 **使用方法:**
 ```bash
-cd web/tools/tif-mp4
+cd web/libs/tif-mp4
 python3 convert.py --input /path/to/images --fps 10
 ```
 
-详细说明见: [web/tools/tif-mp4/README.md](./tools/tif-mp4/README.md)
+详细说明见: [web/libs/tif-mp4/README.md](./libs/tif-mp4/README.md)
 
 ## 🚀 快速开始
 
@@ -144,7 +143,7 @@ python3 convert.py --input /path/to/images --fps 10
 ## ⚠️ 注意事项
 
 1. **YOLO 模型**: 确保 `web/backend/models/` 目录下有 `yolov8s-seg.pt` 模型文件
-2. **依赖安装**: 
+2. **依赖安装**:
    - 需要安装 OpenCV 和 Channels 支持 WebSocket
    - 需要安装 PyTorch 和 torchvision
    - ultralytics 和 deep_sort_pytorch 使用本地库（`web/libs/ultralytics`）
