@@ -14,8 +14,9 @@ const showAdvancedSettings = ref(false)
 
 // 模型相关
 const models = ref<Array<{ name: string; size_mb: number; path: string }>>([])
-const selectedModel = ref('best_split.pt')
+const selectedModel = ref('')  // 改为空字符串，表示未选择
 const isLoadingModels = ref(false)
+const hasModels = computed(() => models.value.length > 0)  // 判断是否有可用模型
 
 // 模型参数
 const modelParams = ref({
@@ -43,9 +44,12 @@ async function loadModels() {
     isLoadingModels.value = true
     const data = await analysisApi.getModels()
     models.value = data.models
-    selectedModel.value = data.default
+    // 始终默认为空，让用户手动选择
+    selectedModel.value = ''
   } catch (error) {
     console.error('加载模型列表失败:', error)
+    models.value = []
+    selectedModel.value = ''
   } finally {
     isLoadingModels.value = false
   }
@@ -84,6 +88,11 @@ function handleDragLeave(event: DragEvent) {
 
 async function submitUpload() {
   if (!selectedFile.value) return
+
+  if (!selectedModel.value) {
+    uploadError.value = '请先选择一个模型'
+    return
+  }
 
   try {
     uploadStatus.value = 'uploading'
@@ -294,11 +303,16 @@ function getStageLabel(stage: string): string {
           class="model-select"
           :disabled="isLoadingModels || uploadStatus !== 'idle'"
         >
-          <option v-if="isLoadingModels" value="">加载中...</option>
+          <option value="" disabled>请选择模型</option>
+          <option v-if="isLoadingModels" value="" disabled>加载中...</option>
+          <option v-if="!isLoadingModels && models.length === 0" value="" disabled>暂无可用模型</option>
           <option v-for="model in models" :key="model.name" :value="model.name">
             {{ model.name }} ({{ model.size_mb }} MB)
           </option>
         </select>
+        <p v-if="!isLoadingModels && models.length === 0" class="model-warning">
+          ⚠️ 检测到没有可用的模型文件，请将 .pt 模型文件放置在 backend/models/ 目录下
+        </p>
       </div>
 
       <!-- 高级参数设置 -->
@@ -415,12 +429,13 @@ function getStageLabel(stage: string): string {
       <div class="upload-actions">
         <button
           class="btn-submit"
-          :disabled="!selectedFile || uploadStatus === 'uploading' || uploadStatus === 'processing'"
+          :disabled="!selectedFile || uploadStatus === 'uploading' || uploadStatus === 'processing' || !selectedModel"
           @click="submitUpload"
         >
           {{
             uploadStatus === 'uploading' ? '上传中...' :
             uploadStatus === 'processing' ? '处理中...' :
+            !selectedModel ? '请选择模型' :
             '开始分析'
           }}
         </button>
@@ -433,11 +448,12 @@ function getStageLabel(stage: string): string {
 .upload-panel {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 2rem;
   background: #0d1117;
   transition: background 0.3s;
+  overflow-y: auto;
 }
 
 :global(:root:not(.dark)) .upload-panel {
@@ -447,6 +463,8 @@ function getStageLabel(stage: string): string {
 .upload-container {
   max-width: 600px;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 h2 {
@@ -668,11 +686,11 @@ h2 {
   color: #c9d1d9;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1rem center !important;
   padding-right: 2.5rem;
 }
 
@@ -680,7 +698,7 @@ h2 {
   background: #fff;
   border-color: #ccc;
   color: #333;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
 }
 
 .model-select:hover:not(:disabled) {
@@ -707,6 +725,23 @@ h2 {
 .model-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.model-warning {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(220, 38, 38, 0.1);
+  border-left: 3px solid #dc2626;
+  color: #f87171;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+:global(:root:not(.dark)) .model-warning {
+  background: rgba(239, 68, 68, 0.1);
+  border-left-color: #ef4444;
+  color: #ef4444;
 }
 
 .advanced-settings {
@@ -865,33 +900,52 @@ h2 {
 
 .setting-select {
   width: 100%;
-  padding: 0.5rem;
-  background: #0d1117;
+  padding: 0.75rem 1rem;
+  background: #21262d;
   border: 1px solid #30363d;
-  border-radius: 6px;
+  border-radius: 8px;
   color: #c9d1d9;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.3s;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+  font-weight: 500;
 }
 
 :global(:root:not(.dark)) .setting-select {
   background: #fff;
   border-color: #ccc;
   color: #333;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
 }
 
 .setting-select:hover {
+  background: #30363d;
   border-color: #58a6ff;
+  color: #fff;
 }
 
 :global(:root:not(.dark)) .setting-select:hover {
+  background: #f5f5f5;
   border-color: #2196f3;
+  color: #333;
 }
 
 .setting-select:focus {
   outline: none;
   border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+  background: #30363d;
+}
+
+:global(:root:not(.dark)) .setting-select:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  background: #fff;
 }
 
 .setting-hint {
