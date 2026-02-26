@@ -58,14 +58,14 @@ onMounted(() => {
 
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
+  if (target.files && target.files.length > 0 && target.files[0]) {
     selectedFile.value = target.files[0]
   }
 }
 
 function handleDrop(event: DragEvent) {
   isDragging.value = false
-  if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+  if (event.dataTransfer?.files && event.dataTransfer.files.length > 0 && event.dataTransfer.files[0]) {
     selectedFile.value = event.dataTransfer.files[0]
   }
 }
@@ -75,8 +75,11 @@ function handleDragOver(event: DragEvent) {
   isDragging.value = true
 }
 
-function handleDragLeave() {
-  isDragging.value = false
+function handleDragLeave(event: DragEvent) {
+  // 防止从子元素触发 dragleave 事件
+  if (event.target === event.currentTarget) {
+    isDragging.value = false
+  }
 }
 
 async function submitUpload() {
@@ -154,7 +157,7 @@ async function pollTaskStatus() {
         // 添加到 store
         store.addUploadedRecord({
           task_id: result.task_id,
-          video_name: result.original_video_path.split('/').pop() || 'Unknown',
+          video_name: result.original_video_path?.split('/').pop() || 'Unknown',
           video_path: result.original_video_path,
           status: 'completed',
           progress: 100,
@@ -163,9 +166,19 @@ async function pollTaskStatus() {
             output_video_path: result.annotated_video_path,
             cell_count: result.cell_count,
             total_frames: result.total_frames,
+            video_duration: result.video_duration || 0,
+            model_name: result.model_name || 'best_split.pt',
             cells: [], // 可以根据 frame_labels 解析出细胞数据
           },
         })
+
+        // 重置任务ID和状态
+        taskId.value = null
+        uploadProgress.value = 0
+        uploadStage.value = ''
+        uploadMessage.value = ''
+        currentFrame.value = null
+        totalFrames.value = null
       } else if (data.status === 'failed') {
         clearInterval(pollInterval)
         uploadStatus.value = 'error'
@@ -251,8 +264,8 @@ function getStageLabel(stage: string): string {
             ></path>
           </svg>
           <div class="file-details">
-            <p class="file-name">{{ selectedFile.name }}</p>
-            <p class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</p>
+            <p class="file-name">{{ selectedFile?.name }}</p>
+            <p class="file-size">{{ selectedFile ? (selectedFile.size / 1024 / 1024).toFixed(2) : '0' }} MB</p>
           </div>
           <button class="btn-clear" @click="clearFile">
             <svg
@@ -392,6 +405,11 @@ function getStageLabel(stage: string): string {
           ></path>
         </svg>
         <span>{{ uploadError }}</span>
+        <button class="btn-close-error" @click="uploadError = null" aria-label="关闭错误提示">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
       </div>
 
       <div class="upload-actions">
@@ -983,6 +1001,31 @@ h2 {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+.btn-close-error {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: #f87171;
+  cursor: pointer;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-close-error:hover {
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.btn-close-error svg {
+  width: 16px;
+  height: 16px;
 }
 
 .upload-actions {
