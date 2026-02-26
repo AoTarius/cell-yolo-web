@@ -17,4 +17,7 @@ urlpatterns = [
     
     # 模型列表接口
     path('models/', views.ModelListView.as_view(), name='model_list'),
+    
+    # 数据导出接口
+    path('export/<str:task_id>/', views.ExportDataView.as_view(), name='export_data'),
 ]

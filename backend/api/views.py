@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from django.conf import settings
-from django.http import JsonResponse, FileResponse, HttpResponseNotFound
+from django.http import JsonResponse, FileResponse, HttpResponseNotFound, HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -383,5 +383,113 @@ class DeleteTaskView(APIView):
         except Exception as e:
             return Response(
                 {'error': f'删除任务失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ExportDataView(APIView):
+    """导出数据接口（CSV 或 JSON）"""
+
+    def get(self, request, task_id: str):
+        """导出任务数据为 CSV 或 JSON 格式"""
+        try:
+            import csv
+            import io
+
+            print(f"[DEBUG] ExportDataView called with task_id: {task_id}")
+            print(f"[DEBUG] Request query params: {dict(request.GET)}")
+
+            # 获取导出格式（使用 export_format 避免与 DRF 的 format 参数冲突）
+            format_type = request.GET.get('export_format', 'csv').lower()
+            print(f"[DEBUG] Format type: {format_type}")
+            
+            if format_type not in ['csv', 'json']:
+                print(f"[DEBUG] Invalid format: {format_type}")
+                return Response(
+                    {'error': '不支持的格式，支持的格式: csv, json'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 读取 JSON 结果
+            media_root = Path(settings.MEDIA_ROOT)
+            json_path = media_root / 'tasks' / task_id / 'result.json'
+            print(f"[DEBUG] JSON path: {json_path}")
+            print(f"[DEBUG] JSON exists: {json_path.exists()}")
+
+            if not json_path.exists():
+                print(f"[DEBUG] JSON file not found at: {json_path}")
+                return Response(
+                    {'error': '结果不存在'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            with open(json_path, 'r', encoding='utf-8') as f:
+                result = json.load(f)
+            print(f"[DEBUG] Loaded result with {len(result.get('tracking_data', []))} tracking records")
+
+            if format_type == 'json':
+                print(f"[DEBUG] Exporting JSON")
+                # 导出 JSON
+                response = Response(
+                    json.dumps(result, ensure_ascii=False, indent=2),
+                    content_type='application/json'
+                )
+                response['Content-Disposition'] = f'attachment; filename="analysis_{task_id}.json"'
+                return response
+
+            elif format_type == 'csv':
+                print(f"[DEBUG] Exporting CSV")
+                # 导出 CSV
+                output = io.StringIO()
+                writer = csv.writer(output)
+
+                # 写入表头
+                writer.writerow([
+                    'track_id',
+                    'frame',
+                    'bb_left',
+                    'bb_top',
+                    'bb_width',
+                    'bb_height',
+                    'conf',
+                    'class',
+                    'visibility'
+                ])
+
+                # 写入数据（使用实际的 tracking_data 结构）
+                rows_written = 0
+                for record in result.get('tracking_data', []):
+                    writer.writerow([
+                        record.get('track_id', ''),
+                        record.get('frame', ''),
+                        record.get('bb_left', ''),
+                        record.get('bb_top', ''),
+                        record.get('bb_width', ''),
+                        record.get('bb_height', ''),
+                        record.get('conf', ''),
+                        record.get('class', ''),
+                        record.get('visibility', '')
+                    ])
+                    rows_written += 1
+                
+                print(f"[DEBUG] CSV rows written: {rows_written}")
+
+                # 创建响应
+                csv_content = output.getvalue()
+                print(f"[DEBUG] CSV content length: {len(csv_content)}")
+                
+                response = HttpResponse(
+                    csv_content,
+                    content_type='text/csv; charset=utf-8'
+                )
+                response['Content-Disposition'] = f'attachment; filename="analysis_{task_id}.csv"'
+                return response
+
+        except Exception as e:
+            print(f"[DEBUG] Export error: {str(e)}")
+            import traceback
+            print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+            return Response(
+                {'error': f'导出失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

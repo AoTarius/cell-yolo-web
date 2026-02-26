@@ -150,7 +150,7 @@ export const analysisApi = {
     format: 'csv' | 'json' = 'csv'
   ): Promise<Blob> {
     const { data } = await api.get(`/export/${taskId}`, {
-      params: { format },
+      params: { export_format: format },
       responseType: 'blob',
     })
 
