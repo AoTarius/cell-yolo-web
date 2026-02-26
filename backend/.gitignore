@@ -1,0 +1,8 @@
+# 忽略 models 目录下所有的 .pt 模型文件
+models/*.pt
+
+# 忽略 models 目录下所有子目录中的 .pt 文件
+models/**/*.pt
+
+# 保留 models/README.md 文件
+!models/README.md

@@ -1,0 +1,3 @@
+# Ignore the output directory where the mp4 files are stored
+output/
+__pycache__/
