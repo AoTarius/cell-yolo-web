@@ -305,7 +305,7 @@ class TaskListView(APIView):
     """获取所有任务列表接口"""
 
     def get(self, request):
-        """获取所有已完成任务的结果列表"""
+        """获取所有任务（包括已完成和处理中）的列表"""
         media_root = Path(settings.MEDIA_ROOT)
         tasks_dir = media_root / 'tasks'
 
@@ -313,22 +313,62 @@ class TaskListView(APIView):
             return Response({'tasks': [], 'count': 0}, status=status.HTTP_200_OK)
 
         tasks = []
-        
+
         # 遍历所有任务目录
         for task_dir in tasks_dir.iterdir():
             if not task_dir.is_dir():
                 continue
 
-            # 读取 result.json
+            task_id = task_dir.name
+
+            # 优先读取 result.json（已完成任务）
             json_path = task_dir / 'result.json'
             if json_path.exists():
                 try:
                     with open(json_path, 'r', encoding='utf-8') as f:
                         result = json.load(f)
+                        # 确保包含 task_id
+                        result['task_id'] = task_id
+                        # 如果任务在 task_status 中且不是 completed，更新状态
+                        with task_lock:
+                            if task_id in task_status and task_status[task_id]['status'] != 'completed':
+                                # 修正状态
+                                task_status[task_id]['status'] = 'completed'
                         tasks.append(result)
                 except Exception as e:
-                    print(f"读取任务 {task_dir.name} 结果失败: {e}")
+                    print(f"读取任务 {task_id} 结果失败: {e}")
                     continue
+            else:
+                # 检查任务是否真的在处理中
+                with task_lock:
+                    if task_id in task_status:
+                        task_info = task_status[task_id]
+                        if task_info['status'] == 'processing':
+                            # 真正在处理中
+                            tasks.append({
+                                'task_id': task_id,
+                                'original_video_path': task_info.get('video_path', ''),
+                                'video_name': task_info.get('video_name', 'Unknown'),
+                                'status': 'processing',
+                                'progress': task_info.get('progress', 0),
+                                'created_at': task_info.get('created_at', datetime.now().isoformat()),
+                            })
+                        elif task_info['status'] == 'failed':
+                            # 任务失败，但不返回（或者可以标记为失败）
+                            pass
+                    else:
+                        # 任务不在 task_status 中，说明是遗留任务
+                        # 查找原始视频文件
+                        original_dir = task_dir / 'original'
+                        if original_dir.exists():
+                            video_files = list(original_dir.glob('*.mp4')) + \
+                                          list(original_dir.glob('*.avi')) + \
+                                          list(original_dir.glob('*.mov'))
+
+                            if video_files:
+                                # 这是遗留任务，视为失败，不返回
+                                # 或者可以返回一个标记为 failed 的任务
+                                pass
 
         # 按创建时间排序（最新的在前）
         tasks.sort(key=lambda x: x.get('created_at', ''), reverse=True)

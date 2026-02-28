@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAnalysisStore } from '@/stores/analysisStore'
+import { useRouter } from 'vue-router'
+import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 const store = useAnalysisStore()
+const router = useRouter()
 
 const showDeleteDialog = ref(false)
 const taskToDelete = ref<string | null>(null)
@@ -15,6 +17,19 @@ function formatDate(date: Date) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function handleRecordClick(record: AnalysisRecord) {
+  // 先设置选中状态（无论什么状态都设置）
+  store.selectRecord(record.task_id)
+
+  // 根据任务状态决定行为
+  if (record.status === 'processing') {
+    // 不跳转，直接在主页显示进度页面
+    // CellTrackingView 会检测到 selectedRecord.status === 'processing' 并显示 ProgressView
+  } else if (record.status === 'completed') {
+    // 不需要跳转，主页会自动显示结果页面
+  }
 }
 
 function showDeleteConfirm(taskId: string, event: Event) {
@@ -58,19 +73,22 @@ function handleDeleteCancel() {
           :key="record.task_id"
           class="record-item"
           :class="{ active: store.selectedId === record.task_id }"
-          @click="store.selectRecord(record.task_id)"
+          @click="handleRecordClick(record)"
         >
           <div class="record-header">
             <span class="record-name">{{ record.video_name }}</span>
-            <span class="record-status" :class="`status-${record.status}`">
-              {{
-                record.status === 'completed'
-                  ? '已完成'
-                  : record.status === 'processing'
-                    ? `处理中 ${record.progress}%`
-                    : record.status
-              }}
-            </span>
+            <div class="status-indicator">
+              <span class="status-dot" :class="`dot-${record.status}`"></span>
+              <span class="record-status" :class="`status-${record.status}`">
+                {{
+                  record.status === 'completed'
+                    ? '已完成'
+                    : record.status === 'processing'
+                      ? '分析中'
+                      : record.status
+                }}
+              </span>
+            </div>
           </div>
           <div class="record-video">任务ID: {{ record.task_id }}</div>
           <div class="record-footer">
@@ -133,7 +151,7 @@ function handleDeleteCancel() {
 
 <style scoped>
 .sidebar {
-  width: 280px;
+  width: 320px;
   height: 100vh;
   background: #1e1e1e;
   color: #e0e0e0;
@@ -220,10 +238,6 @@ function handleDeleteCancel() {
   border-color: #007acc;
 }
 
-.record-item.active .btn-delete {
-  opacity: 1;
-}
-
 .record-item.active .btn-delete:hover:not(:disabled) {
   background: rgba(248, 113, 113, 0.1);
   color: #f87171;
@@ -242,6 +256,39 @@ function handleDeleteCancel() {
   color: #fff;
 }
 
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-completed {
+  background: #4ade80;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+}
+
+.dot-processing {
+  background: #fb923c;
+  box-shadow: 0 0 6px rgba(251, 146, 60, 0.5);
+  animation: pulse-orange 2s ease-in-out infinite;
+}
+
+@keyframes pulse-orange {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 .record-status {
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
@@ -256,7 +303,7 @@ function handleDeleteCancel() {
 
 .status-processing {
   background: #5a4a0e;
-  color: #fbbf24;
+  color: #fb923c;
 }
 
 .record-video {

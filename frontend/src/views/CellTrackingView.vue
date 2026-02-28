@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import Sidebar from '@/components/Sidebar.vue'
 import UploadPanel from '@/components/UploadPanel.vue'
-import LoadingPanel from '@/components/LoadingPanel.vue'
+import ProgressView from '@/views/ProgressView.vue'
 import AnalysisResult from '@/components/AnalysisResult.vue'
 
 const store = useAnalysisStore()
@@ -61,10 +61,10 @@ const currentPanel = computed(() => {
       <UploadPanel v-else-if="currentPanel === 'upload'" />
 
       <!-- 加载面板 -->
-      <LoadingPanel
+      <ProgressView
         v-else-if="currentPanel === 'loading'"
-        :video-name="store.selectedRecord?.video_name"
-        :progress="store.selectedRecord?.progress"
+        :task-id="store.selectedRecord?.task_id"
+        :embedded="true"
       />
 
       <!-- 结果面板 -->

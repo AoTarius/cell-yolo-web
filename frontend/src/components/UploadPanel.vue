@@ -119,88 +119,38 @@ async function submitUpload() {
 
     // 2. 启动处理任务
     await axios.post('/api/process/', {
-      task_id: taskId.value,
+      task_id: taskId.value!,
       conf: modelParams.value.conf,
       imgsz: modelParams.value.imgsz,
       fps: modelParams.value.fps,
       model_name: selectedModel.value,
     })
 
-    // 3. 开始轮询任务状态
-    pollTaskStatus()
+    // 3. 添加处理中记录到 store（store 会自动轮询进度）
+    store.addProcessingRecord({
+      task_id: taskId.value!,
+      video_name: selectedFile.value.name,
+      video_path: uploadResponse.data.video_path || '',
+      status: 'processing',
+      progress: 0,
+      start_time: new Date(),
+    })
 
-    // 清理
+    // 4. 立即关闭上传面板，返回主页
+    showAdvancedSettings.value = false
     selectedFile.value = null
+    uploadStatus.value = 'idle'
+    uploadProgress.value = 0
+    taskId.value = null
+
+    // 关闭上传面板
+    store.showUploadPanel = false
 
   } catch (error: any) {
     uploadStatus.value = 'error'
     uploadError.value = error.response?.data?.error || error.message || '处理失败'
     console.error('Upload error:', error)
   }
-}
-
-async function pollTaskStatus() {
-  if (!taskId.value) return
-
-  const pollInterval = setInterval(async () => {
-    try {
-      const response = await axios.get(`/api/status/${taskId.value}/`)
-      const data = response.data
-
-      // 更新进度
-      uploadProgress.value = data.progress || 0
-      uploadStage.value = data.stage || ''
-      uploadMessage.value = data.message || ''
-      currentFrame.value = data.current_frame || null
-      totalFrames.value = data.total_frames || null
-
-      // 如果任务完成
-      if (data.status === 'completed') {
-        clearInterval(pollInterval)
-        uploadStatus.value = 'completed'
-
-        // 获取完整结果
-        const resultResponse = await axios.get(`/api/result/${taskId.value}/`)
-        const result = resultResponse.data
-
-        // 添加到 store
-        store.addUploadedRecord({
-          task_id: result.task_id,
-          video_name: result.original_video_path?.split('/').pop() || 'Unknown',
-          video_path: result.original_video_path,
-          status: 'completed',
-          progress: 100,
-          start_time: new Date(result.created_at),
-          result: {
-            output_video_path: result.annotated_video_path,
-            cell_count: result.cell_count,
-            total_frames: result.total_frames,
-            video_duration: result.video_duration || 0,
-            model_name: result.model_name || 'best_split.pt',
-            cells: [], // 可以根据 frame_labels 解析出细胞数据
-          },
-        })
-
-        // 重置任务ID和状态
-        taskId.value = null
-        uploadProgress.value = 0
-        uploadStage.value = ''
-        uploadMessage.value = ''
-        currentFrame.value = null
-        totalFrames.value = null
-      } else if (data.status === 'failed') {
-        clearInterval(pollInterval)
-        uploadStatus.value = 'error'
-        uploadError.value = data.error || '处理失败'
-      }
-    } catch (error: any) {
-      clearInterval(pollInterval)
-      uploadStatus.value = 'error'
-      uploadError.value = error.response?.data?.error || error.message || '查询状态失败'
-    }
-  }, 2000) // 每2秒轮询一次
-
-  return pollInterval
 }
 
 function clearFile() {

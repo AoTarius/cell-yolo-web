@@ -60,6 +60,11 @@ export interface AnalysisRecord {
   start_time: Date // 开始时间
   end_time?: Date // 结束时间
   result?: ProcessResult // 处理结果
+  // 进度详情字段
+  stage?: string // 当前阶段
+  message?: string // 详细消息
+  currentFrame?: number // 当前帧数
+  totalFrames?: number // 总帧数
 }
 
 export const useAnalysisStore = defineStore('analysis', () => {
@@ -212,30 +217,38 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
       // 转换后端数据为前端格式
       const convertedRecords: AnalysisRecord[] = historyTasks.map((task: any) => {
-        // 确保 result 对象存在且格式正确
-        const result: ProcessResult = {
-          output_video_path: task.annotated_video_path || '',
-          cell_count: task.cell_count || 0,
-          total_frames: task.total_frames || 0,
-          video_duration: task.video_duration || 0,
-          model_name: task.model_name || 'best_split.pt', // 从后端获取模型名称
-          cells: [], // 从 summary 解析细胞数据
-        }
+        // 根据任务状态决定转换方式
+        if (task.status === 'processing') {
+          // 处理中的任务
+          return {
+            task_id: task.task_id,
+            video_name: task.video_name || task.original_video_path?.split('/').pop() || 'Unknown',
+            video_path: task.original_video_path || '',
+            status: 'processing' as AnalysisStatus,
+            progress: task.progress || 0,
+            start_time: new Date(task.created_at),
+          }
+        } else {
+          // 已完成的任务
+          const result: ProcessResult = {
+            output_video_path: task.annotated_video_path || '',
+            cell_count: task.cell_count || 0,
+            total_frames: task.total_frames || 0,
+            video_duration: task.video_duration || 0,
+            model_name: task.model_name || 'best_split.pt',
+            cells: [],
+          }
 
-        // 如果有 summary，尝试解析细胞数据
-        if (task.summary && typeof task.summary === 'object') {
-          // summary 可能包含细胞统计信息
-        }
-
-        return {
-          task_id: task.task_id,
-          video_name: task.original_video_path.split('/').pop() || 'Unknown',
-          video_path: task.original_video_path,
-          status: 'completed' as AnalysisStatus,
-          progress: 100,
-          start_time: new Date(task.created_at),
-          end_time: new Date(),
-          result,
+          return {
+            task_id: task.task_id,
+            video_name: task.original_video_path?.split('/').pop() || 'Unknown',
+            video_path: task.original_video_path,
+            status: 'completed' as AnalysisStatus,
+            progress: 100,
+            start_time: new Date(task.created_at),
+            end_time: new Date(),
+            result,
+          }
         }
       })
 
@@ -358,6 +371,118 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
+  // 添加处理中的任务记录
+  function addProcessingRecord(record: AnalysisRecord) {
+    records.value.unshift(record)
+  }
+
+  // 更新任务进度详情
+  function updateTaskProgress(
+    taskId: string,
+    updates: {
+      progress?: number
+      stage?: string
+      message?: string
+      currentFrame?: number
+      totalFrames?: number
+    }
+  ) {
+    const record = records.value.find((r) => r.task_id === taskId)
+    if (record) {
+      if (updates.progress !== undefined) {
+        record.progress = updates.progress
+      }
+      if (updates.stage !== undefined) {
+        record.stage = updates.stage
+      }
+      if (updates.message !== undefined) {
+        record.message = updates.message
+      }
+      if (updates.currentFrame !== undefined) {
+        record.currentFrame = updates.currentFrame
+      }
+      if (updates.totalFrames !== undefined) {
+        record.totalFrames = updates.totalFrames
+      }
+    }
+  }
+
+  // 全局轮询控制
+  let pollIntervalId: number | null = null
+
+  // 启动全局轮询
+  function startGlobalPolling() {
+    if (pollIntervalId !== null) {
+      return // 已经在轮询中
+    }
+
+    pollIntervalId = window.setInterval(async () => {
+      // 查找所有处理中的任务
+      const processingTasks = records.value.filter((r) => r.status === 'processing')
+
+      if (processingTasks.length === 0) {
+        return // 没有处理中的任务，跳过
+      }
+
+      // 并发轮询所有处理中的任务
+      const pollPromises = processingTasks.map(async (task) => {
+        try {
+          const response = await axios.get(`/api/status/${task.task_id}/`)
+          const data = response.data
+
+          // 更新任务进度
+          updateTaskProgress(task.task_id, {
+            progress: data.progress || 0,
+            stage: data.stage || '',
+            message: data.message || '',
+            currentFrame: data.current_frame || null,
+            totalFrames: data.total_frames || null,
+          })
+
+          // 如果任务完成，更新状态
+          if (data.status === 'completed') {
+            updateTaskStatus(task.task_id, { status: 'completed', progress: 100 })
+
+            // 获取完整结果
+            const resultResponse = await axios.get(`/api/result/${task.task_id}/`)
+            const result = resultResponse.data
+
+            // 更新结果数据
+            const record = records.value.find((r) => r.task_id === task.task_id)
+            if (record) {
+              record.result = {
+                output_video_path: result.annotated_video_path || '',
+                cell_count: result.cell_count || 0,
+                total_frames: result.total_frames || 0,
+                video_duration: result.video_duration || 0,
+                model_name: result.model_name || 'best_split.pt',
+                cells: [], // 可以根据 frame_labels 解析出细胞数据
+              }
+              record.end_time = new Date()
+            }
+          } else if (data.status === 'failed') {
+            updateTaskStatus(task.task_id, { status: 'failed' })
+          }
+        } catch (error) {
+          console.error(`轮询任务 ${task.task_id} 失败:`, error)
+        }
+      })
+
+      await Promise.all(pollPromises)
+    }, 2000) // 每2秒轮询一次
+  }
+
+  // 停止全局轮询
+  function stopGlobalPolling() {
+    if (pollIntervalId !== null) {
+      clearInterval(pollIntervalId)
+      pollIntervalId = null
+    }
+  }
+
+  // 初始化时启动全局轮询
+  startGlobalPolling()
+
   return {
     records,
     selectedId,
@@ -375,5 +500,9 @@ export const useAnalysisStore = defineStore('analysis', () => {
     updateTaskResult,
     loadHistoryTasks,
     deleteRecord,
+    addProcessingRecord,
+    updateTaskProgress,
+    startGlobalPolling,
+    stopGlobalPolling,
   }
 })
