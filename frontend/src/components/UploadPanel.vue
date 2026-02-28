@@ -637,6 +637,9 @@ h2 {
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 :global(:root:not(.dark)) .btn-clear {

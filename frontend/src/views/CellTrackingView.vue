@@ -4,7 +4,7 @@ import { useAnalysisStore } from '@/stores/analysisStore'
 import Sidebar from '@/components/Sidebar.vue'
 import UploadPanel from '@/components/UploadPanel.vue'
 import LoadingPanel from '@/components/LoadingPanel.vue'
-import ResultPanel from '@/components/ResultPanel.vue'
+import AnalysisResult from '@/components/AnalysisResult.vue'
 
 const store = useAnalysisStore()
 
@@ -68,7 +68,7 @@ const currentPanel = computed(() => {
       />
 
       <!-- 结果面板 -->
-      <ResultPanel v-else-if="currentPanel === 'result'" :record="store.selectedRecord!" />
+      <AnalysisResult v-else-if="currentPanel === 'result'" :record="store.selectedRecord!" />
     </main>
   </div>
 </template>

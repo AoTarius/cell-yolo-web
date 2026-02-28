@@ -273,6 +273,34 @@ class AnnotatedVideoView(APIView):
         )
 
 
+class OriginalVideoView(APIView):
+    """获取原始视频接口"""
+
+    def get(self, request, task_id):
+        media_root = Path(settings.MEDIA_ROOT)
+        original_dir = media_root / 'tasks' / task_id / 'original'
+
+        # 查找original目录下的视频文件
+        video_files = list(original_dir.glob('*.mp4')) + list(original_dir.glob('*.avi')) + list(original_dir.glob('*.mov'))
+
+        if not video_files:
+            return HttpResponseNotFound('原始视频不存在')
+
+        # 取第一个找到的视频文件
+        video_path = video_files[0]
+
+        # 获取文件名
+        filename = video_path.name
+
+        # 返回视频文件
+        return FileResponse(
+            open(video_path, 'rb'),
+            content_type='video/mp4',
+            as_attachment=True,
+            filename=filename
+        )
+
+
 class TaskListView(APIView):
     """获取所有任务列表接口"""
 
