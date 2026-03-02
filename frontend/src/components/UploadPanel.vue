@@ -2,11 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
+import { useToast } from '@/composables/useToast'
 import { analysisApi } from '@/api/analysisApi'
 import axios from 'axios'
 
 const store = useAnalysisStore()
 const api = useAnalysisApi()
+const { showToast } = useToast()
 
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
@@ -127,9 +129,10 @@ async function submitUpload() {
     })
 
     // 3. 添加处理中记录到 store（store 会自动轮询进度）
+    const fileName = selectedFile.value.name
     store.addProcessingRecord({
       task_id: taskId.value!,
-      video_name: selectedFile.value.name,
+      video_name: fileName,
       video_path: uploadResponse.data.video_path || '',
       status: 'processing',
       progress: 0,
@@ -143,6 +146,9 @@ async function submitUpload() {
     uploadProgress.value = 0
     taskId.value = null
 
+    // 显示成功提示
+    showToast(`分析任务已启动！视频 "${fileName}" 正在处理中...`, 'success')
+
     // 关闭上传面板
     store.showUploadPanel = false
 
@@ -150,6 +156,7 @@ async function submitUpload() {
     uploadStatus.value = 'error'
     uploadError.value = error.response?.data?.error || error.message || '处理失败'
     console.error('Upload error:', error)
+    showToast(error.response?.data?.error || error.message || '处理失败', 'error')
   }
 }
 
@@ -398,12 +405,11 @@ function getStageLabel(stage: string): string {
 .upload-panel {
   flex: 1;
   display: flex;
-  align-items: flex-start;
+  overflow: hidden;
+  align-items: center;
   justify-content: center;
-  padding: 2rem;
   background: #0d1117;
   transition: background 0.3s;
-  overflow-y: auto;
 }
 
 :global(:root:not(.dark)) .upload-panel {
@@ -415,6 +421,7 @@ function getStageLabel(stage: string): string {
   width: 100%;
   display: flex;
   flex-direction: column;
+  padding: 2rem;
 }
 
 h2 {

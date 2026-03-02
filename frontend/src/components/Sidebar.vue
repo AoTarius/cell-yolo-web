@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
-import ConfirmDialog from './ConfirmDialog.vue'
+import { useToast } from '@/composables/useToast'
+import ConfirmDialog from './common/ConfirmDialog.vue'
 
 const store = useAnalysisStore()
 const router = useRouter()
+const route = useRoute()
+const { showToast } = useToast()
+
+// 组件挂载时加载历史记录
+onMounted(async () => {
+  await store.loadHistoryTasks()
+})
 
 const showDeleteDialog = ref(false)
 const taskToDelete = ref<string | null>(null)
@@ -20,15 +28,13 @@ function formatDate(date: Date) {
 }
 
 function handleRecordClick(record: AnalysisRecord) {
-  // 先设置选中状态（无论什么状态都设置）
-  store.selectRecord(record.task_id)
-
-  // 根据任务状态决定行为
-  if (record.status === 'processing') {
-    // 不跳转，直接在主页显示进度页面
-    // CellTrackingView 会检测到 selectedRecord.status === 'processing' 并显示 ProgressView
-  } else if (record.status === 'completed') {
-    // 不需要跳转，主页会自动显示结果页面
+  // 如果不在主页，先跳转回主页
+  if (route.path !== '/') {
+    router.push('/').then(() => {
+      store.selectRecord(record.task_id)
+    })
+  } else {
+    store.selectRecord(record.task_id)
   }
 }
 
@@ -42,8 +48,10 @@ async function handleDeleteConfirm() {
   if (taskToDelete.value) {
     try {
       await store.deleteRecord(taskToDelete.value)
+      showToast('任务已成功删除', 'success')
     } catch (error) {
       console.error('删除失败:', error)
+      showToast('删除任务失败', 'error')
     } finally {
       taskToDelete.value = null
     }
@@ -53,15 +61,34 @@ async function handleDeleteConfirm() {
 function handleDeleteCancel() {
   taskToDelete.value = null
 }
+
+function handleNewAnalysis() {
+  // 如果不在主页，先跳转回主页
+  if (route.path !== '/') {
+    router.push('/').then(() => {
+      store.createNewAnalysis()
+    })
+  } else {
+    store.createNewAnalysis()
+  }
+}
+
+function handleModelUpload() {
+  router.push('/model-upload')
+}
 </script>
 
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
       <h1>细胞跟踪分析</h1>
-      <button class="btn-new-analysis" @click="store.createNewAnalysis()">
+      <button class="btn-new-analysis" @click="handleNewAnalysis">
         <span class="icon">+</span>
         新建分析
+      </button>
+      <button class="btn-upload-model" @click="handleModelUpload">
+        <span class="icon">📤</span>
+        上传模型
       </button>
     </div>
 
@@ -194,6 +221,33 @@ function handleDeleteCancel() {
 }
 
 .btn-new-analysis .icon {
+  font-size: 1.25rem;
+  font-weight: 300;
+}
+
+.btn-upload-model {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #fb923c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+  margin-top: 0.75rem;
+}
+
+.btn-upload-model:hover {
+  background: #f97316;
+}
+
+.btn-upload-model .icon {
   font-size: 1.25rem;
   font-weight: 300;
 }

@@ -561,3 +561,53 @@ class ExportDataView(APIView):
                 {'error': f'导出失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class ModelUploadView(APIView):
+    """上传模型接口"""
+
+    def post(self, request):
+        """上传模型文件到 models 目录"""
+        try:
+            model_file = request.FILES.get('model')
+            if not model_file:
+                return Response(
+                    {'error': '未找到模型文件'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 验证文件类型
+            if not model_file.name.endswith('.pt'):
+                return Response(
+                    {'error': '只支持 .pt 格式的模型文件'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 获取 models 目录路径
+            backend_dir = Path(settings.BASE_DIR).parent
+            models_dir = backend_dir / 'backend' / 'models'
+
+            # 确保目录存在
+            models_dir.mkdir(parents=True, exist_ok=True)
+
+            # 保存模型文件
+            model_path = models_dir / model_file.name
+            
+            # 如果文件已存在，询问是否覆盖（这里简单处理为覆盖）
+            with open(model_path, 'wb') as f:
+                for chunk in model_file.chunks():
+                    f.write(chunk)
+
+            # 返回成功响应
+            return Response({
+                'status': 'success',
+                'message': '模型上传成功',
+                'model_name': model_file.name,
+                'model_size_mb': round(model_file.size / (1024 * 1024), 2)
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': f'上传失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

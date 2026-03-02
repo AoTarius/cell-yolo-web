@@ -4,7 +4,7 @@ import { useAnalysisStore } from '@/stores/analysisStore'
 import Sidebar from '@/components/Sidebar.vue'
 import UploadPanel from '@/components/UploadPanel.vue'
 import ProgressView from '@/views/ProgressView.vue'
-import AnalysisResult from '@/components/AnalysisResult.vue'
+import AnalysisResult from '@/components/result/AnalysisResult.vue'
 
 const store = useAnalysisStore()
 

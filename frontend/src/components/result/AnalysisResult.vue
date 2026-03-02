@@ -3,9 +3,10 @@ import { ref } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
-import CellDetailPanel from './CellDetailPanel.vue'
-import ResultHeader from './result/ResultHeader.vue'
-import VideoPlayer from './result/VideoPlayer.vue'
+import { useToast } from '@/composables/useToast'
+import CellDetailPanel from '../CellDetailPanel.vue'
+import ResultHeader from './ResultHeader.vue'
+import VideoPlayer from './VideoPlayer.vue'
 
 const props = defineProps<{
   record: AnalysisRecord
@@ -13,6 +14,7 @@ const props = defineProps<{
 
 const store = useAnalysisStore()
 const api = useAnalysisApi()
+const { showToast } = useToast()
 
 const isExporting = ref(false)
 const exportError = ref<string | null>(null)
@@ -33,9 +35,11 @@ async function handleExport(format: 'csv' | 'json' = 'csv') {
     isExporting.value = true
     exportError.value = null
     await api.exportData(props.record.task_id, format)
+    showToast(`数据已成功导出为 ${format.toUpperCase()} 格式`, 'success')
   } catch (error: any) {
     exportError.value = error.message || '导出失败'
     console.error('Export error:', error)
+    showToast(error.message || '导出失败', 'error')
   } finally {
     isExporting.value = false
   }
@@ -47,9 +51,11 @@ async function handleDownloadVideo() {
     isExporting.value = true
     exportError.value = null
     await api.downloadVideo(props.record.task_id, props.record.video_name)
+    showToast('标注视频下载成功！', 'success')
   } catch (error: any) {
     exportError.value = error.message || '下载失败'
     console.error('Download error:', error)
+    showToast(error.message || '下载失败', 'error')
   } finally {
     isExporting.value = false
   }
