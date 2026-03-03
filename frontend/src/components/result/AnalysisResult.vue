@@ -7,6 +7,7 @@ import { useToast } from '@/composables/useToast'
 import CellDetailPanel from '../CellDetailPanel.vue'
 import ResultHeader from './ResultHeader.vue'
 import VideoPlayer from './VideoPlayer.vue'
+import CellIconAnalysis from './CellIconAnalysis.vue'
 
 const props = defineProps<{
   record: AnalysisRecord
@@ -163,28 +164,8 @@ function handleVideoError() {
         @video-error="handleVideoError"
       />
 
-      <!-- 3D轨迹图占位 -->
-      <div class="visualization-section">
-        <h3>细胞轨迹 3D 可视化</h3>
-        <div class="visualization-placeholder">
-          <svg
-            class="placeholder-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
-            ></path>
-          </svg>
-          <p>3D 轨迹图 (X-Y-Time)</p>
-          <p class="placeholder-hint">此处将展示细胞运动轨迹的三维可视化</p>
-        </div>
-      </div>
+      <!-- 细胞图标分析 -->
+      <CellIconAnalysis />
 
       <!-- 细胞列表占位 -->
       <div class="cell-list-section">
