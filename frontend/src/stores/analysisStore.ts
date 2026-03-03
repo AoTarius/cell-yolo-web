@@ -37,6 +37,13 @@ export interface CellFrameData {
 // 细胞完整数据（符合需求文档 6.3.1）
 export interface CellData {
   cell_id: string // 细胞ID
+  first_frame: number // 首次出现帧号
+  last_frame: number // 最后出现帧号
+  frame_count: number // 存活帧数
+  avg_width: number // 平均宽度
+  avg_height: number // 平均高度
+  avg_conf: number // 平均置信度
+  avg_velocity: number // 平均速度
   frames: CellFrameData[] // 每一帧的数据
 }
 
@@ -111,8 +118,20 @@ export const useAnalysisStore = defineStore('analysis', () => {
         prevY = y
       }
 
+      // 计算统计信息
+      const avgWidth = frames.reduce((sum, f) => sum + f.bounding_box.width, 0) / framesToGenerate
+      const avgHeight = frames.reduce((sum, f) => sum + f.bounding_box.height, 0) / framesToGenerate
+      const avgSpeed = frames.reduce((sum, f) => sum + f.velocity.speed, 0) / framesToGenerate
+
       return {
         cell_id: `Cell #${i + 1}`,
+        first_frame: firstFrame,
+        last_frame: lastFrame,
+        frame_count: framesToGenerate,
+        avg_width: Number(avgWidth.toFixed(2)),
+        avg_height: Number(avgHeight.toFixed(2)),
+        avg_conf: 0.95,
+        avg_velocity: Number(avgSpeed.toFixed(2)),
         frames,
       }
     })

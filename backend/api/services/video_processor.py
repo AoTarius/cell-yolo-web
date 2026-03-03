@@ -319,35 +319,54 @@ class VideoProcessor:
 
                 avg_velocity = sum(velocities) / len(velocities) if velocities else 0
 
-                # 生成帧数据列表
+                # 生成帧数据列表（符合前端 CellFrameData 结构）
                 frame_list = []
-                for frame in frames:
-                    # 计算该帧的速度（相对于前一帧）
-                    velocity = {'speed': 0.0}
-                    if len(frame_list) > 0:
-                        prev_center_x = frame_list[-1].get('center_x', 0)
-                        prev_center_y = frame_list[-1].get('center_y', 0)
-                        curr_center_x = frame['bb_left'] + frame['bb_width'] / 2
-                        curr_center_y = frame['bb_top'] + frame['bb_height'] / 2
-                        distance = ((curr_center_x - prev_center_x) ** 2 + (curr_center_y - prev_center_y) ** 2) ** 0.5
-                        frame_diff = frame['frame'] - frame_list[-1]['frame_number']
+                for i, frame in enumerate(frames):
+                    # 计算中心点、面积、速度等信息
+                    center_x = frame['bb_left'] + frame['bb_width'] / 2
+                    center_y = frame['bb_top'] + frame['bb_height'] / 2
+                    area = frame['bb_width'] * frame['bb_height']
+
+                    # 计算速度（相对于前一帧）
+                    vx = 0.0
+                    vy = 0.0
+                    speed = 0.0
+
+                    if i > 0:
+                        prev_frame = frame_list[-1]
+                        prev_center_x = prev_frame['position']['x']
+                        prev_center_y = prev_frame['position']['y']
+                        prev_frame_num = prev_frame['frame_number']
+                        curr_frame_num = frame['frame']
+                        frame_diff = curr_frame_num - prev_frame_num
+
                         if frame_diff > 0:
-                            velocity = {'speed': distance / frame_diff}
+                            vx = (center_x - prev_center_x) / frame_diff
+                            vy = (center_y - prev_center_y) / frame_diff
+                            speed = ((vx ** 2 + vy ** 2) ** 0.5)
 
                     frame_list.append({
                         'frame_number': frame['frame'],
-                        'bb_left': frame['bb_left'],
-                        'bb_top': frame['bb_top'],
-                        'bb_width': frame['bb_width'],
-                        'bb_height': frame['bb_height'],
-                        'conf': frame['conf'],
-                        'center_x': frame['bb_left'] + frame['bb_width'] / 2,
-                        'center_y': frame['bb_top'] + frame['bb_height'] / 2,
-                        'velocity': velocity
+                        'position': {
+                            'x': center_x,
+                            'y': center_y
+                        },
+                        'area': area,
+                        'velocity': {
+                            'vx': vx,
+                            'vy': vy,
+                            'speed': speed
+                        },
+                        'bounding_box': {
+                            'x': frame['bb_left'],
+                            'y': frame['bb_top'],
+                            'width': frame['bb_width'],
+                            'height': frame['bb_height']
+                        }
                     })
 
                 cells.append({
-                    'cell_id': track_id,
+                    'cell_id': str(track_id),  # 转换为字符串类型
                     'first_frame': first_frame,
                     'last_frame': last_frame,
                     'frame_count': total_frames_count,
