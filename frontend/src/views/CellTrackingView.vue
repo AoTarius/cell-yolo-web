@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
-import Sidebar from '@/components/Sidebar.vue'
-import UploadPanel from '@/components/UploadPanel.vue'
+import Sidebar from '@/components/common/Sidebar.vue'
+import UploadPanel from '@/components/upload/UploadPanel.vue'
 import ProgressView from '@/views/ProgressView.vue'
-import AnalysisResult from '@/components/result/AnalysisResult.vue'
+import AnalysisResult from '@/components/analysis/AnalysisResult.vue'
 
 const store = useAnalysisStore()
 

@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import { useToast } from '@/composables/useToast'
-import ConfirmDialog from './common/ConfirmDialog.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 const store = useAnalysisStore()
 const router = useRouter()

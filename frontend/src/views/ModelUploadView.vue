@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import Sidebar from '@/components/Sidebar.vue'
+import Sidebar from '@/components/common/Sidebar.vue'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()

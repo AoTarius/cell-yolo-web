@@ -14,8 +14,8 @@ function selectChart(chartNumber: number) {
 </script>
 
 <template>
-  <div class="cell-icon-analysis">
-    <h3>细胞图表分析</h3>
+  <div class="cell-population-chart">
+    <h3>细胞群体图表</h3>
     <div class="content-wrapper">
       <!-- 侧边栏按钮区域 -->
       <div class="sidebar">
@@ -78,11 +78,11 @@ function selectChart(chartNumber: number) {
 </template>
 
 <style scoped>
-.cell-icon-analysis {
+.cell-population-chart {
   margin-bottom: 2rem;
 }
 
-.cell-icon-analysis h3 {
+.cell-population-chart h3 {
   font-size: 1.25rem;
   font-weight: 600;
   color: #fff;
@@ -90,7 +90,7 @@ function selectChart(chartNumber: number) {
   transition: color 0.3s;
 }
 
-:global(:root:not(.dark)) .cell-icon-analysis h3 {
+:global(:root:not(.dark)) .cell-population-chart h3 {
   color: #333;
 }
 
