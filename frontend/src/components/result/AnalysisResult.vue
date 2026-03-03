@@ -197,6 +197,8 @@ function handleVideoError() {
                 <th>首次出现</th>
                 <th>最后出现</th>
                 <th>存活帧数</th>
+                <th>平均尺寸</th>
+                <th>平均置信度</th>
                 <th>平均速度</th>
                 <th>操作</th>
               </tr>
@@ -205,25 +207,18 @@ function handleVideoError() {
               <tr v-for="cell in record.result?.cells || []" :key="cell.cell_id">
                 <td>{{ cell.cell_id }}</td>
                 <td>
-                  第 {{ cell.frames.length > 0 ? cell.frames[0]?.frame_number ?? '-' : '-' }} 帧
+                  第 {{ cell.first_frame ?? '-' }} 帧
                 </td>
                 <td>
-                  第
-                  {{
-                    cell.frames.length > 0
-                      ? cell.frames[cell.frames.length - 1]?.frame_number ?? '-'
-                      : '-'
-                  }}
-                  帧
+                  第 {{ cell.last_frame ?? '-' }} 帧
                 </td>
-                <td>{{ cell.frames.length }} 帧</td>
+                <td>{{ cell.frame_count }} 帧</td>
+                <td>{{ cell.avg_width }}×{{ cell.avg_height }} px</td>
+                <td>{{ cell.avg_conf.toFixed(2) }}</td>
                 <td>
                   {{
-                    cell.frames.length > 0
-                      ? (
-                          cell.frames.reduce((sum, f) => sum + f.velocity.speed, 0) /
-                          cell.frames.length
-                        ).toFixed(2)
+                    cell.avg_velocity > 0
+                      ? cell.avg_velocity.toFixed(2)
                       : '0.00'
                   }}
                   px/frame

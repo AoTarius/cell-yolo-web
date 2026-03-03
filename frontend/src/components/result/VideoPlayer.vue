@@ -10,6 +10,10 @@ const props = defineProps<{
 const originalVideoRef = ref<HTMLVideoElement | null>(null)
 const annotatedVideoRef = ref<HTMLVideoElement | null>(null)
 
+// 视频加载错误状态
+const originalVideoError = ref(false)
+const annotatedVideoError = ref(false)
+
 // 计算视频帧率（基于总帧数和时长）
 function getVideoFps(): number {
   const totalFrames = props.record.result?.total_frames || 0
@@ -104,7 +108,12 @@ const emit = defineEmits<{
 }>()
 
 function handleVideoError(event: Event) {
-  console.error('Video playback error:', event)
+  const target = event.target as HTMLVideoElement
+  if (target === originalVideoRef.value) {
+    originalVideoError.value = true
+  } else if (target === annotatedVideoRef.value) {
+    annotatedVideoError.value = true
+  }
   emit('videoError')
 }
 </script>
@@ -129,6 +138,24 @@ function handleVideoError(event: Event) {
         >
           您的浏览器不支持视频播放
         </video>
+        <div v-if="originalVideoError" class="video-placeholder">
+          <svg
+            class="placeholder-icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+            ></path>
+          </svg>
+          <p class="placeholder-text">样例视频（演示数据）</p>
+          <p class="placeholder-hint">此为设计稿演示，无真实视频文件</p>
+        </div>
       </div>
     </div>
 
@@ -148,6 +175,24 @@ function handleVideoError(event: Event) {
         >
           您的浏览器不支持视频播放
         </video>
+        <div v-if="annotatedVideoError" class="video-placeholder">
+          <svg
+            class="placeholder-icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+            ></path>
+          </svg>
+          <p class="placeholder-text">样例视频（演示数据）</p>
+          <p class="placeholder-hint">此为设计稿演示，无真实视频文件</p>
+        </div>
       </div>
     </div>
   </div>
@@ -393,6 +438,74 @@ function handleVideoError(event: Event) {
   color: #fff;
   margin: 0 0 1rem 0;
   transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .video-section h3 {
+  color: #333;
+}
+
+.video-container {
+  position: relative;
+  background: #0d1117;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .video-container {
+  background: #f5f5f5;
+}
+
+.video-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 17, 23, 0.95);
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .video-placeholder {
+  background: rgba(245, 245, 245, 0.95);
+}
+
+.placeholder-icon {
+  width: 64px;
+  height: 64px;
+  color: #8b949e;
+  margin-bottom: 1rem;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .placeholder-icon {
+  color: #999;
+}
+
+.placeholder-text {
+  font-size: 1rem;
+  color: #c9d1d9;
+  margin: 0 0 0.5rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .placeholder-text {
+  color: #333;
+}
+
+.placeholder-hint {
+  font-size: 0.875rem;
+  color: #8b949e;
+  margin: 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .placeholder-hint {
+  color: #666;
 }
 
 :global(:root:not(.dark)) .video-section h3 {

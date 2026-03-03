@@ -8,9 +8,24 @@ import cv2
 import json
 import sys
 import subprocess
+import threading
 from pathlib import Path
 from typing import Callable, Optional, Dict, Any, Tuple
 from datetime import datetime
+
+
+# 线程标识辅助函数
+def get_thread_prefix(task_id: str = None):
+    """获取线程标识前缀，格式: [task_id|T线程ID] 或 [T线程ID]（带颜色）"""
+    thread_id = f"T{threading.current_thread().ident}"
+    # ANSI 颜色码
+    BLUE = '\033[94m'      # 亮蓝色
+    CYAN = '\033[96m'      # 青色
+    RESET = '\033[0m'      # 重置颜色
+
+    if task_id:
+        return f"{BLUE}[{task_id}|{CYAN}{thread_id}{BLUE}]{RESET}"
+    return f"{BLUE}[{CYAN}{thread_id}{BLUE}]{RESET}"
 
 # 添加模型路径到 sys.path
 # 从 web/backend/api/services/video_processor.py 到 backend 目录需要 3 个 parent
@@ -141,7 +156,8 @@ class VideoProcessor:
             '--output', str(output_dir),
             '--conf', str(conf),
             '--imgsz', str(imgsz),
-            '--fps', str(fps)
+            '--fps', str(fps),
+            '--task_id', task_id
         ]
 
         # 运行命令
@@ -156,7 +172,6 @@ class VideoProcessor:
         # 读取输出以更新进度
         for line in process.stdout:
             line = line.strip()
-            print(f"[YOLO] {line}")
 
             # 解析进度信息
             if line.startswith("PROGRESS:"):
@@ -169,6 +184,9 @@ class VideoProcessor:
 
                         current_frame, total_frames = map(int, frame_info.split("/"))
 
+                        # 输出进度信息
+                        print(f"{get_thread_prefix(task_id)} 处理帧 {current_frame}/{total_frames} ({percentage}%)")
+
                         if progress_callback:
                             progress_callback('processing', percentage, {
                                 'message': f'处理帧 {current_frame}/{total_frames}',
@@ -176,10 +194,10 @@ class VideoProcessor:
                                 'total_frames': total_frames
                             })
                 except (ValueError, IndexError) as e:
-                    print(f"解析进度信息失败: {e}")
-            elif progress_callback:
-                # 默认进度（兼容未修改的版本）
-                progress_callback('processing', 50, {'message': f'YOLO 处理中...'})
+                    print(f"{get_thread_prefix(task_id)} 解析进度信息失败: {e}")
+            else:
+                # 其他输出（如加载模型、初始化等）
+                print(f"{get_thread_prefix(task_id)} [YOLO] {line}")
 
         process.wait()
 
@@ -254,6 +272,92 @@ class VideoProcessor:
         track_ids = set(row['track_id'] for row in tracking_data) if tracking_data else set()
         cell_count = len(track_ids)
 
+        # 生成 cells 数据（从 tracking_data 中提取每个细胞的统计信息）
+        cells = []
+        if tracking_data:
+            # 按 track_id 分组
+            from collections import defaultdict
+            track_data = defaultdict(list)
+            for row in tracking_data:
+                track_data[row['track_id']].append(row)
+
+            # 为每个 track_id 生成统计信息
+            for track_id in sorted(track_data.keys()):
+                frames = track_data[track_id]
+                frames.sort(key=lambda x: x['frame'])  # 按帧号排序
+
+                # 计算统计信息
+                total_frames_count = len(frames)
+                first_frame = frames[0]['frame']
+                last_frame = frames[-1]['frame']
+
+                # 计算平均尺寸
+                avg_width = sum(f['bb_width'] for f in frames) / total_frames_count
+                avg_height = sum(f['bb_height'] for f in frames) / total_frames_count
+
+                # 计算平均置信度
+                avg_conf = sum(f['conf'] for f in frames) / total_frames_count
+
+                # 计算平均速度（需要计算相邻帧之间的距离）
+                velocities = []
+                for i in range(1, len(frames)):
+                    prev_frame = frames[i - 1]
+                    curr_frame = frames[i]
+
+                    # 计算中心点
+                    prev_center_x = prev_frame['bb_left'] + prev_frame['bb_width'] / 2
+                    prev_center_y = prev_frame['bb_top'] + prev_frame['bb_height'] / 2
+                    curr_center_x = curr_frame['bb_left'] + curr_frame['bb_width'] / 2
+                    curr_center_y = curr_frame['bb_top'] + curr_frame['bb_height'] / 2
+
+                    # 计算距离（像素）
+                    distance = ((curr_center_x - prev_center_x) ** 2 + (curr_center_y - prev_center_y) ** 2) ** 0.5
+
+                    # 计算速度（像素/帧）
+                    velocity = distance / (curr_frame['frame'] - prev_frame['frame'])
+                    velocities.append(velocity)
+
+                avg_velocity = sum(velocities) / len(velocities) if velocities else 0
+
+                # 生成帧数据列表
+                frame_list = []
+                for frame in frames:
+                    # 计算该帧的速度（相对于前一帧）
+                    velocity = {'speed': 0.0}
+                    if len(frame_list) > 0:
+                        prev_center_x = frame_list[-1].get('center_x', 0)
+                        prev_center_y = frame_list[-1].get('center_y', 0)
+                        curr_center_x = frame['bb_left'] + frame['bb_width'] / 2
+                        curr_center_y = frame['bb_top'] + frame['bb_height'] / 2
+                        distance = ((curr_center_x - prev_center_x) ** 2 + (curr_center_y - prev_center_y) ** 2) ** 0.5
+                        frame_diff = frame['frame'] - frame_list[-1]['frame_number']
+                        if frame_diff > 0:
+                            velocity = {'speed': distance / frame_diff}
+
+                    frame_list.append({
+                        'frame_number': frame['frame'],
+                        'bb_left': frame['bb_left'],
+                        'bb_top': frame['bb_top'],
+                        'bb_width': frame['bb_width'],
+                        'bb_height': frame['bb_height'],
+                        'conf': frame['conf'],
+                        'center_x': frame['bb_left'] + frame['bb_width'] / 2,
+                        'center_y': frame['bb_top'] + frame['bb_height'] / 2,
+                        'velocity': velocity
+                    })
+
+                cells.append({
+                    'cell_id': track_id,
+                    'first_frame': first_frame,
+                    'last_frame': last_frame,
+                    'frame_count': total_frames_count,
+                    'avg_width': round(avg_width, 2),
+                    'avg_height': round(avg_height, 2),
+                    'avg_conf': round(avg_conf, 2),
+                    'avg_velocity': round(avg_velocity, 2),
+                    'frames': frame_list
+                })
+
         # 获取标注视频路径
         annotated_video_path = output_dir / 'tracking_result.mp4'
         annotated_video_url = f"/api/video/{task_id}"
@@ -272,7 +376,8 @@ class VideoProcessor:
             'created_at': datetime.now().isoformat(),
             'summary': summary,
             'tracking_data': tracking_data,
-            'frame_labels': frame_labels
+            'frame_labels': frame_labels,
+            'cells': cells
         }
 
         # 保存 JSON 文件

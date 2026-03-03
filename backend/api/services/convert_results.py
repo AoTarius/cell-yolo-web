@@ -9,9 +9,24 @@ import os
 import sys
 import numpy as np
 import torch
+import threading
 from pathlib import Path
 from tqdm import tqdm
 from collections import deque
+
+
+# 线程标识辅助函数
+def get_thread_prefix(task_id: str = None):
+    """获取线程标识前缀，格式: [task_id|T线程ID] 或 [T线程ID]（带颜色）"""
+    thread_id = f"T{threading.current_thread().ident}"
+    # ANSI 颜色码
+    BLUE = '\033[94m'      # 亮蓝色
+    CYAN = '\033[96m'      # 青色
+    RESET = '\033[0m'      # 重置颜色
+
+    if task_id:
+        return f"{BLUE}[{task_id}|{CYAN}{thread_id}{BLUE}]{RESET}"
+    return f"{BLUE}[{CYAN}{thread_id}{BLUE}]{RESET}"
 
 # 添加路径
 # 从 services 目录到 web 目录需要 4 个 parent
@@ -146,15 +161,16 @@ def run_tracking_with_colored_masks(
     output_dir: str,
     conf: float = 0.25,
     imgsz: int = 1024,
-    fps: int = 10
+    fps: int = 10,
+    task_id: str = None
 ):
     """
     运行跟踪并按 track_id 着色掩模，同时输出 TXT 追踪结果
     """
-    print(f"加载模型: {model_path}")
+    print(f"{get_thread_prefix(task_id)} 加载模型: {model_path}")
     model = YOLO(model_path)
 
-    print(f"初始化 DeepSORT...")
+    print(f"{get_thread_prefix(task_id)} 初始化 DeepSORT...")
     deepsort = init_deepsort()
 
     source_path = Path(source_dir)
@@ -164,10 +180,10 @@ def run_tracking_with_colored_masks(
     # 获取所有图像
     image_files = sorted(source_path.glob("*.tif")) + sorted(source_path.glob("*.png")) + sorted(source_path.glob("*.jpg"))
     if not image_files:
-        print(f"未找到图像文件在: {source_dir}")
+        print(f"{get_thread_prefix(task_id)} 未找到图像文件在: {source_dir}")
         return
 
-    print(f"找到 {len(image_files)} 张图像")
+    print(f"{get_thread_prefix(task_id)} 找到 {len(image_files)} 张图像")
 
     frames = []
     # ========== TXT 输出相关 ==========
@@ -186,7 +202,7 @@ def run_tracking_with_colored_masks(
         # 读取原图
         img = cv2.imread(str(img_file))
         if img is None:
-            print(f"无法读取: {img_file}")
+            print(f"{get_thread_prefix(task_id)} 无法读取: {img_file}")
             continue
 
         im0 = img.copy()
@@ -307,7 +323,7 @@ def run_tracking_with_colored_masks(
         cv2.imwrite(str(save_path), im0)
         frames.append(im0.copy())
 
-    print(f"\nPNG 图像已保存到: {output_path}")
+    print(f"{get_thread_prefix(task_id)} PNG 图像已保存到: {output_path}")
 
     # ========== 保存 TXT 追踪结果 ==========
 
@@ -317,7 +333,7 @@ def run_tracking_with_colored_masks(
         f.write("# MOT format: frame, track_id, bb_left, bb_top, bb_width, bb_height, conf, class, visibility\n")
         for row in all_tracking_results:
             f.write(','.join(map(str, row)) + '\n')
-    print(f"MOT 格式追踪结果已保存到: {mot_path}  (共 {len(all_tracking_results)} 条记录)")
+    print(f"{get_thread_prefix(task_id)} MOT 格式追踪结果已保存到: {mot_path}  (共 {len(all_tracking_results)} 条记录)")
 
     # 2. 每帧单独的 label 文件: track_id class_id x_center y_center width height (归一化坐标)
     labels_dir = output_path / "labels"
@@ -327,7 +343,7 @@ def run_tracking_with_colored_masks(
         with open(label_file, 'w') as f:
             for row in rows:
                 f.write(' '.join(map(str, row)) + '\n')
-    print(f"每帧 label 文件已保存到: {labels_dir}/  (共 {len(per_frame_results)} 帧)")
+    print(f"{get_thread_prefix(task_id)} 每帧 label 文件已保存到: {labels_dir}/  (共 {len(per_frame_results)} 帧)")
 
     # 3. 轨迹统计摘要
     if all_tracking_results:
@@ -345,7 +361,7 @@ def run_tracking_with_colored_masks(
                 tid_rows = [r for r in all_tracking_results if r[1] == tid]
                 frames_appeared = [r[0] for r in tid_rows]
                 f.write(f"  {tid:5d}  |  {len(tid_rows):5d}   |    {min(frames_appeared):5d}    |    {max(frames_appeared):5d}\n")
-        print(f"轨迹统计摘要已保存到: {summary_path}")
+        print(f"{get_thread_prefix(task_id)} 轨迹统计摘要已保存到: {summary_path}")
 
     # ========== 生成视频 ==========
     if len(frames) > 1:
@@ -356,7 +372,7 @@ def run_tracking_with_colored_masks(
         for frame in frames:
             writer.write(frame)
         writer.release()
-        print(f"视频已保存到: {video_path}")
+        print(f"{get_thread_prefix(task_id)} 视频已保存到: {video_path}")
 
     # 清理轨迹数据
     data_deque.clear()
@@ -383,6 +399,8 @@ if __name__ == "__main__":
                         help="图像尺寸")
     parser.add_argument("--fps", type=int, default=10,
                         help="视频帧率")
+    parser.add_argument("--task_id", type=str, default=None,
+                        help="任务ID（用于日志标识）")
 
     args = parser.parse_args()
 
@@ -392,5 +410,6 @@ if __name__ == "__main__":
         output_dir=args.output,
         conf=args.conf,
         imgsz=args.imgsz,
-        fps=args.fps
+        fps=args.fps,
+        task_id=args.task_id
     )

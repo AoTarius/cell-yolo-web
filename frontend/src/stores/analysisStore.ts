@@ -123,13 +123,13 @@ export const useAnalysisStore = defineStore('analysis', () => {
     {
       task_id: 'demo_001',
       video_name: 'sample_video_1.mp4',
-      video_path: '/uploads/sample_video_1.mp4',
+      video_path: 'demo_001', // 使用 task_id 作为视频标识
       status: 'completed',
       progress: 100,
       start_time: new Date('2024-02-10 10:00:00'),
       end_time: new Date('2024-02-10 10:05:30'),
       result: {
-        output_video_path: '/outputs/sample_video_1_annotated.mp4',
+        output_video_path: 'demo_001', // 使用 task_id 作为视频标识
         cell_count: 25,
         total_frames: 120,
         video_duration: 4.0, // 120帧 / 30fps
@@ -140,13 +140,13 @@ export const useAnalysisStore = defineStore('analysis', () => {
     {
       task_id: 'demo_002',
       video_name: 'sample_video_2.mp4',
-      video_path: '/uploads/sample_video_2.mp4',
+      video_path: 'demo_002', // 使用 task_id 作为视频标识
       status: 'completed',
       progress: 100,
       start_time: new Date('2024-02-10 14:30:00'),
       end_time: new Date('2024-02-10 14:38:20'),
       result: {
-        output_video_path: '/outputs/sample_video_2_annotated.mp4',
+        output_video_path: 'demo_002', // 使用 task_id 作为视频标识
         cell_count: 18,
         total_frames: 200,
         video_duration: 6.67, // 200帧 / 30fps
@@ -236,7 +236,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
             total_frames: task.total_frames || 0,
             video_duration: task.video_duration || 0,
             model_name: task.model_name || 'best_split.pt',
-            cells: [],
+            cells: task.cells || [],
           }
 
           return {
@@ -456,7 +456,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
                 total_frames: result.total_frames || 0,
                 video_duration: result.video_duration || 0,
                 model_name: result.model_name || 'best_split.pt',
-                cells: [], // 可以根据 frame_labels 解析出细胞数据
+                cells: result.cells || [],
               }
               record.end_time = new Date()
             }

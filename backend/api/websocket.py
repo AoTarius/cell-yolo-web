@@ -5,6 +5,7 @@ WebSocket 消费者
 
 import json
 import asyncio
+import threading
 from typing import Dict, Set
 from threading import Thread, Lock
 
@@ -15,6 +16,20 @@ from channels.layers import get_channel_layer
 # 全局 WebSocket 连接管理
 connections: Dict[str, Set[AsyncWebsocketConsumer]] = {}
 connections_lock = Lock()
+
+
+# 线程标识辅助函数
+def get_thread_prefix(task_id: str = None):
+    """获取线程标识前缀，格式: [task_id|T线程ID] 或 [T线程ID]（带颜色）"""
+    thread_id = f"T{threading.current_thread().ident}"
+    # ANSI 颜色码
+    BLUE = '\033[94m'      # 亮蓝色
+    CYAN = '\033[96m'      # 青色
+    RESET = '\033[0m'      # 重置颜色
+
+    if task_id:
+        return f"{BLUE}[{task_id}|{CYAN}{thread_id}{BLUE}]{RESET}"
+    return f"{BLUE}[{CYAN}{thread_id}{BLUE}]{RESET}"
 
 
 class TaskProgressConsumer(AsyncWebsocketConsumer):
@@ -34,7 +49,7 @@ class TaskProgressConsumer(AsyncWebsocketConsumer):
                     connections[self.task_id] = set()
                 connections[self.task_id].add(self)
 
-        print(f"WebSocket connected for task: {self.task_id}")
+        print(f"{get_thread_prefix(self.task_id)} WebSocket connected")
 
     async def disconnect(self, close_code):
         """连接断开"""
@@ -45,7 +60,7 @@ class TaskProgressConsumer(AsyncWebsocketConsumer):
                     if not connections[self.task_id]:
                         del connections[self.task_id]
 
-        print(f"WebSocket disconnected for task: {self.task_id}")
+        print(f"{get_thread_prefix(self.task_id)} WebSocket disconnected")
 
     async def receive(self, text_data):
         """接收消息"""
@@ -119,7 +134,7 @@ def broadcast_progress(task_id: str, stage: str, progress: int, data: dict = Non
             try:
                 await connection.send(json.dumps(message))
             except Exception as e:
-                print(f"发送消息失败: {e}")
+                print(f"{get_thread_prefix(task_id)} 发送消息失败: {e}")
 
     # 在事件循环中执行
     try:

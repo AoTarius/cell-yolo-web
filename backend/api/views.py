@@ -20,6 +20,20 @@ task_status = {}
 task_lock = threading.Lock()
 
 
+# 线程标识辅助函数
+def get_thread_prefix(task_id: str = None):
+    """获取线程标识前缀，格式: [task_id|T线程ID] 或 [T线程ID]（带颜色）"""
+    thread_id = f"T{threading.current_thread().ident}"
+    # ANSI 颜色码
+    BLUE = '\033[94m'      # 亮蓝色
+    CYAN = '\033[96m'      # 青色
+    RESET = '\033[0m'      # 重置颜色
+
+    if task_id:
+        return f"{BLUE}[{task_id}|{CYAN}{thread_id}{BLUE}]{RESET}"
+    return f"{BLUE}[{CYAN}{thread_id}{BLUE}]{RESET}"
+
+
 @api_view(['GET'])
 def test_api(request):
     return Response({
@@ -158,11 +172,14 @@ class ProcessTaskView(APIView):
 
     def _process_video(self, task_id: str, conf: float, imgsz: int, fps: int, model_name: str):
         """后台处理视频"""
+        print(f"{get_thread_prefix(task_id)} 开始处理任务")
         try:
             # 获取任务信息
             with task_lock:
                 task_info = task_status[task_id]
                 video_path = task_info['video_path']
+
+            print(f"{get_thread_prefix(task_id)} 获取视频处理器")
 
             # 获取视频处理器
             processor = get_video_processor()
@@ -177,6 +194,8 @@ class ProcessTaskView(APIView):
                         task_status[task_id]['current_frame'] = data.get('current_frame')
                         task_status[task_id]['total_frames'] = data.get('total_frames')
 
+            print(f"{get_thread_prefix(task_id)} 开始处理视频，参数: conf={conf}, imgsz={imgsz}, fps={fps}, model={model_name}")
+
             # 处理视频
             result = processor.process_video(
                 video_path,
@@ -188,6 +207,8 @@ class ProcessTaskView(APIView):
                 progress_callback=progress_callback
             )
 
+            print(f"{get_thread_prefix(task_id)} 视频处理完成")
+
             # 更新任务状态
             with task_lock:
                 if task_id in task_status:
@@ -198,6 +219,7 @@ class ProcessTaskView(APIView):
 
         except Exception as e:
             # 更新任务状态为失败
+            print(f"{get_thread_prefix(task_id)} 处理失败: {str(e)}")
             with task_lock:
                 if task_id in task_status:
                     task_status[task_id]['status'] = 'failed'
@@ -336,7 +358,7 @@ class TaskListView(APIView):
                                 task_status[task_id]['status'] = 'completed'
                         tasks.append(result)
                 except Exception as e:
-                    print(f"读取任务 {task_id} 结果失败: {e}")
+                    print(f"{get_thread_prefix()} 读取任务 {task_id} 结果失败: {e}")
                     continue
             else:
                 # 检查任务是否真的在处理中
@@ -464,15 +486,15 @@ class ExportDataView(APIView):
             import csv
             import io
 
-            print(f"[DEBUG] ExportDataView called with task_id: {task_id}")
-            print(f"[DEBUG] Request query params: {dict(request.GET)}")
+            print(f"{get_thread_prefix(task_id)} ExportDataView called")
+            print(f"{get_thread_prefix(task_id)} Request query params: {dict(request.GET)}")
 
             # 获取导出格式（使用 export_format 避免与 DRF 的 format 参数冲突）
             format_type = request.GET.get('export_format', 'csv').lower()
-            print(f"[DEBUG] Format type: {format_type}")
-            
+            print(f"{get_thread_prefix(task_id)} Format type: {format_type}")
+
             if format_type not in ['csv', 'json']:
-                print(f"[DEBUG] Invalid format: {format_type}")
+                print(f"{get_thread_prefix(task_id)} Invalid format: {format_type}")
                 return Response(
                     {'error': '不支持的格式，支持的格式: csv, json'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -481,11 +503,11 @@ class ExportDataView(APIView):
             # 读取 JSON 结果
             media_root = Path(settings.MEDIA_ROOT)
             json_path = media_root / 'tasks' / task_id / 'result.json'
-            print(f"[DEBUG] JSON path: {json_path}")
-            print(f"[DEBUG] JSON exists: {json_path.exists()}")
+            print(f"{get_thread_prefix(task_id)} JSON path: {json_path}")
+            print(f"{get_thread_prefix(task_id)} JSON exists: {json_path.exists()}")
 
             if not json_path.exists():
-                print(f"[DEBUG] JSON file not found at: {json_path}")
+                print(f"{get_thread_prefix(task_id)} JSON file not found at: {json_path}")
                 return Response(
                     {'error': '结果不存在'},
                     status=status.HTTP_404_NOT_FOUND
@@ -493,10 +515,10 @@ class ExportDataView(APIView):
 
             with open(json_path, 'r', encoding='utf-8') as f:
                 result = json.load(f)
-            print(f"[DEBUG] Loaded result with {len(result.get('tracking_data', []))} tracking records")
+            print(f"{get_thread_prefix(task_id)} Loaded result with {len(result.get('tracking_data', []))} tracking records")
 
             if format_type == 'json':
-                print(f"[DEBUG] Exporting JSON")
+                print(f"{get_thread_prefix(task_id)} Exporting JSON")
                 # 导出 JSON
                 response = Response(
                     json.dumps(result, ensure_ascii=False, indent=2),
@@ -506,7 +528,7 @@ class ExportDataView(APIView):
                 return response
 
             elif format_type == 'csv':
-                print(f"[DEBUG] Exporting CSV")
+                print(f"{get_thread_prefix(task_id)} Exporting CSV")
                 # 导出 CSV
                 output = io.StringIO()
                 writer = csv.writer(output)
@@ -539,13 +561,13 @@ class ExportDataView(APIView):
                         record.get('visibility', '')
                     ])
                     rows_written += 1
-                
-                print(f"[DEBUG] CSV rows written: {rows_written}")
+
+                print(f"{get_thread_prefix(task_id)} CSV rows written: {rows_written}")
 
                 # 创建响应
                 csv_content = output.getvalue()
-                print(f"[DEBUG] CSV content length: {len(csv_content)}")
-                
+                print(f"{get_thread_prefix(task_id)} CSV content length: {len(csv_content)}")
+
                 response = HttpResponse(
                     csv_content,
                     content_type='text/csv; charset=utf-8'
@@ -554,9 +576,9 @@ class ExportDataView(APIView):
                 return response
 
         except Exception as e:
-            print(f"[DEBUG] Export error: {str(e)}")
+            print(f"{get_thread_prefix(task_id)} Export error: {str(e)}")
             import traceback
-            print(f"[DEBUG] Traceback: {traceback.format_exc()}")
+            print(f"{get_thread_prefix(task_id)} Traceback: {traceback.format_exc()}")
             return Response(
                 {'error': f'导出失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
