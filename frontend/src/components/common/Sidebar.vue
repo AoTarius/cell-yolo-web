@@ -189,6 +189,26 @@ function handleModelUpload() {
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
+
+    <!-- 底部状态栏 -->
+    <div class="sidebar-footer">
+      <button class="btn-theme-toggle" title="切换主题">
+        <svg
+          class="theme-icon sun-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+          ></path>
+        </svg>
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -481,5 +501,44 @@ function handleModelUpload() {
 
 .sidebar-content::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* 底部状态栏 */
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.btn-theme-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-theme-toggle:hover {
+  background: #3d3d3d;
+  border-color: #555;
+  transform: scale(1.05);
+}
+
+.btn-theme-toggle:active {
+  transform: scale(0.95);
+}
+
+.theme-icon {
+  width: 24px;
+  height: 24px;
+  transition: all 0.3s ease;
 }
 </style>
