@@ -1,15 +1,31 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 
 const props = defineProps<{
   record: AnalysisRecord
   isExporting: boolean
+  viewMode: 'overall' | 'detail'
 }>()
 
 const emit = defineEmits<{
   export: [format: 'csv' | 'json']
   download: []
+  viewModeChange: [mode: 'overall' | 'detail']
 }>()
+
+// 滑块位置计算
+const sliderStyle = computed(() => {
+  return {
+    left: props.viewMode === 'overall' ? '0' : '50%'
+  }
+})
+
+// 切换视图模式
+function toggleViewMode() {
+  const newMode = props.viewMode === 'overall' ? 'detail' : 'overall'
+  emit('viewModeChange', newMode)
+}
 </script>
 
 <template>
@@ -38,6 +54,13 @@ const emit = defineEmits<{
       </div>
     </div>
     <div class="header-actions">
+      <button class="view-toggle" @click="toggleViewMode">
+        <div class="view-toggle-slider" :style="sliderStyle"></div>
+        <span class="view-toggle-item" :class="{ active: props.viewMode === 'overall' }">整体</span>
+        <span class="view-toggle-divider"></span>
+        <span class="view-toggle-item" :class="{ active: props.viewMode === 'detail' }">细化</span>
+      </button>
+      <div class="header-actions-spacer"></div>
       <button class="btn-action" @click="emit('export', 'csv')" :disabled="isExporting">
         <svg
           fill="none"
@@ -170,9 +193,93 @@ const emit = defineEmits<{
   height: 12px;
 }
 
+.view-toggle {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 0.25rem;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  overflow: hidden;
+  width: 140px;
+  margin-right:5vh;
+}
+
+:global(:root:not(.dark)) .view-toggle {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.view-toggle-slider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: #1f6feb;
+  border-radius: 4px;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+  width: 50%;
+}
+
+:global(:root:not(.dark)) .view-toggle-slider {
+  background: #2196f3;
+}
+
+.view-toggle-item {
+  padding: 0.375rem 0;
+  font-size: 0.875rem;
+  color: #8b949e;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  text-align: center;
+}
+
+:global(:root:not(.dark)) .view-toggle-item {
+  color: #666;
+}
+
+.view-toggle-item.active {
+  color: #fff;
+  font-weight: 500;
+}
+
+:global(:root:not(.dark)) .view-toggle-item.active {
+  color: #fff;
+}
+
+.view-toggle-item:hover {
+  color: #c9d1d9;
+}
+
+:global(:root:not(.dark)) .view-toggle-item:hover {
+  color: #555;
+}
+
+.view-toggle-divider {
+  width: 1px;
+  height: 16px;
+  background: #30363d;
+  margin: 0 0.25rem;
+}
+
+:global(:root:not(.dark)) .view-toggle-divider {
+  background: #ccc;
+}
+
 .header-actions {
   display: flex;
   gap: 0.75rem;
+}
+
+.header-actions-spacer {
+  flex: 2;
+  min-width: 0;
 }
 
 .btn-action {
@@ -187,6 +294,9 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: fit-content;
+  margin: 0 auto;
+  white-space: nowrap;
 }
 
 :global(:root:not(.dark)) .btn-action {

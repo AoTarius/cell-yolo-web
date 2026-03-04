@@ -103,7 +103,7 @@ function handleModelUpload() {
         新建分析
       </button>
       <button class="btn-upload-model" @click="handleModelUpload">
-        <span class="icon">📤</span>
+        <span class="icon">+</span>
         上传模型
       </button>
     </div>

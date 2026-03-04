@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 
 const props = defineProps<{
@@ -13,6 +13,18 @@ const annotatedVideoRef = ref<HTMLVideoElement | null>(null)
 // 视频加载错误状态
 const originalVideoError = ref(false)
 const annotatedVideoError = ref(false)
+
+// 监听record.task_id变化，切换记录卡时重置播放速率
+watch(() => props.record.task_id, () => {
+  currentPlaybackRate.value = 1
+  showRateMenu.value = false
+  if (originalVideoRef.value) {
+    originalVideoRef.value.playbackRate = 1
+  }
+  if (annotatedVideoRef.value) {
+    annotatedVideoRef.value.playbackRate = 1
+  }
+})
 
 // 计算视频帧率（基于总帧数和时长）
 function getVideoFps(): number {
@@ -30,6 +42,28 @@ const videoLayoutMode = ref<'side-by-side' | 'stacked'>('side-by-side')
 // 切换视频布局模式
 function toggleVideoLayout() {
   videoLayoutMode.value = videoLayoutMode.value === 'side-by-side' ? 'stacked' : 'side-by-side'
+}
+
+// 播放速率选项
+const playbackRates = [0.25, 0.5, 0.75, 1, 1.5, 2]
+const currentPlaybackRate = ref(1)
+const showRateMenu = ref(false)
+
+// 切换速率菜单显示
+function toggleRateMenu() {
+  showRateMenu.value = !showRateMenu.value
+}
+
+// 设置播放速率
+function setPlaybackRate(rate: number) {
+  currentPlaybackRate.value = rate
+  if (originalVideoRef.value) {
+    originalVideoRef.value.playbackRate = rate
+  }
+  if (annotatedVideoRef.value) {
+    annotatedVideoRef.value.playbackRate = rate
+  }
+  showRateMenu.value = false
 }
 
 // 同时播放功能
@@ -301,6 +335,50 @@ function handleVideoError(event: Event) {
       </svg>
       回到开始并暂停
     </button>
+    <div class="rate-control-wrapper">
+      <button class="btn-control" @click="toggleRateMenu">
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          ></path>
+        </svg>
+        调整速率: {{ currentPlaybackRate }}x
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+          class="dropdown-arrow"
+          :class="{ 'dropdown-arrow-open': showRateMenu }"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 9l-7 7-7-7"
+          ></path>
+        </svg>
+      </button>
+      <div v-if="showRateMenu" class="rate-dropdown-menu">
+        <button
+          v-for="rate in playbackRates"
+          :key="rate"
+          class="rate-option"
+          :class="{ 'rate-option-active': rate === currentPlaybackRate }"
+          @click="setPlaybackRate(rate)"
+        >
+          {{ rate }}x
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -535,5 +613,82 @@ function handleVideoError(event: Event) {
 .videos-wrapper-stacked .video-player {
   max-height: 500px;
   object-fit: contain;
+}
+
+/* 速率控制下拉菜单 */
+.rate-control-wrapper {
+  position: relative;
+}
+
+.rate-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  min-width: 120px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.5rem 0;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+:global(:root:not(.dark)) .rate-dropdown-menu {
+  background: #fff;
+  border-color: #ccc;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.rate-option {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #c9d1d9;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+:global(:root:not(.dark)) .rate-option {
+  color: #333;
+}
+
+.rate-option:hover {
+  background: #30363d;
+}
+
+:global(:root:not(.dark)) .rate-option:hover {
+  background: #f5f5f5;
+}
+
+.rate-option-active {
+  background: #1f6feb;
+  color: #fff;
+}
+
+:global(:root:not(.dark)) .rate-option-active {
+  background: #2196f3;
+  color: #fff;
+}
+
+.rate-option-active:hover {
+  background: #388bfd;
+}
+
+:global(:root:not(.dark)) .rate-option-active:hover {
+  background: #1976d2;
+}
+
+.dropdown-arrow {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s;
+  margin-left: auto;
+}
+
+.dropdown-arrow-open {
+  transform: rotate(180deg);
 }
 </style>
