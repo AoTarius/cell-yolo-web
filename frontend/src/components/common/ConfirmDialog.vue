@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { computed, watch } from 'vue'
 
 interface Props {
@@ -112,7 +113,7 @@ watch(() => props.visible, (visible) => {
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--bg-overlay);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -122,10 +123,10 @@ watch(() => props.visible, (visible) => {
 }
 
 .dialog-container {
-  background: #1e1e1e;
-  border: 1px solid #333;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-secondary);
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-xl);
   max-width: 440px;
   width: 100%;
   overflow: hidden;
@@ -133,9 +134,9 @@ watch(() => props.visible, (visible) => {
 }
 
 :global(:root:not(.dark)) .dialog-container {
-  background: #fff;
-  border-color: #e0e0e0;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+  box-shadow: var(--shadow-xl-light);
 }
 
 .dialog-header {
@@ -143,28 +144,28 @@ watch(() => props.visible, (visible) => {
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 :global(:root:not(.dark)) .dialog-header {
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color-light);
 }
 
 .dialog-header h3 {
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 :global(:root:not(.dark)) .dialog-header h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  color: #8b949e;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
@@ -175,17 +176,17 @@ watch(() => props.visible, (visible) => {
 }
 
 :global(:root:not(.dark)) .btn-close {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .btn-close:hover {
-  background: rgba(139, 148, 158, 0.1);
-  color: #c9d1d9;
+  background: var(--alpha-hover);
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .btn-close:hover {
-  background: rgba(102, 102, 102, 0.1);
-  color: #333;
+  background: var(--alpha-hover-light);
+  color: var(--text-primary-light);
 }
 
 .btn-close svg {
@@ -216,18 +217,18 @@ watch(() => props.visible, (visible) => {
 }
 
 .icon-danger {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
+  background: var(--danger-bg);
+  color: var(--danger-light);
 }
 
 .icon-warning {
-  background: rgba(251, 191, 36, 0.1);
-  color: #fbbf24;
+  background: var(--warning-bg);
+  color: var(--warning-light);
 }
 
 .icon-info {
-  background: rgba(88, 166, 255, 0.1);
-  color: #58a6ff;
+  background: var(--alpha-focus);
+  color: var(--accent-blue);
 }
 
 .dialog-message {
@@ -235,11 +236,11 @@ watch(() => props.visible, (visible) => {
   margin: 0;
   font-size: 1rem;
   line-height: 1.5;
-  color: #c9d1d9;
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .dialog-message {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .dialog-footer {
@@ -247,11 +248,11 @@ watch(() => props.visible, (visible) => {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
 }
 
 :global(:root:not(.dark)) .dialog-footer {
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border-color-light);
 }
 
 .btn {
@@ -266,50 +267,50 @@ watch(() => props.visible, (visible) => {
 
 .btn-cancel {
   background: transparent;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 :global(:root:not(.dark)) .btn-cancel {
-  color: #333;
-  border-color: #ccc;
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
 }
 
 .btn-cancel:hover {
-  background: rgba(48, 54, 61, 0.1);
-  border-color: #8b949e;
+  background: var(--alpha-hover);
+  border-color: var(--text-muted);
 }
 
 :global(:root:not(.dark)) .btn-cancel:hover {
-  background: rgba(204, 204, 204, 0.1);
-  border-color: #999;
+  background: var(--alpha-hover-light);
+  border-color: var(--text-disabled-light);
 }
 
 .btn-danger {
-  background: #dc2626;
+  background: var(--danger);
   color: white;
 }
 
 .btn-danger:hover {
-  background: #ef4444;
+  background: var(--danger-hover);
 }
 
 .btn-warning {
-  background: #d97706;
+  background: var(--warning);
   color: white;
 }
 
 .btn-warning:hover {
-  background: #f59e0b;
+  background: var(--warning-hover);
 }
 
 .btn-info {
-  background: #007acc;
+  background: var(--accent-info);
   color: white;
 }
 
 .btn-info:hover {
-  background: #005a9e;
+  background: var(--accent-info-hover);
 }
 
 /* 动画效果 */

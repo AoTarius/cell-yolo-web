@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from './ConfirmDialog.vue'
+import '@/assets/styles/colors.css'
 
 const store = useAnalysisStore()
 const router = useRouter()
@@ -17,6 +18,36 @@ onMounted(async () => {
 
 const showDeleteDialog = ref(false)
 const taskToDelete = ref<string | null>(null)
+
+// 主题切换
+const isDark = ref(true)
+
+// 初始化主题
+onMounted(async () => {
+  await store.loadHistoryTasks()
+  
+  // 从localStorage读取主题设置
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme === 'light') {
+    isDark.value = false
+    document.documentElement.classList.remove('dark')
+  } else {
+    isDark.value = true
+    document.documentElement.classList.add('dark')
+  }
+})
+
+// 切换主题
+function toggleTheme() {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('theme', 'light')
+  }
+}
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -192,15 +223,23 @@ function handleModelUpload() {
 
     <!-- 底部状态栏 -->
     <div class="sidebar-footer">
-      <button class="btn-theme-toggle" title="切换主题">
+      <button class="btn-theme-toggle" title="切换主题" @click="toggleTheme">
         <svg
-          class="theme-icon sun-icon"
+          class="theme-icon"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
+            v-if="!isDark"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M20.354 15.354A9 9 0 018.646 3.646 9 9 0 0012.708-3.646 9 9 0 01-2.708 3.646M3 12a9 9 0 0112.708-3.646M9 21V9a9 9 0 00-9-9m9 12a9 9 0 01-9-9m6 2a7 7 0 01-7 7m0 0v-3m0 0a7 7 0 017 7m0 0h3m0 0v-3"
+          ></path>
+          <path
+            v-else
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
@@ -216,30 +255,30 @@ function handleModelUpload() {
 .sidebar {
   width: 320px;
   height: 100vh;
-  background: #1e1e1e;
-  color: #e0e0e0;
+  background: var(--bg-sidebar);
+  color: var(--text-secondary);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #333;
+  border-right: 1px solid var(--border-secondary);
 }
 
 .sidebar-header {
   padding: 1.5rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .sidebar-header h1 {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0 0 1rem 0;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .btn-new-analysis {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #007acc;
-  color: white;
+  background: var(--accent-info);
+  color: var(--text-primary);
   border: none;
   border-radius: 6px;
   font-size: 0.95rem;
@@ -253,7 +292,7 @@ function handleModelUpload() {
 }
 
 .btn-new-analysis:hover {
-  background: #005a9e;
+  background: var(--accent-info-hover);
 }
 
 .btn-new-analysis .icon {
@@ -264,8 +303,8 @@ function handleModelUpload() {
 .btn-upload-model {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #fb923c;
-  color: white;
+  background: var(--btn-upload);
+  color: var(--text-primary);
   border: none;
   border-radius: 6px;
   font-size: 0.95rem;
@@ -280,7 +319,7 @@ function handleModelUpload() {
 }
 
 .btn-upload-model:hover {
-  background: #f97316;
+  background: var(--btn-upload-hover);
 }
 
 .btn-upload-model .icon {
@@ -298,7 +337,7 @@ function handleModelUpload() {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #888;
+  color: var(--text-muted);
   margin: 0 0 0.75rem 0.5rem;
   font-weight: 600;
 }
@@ -311,7 +350,7 @@ function handleModelUpload() {
 
 .record-item {
   padding: 0.75rem;
-  background: #252525;
+  background: var(--bg-record);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -319,18 +358,18 @@ function handleModelUpload() {
 }
 
 .record-item:hover {
-  background: #2d2d2d;
-  border-color: #444;
+  background: var(--bg-record-hover);
+  border-color: var(--border-tertiary);
 }
 
 .record-item.active {
-  background: #264f78;
-  border-color: #007acc;
+  background: var(--bg-record-active);
+  border-color: var(--accent-blue);
 }
 
 .record-item.active .btn-delete:hover:not(:disabled) {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
+  background: var(--alpha-hover);
+  color: var(--danger-light);
 }
 
 .record-header {
@@ -343,7 +382,7 @@ function handleModelUpload() {
 .record-name {
   font-weight: 500;
   font-size: 0.95rem;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .status-indicator {
@@ -360,13 +399,13 @@ function handleModelUpload() {
 }
 
 .dot-completed {
-  background: #4ade80;
-  box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+  background: var(--success-light);
+  box-shadow: var(--shadow-success);
 }
 
 .dot-processing {
-  background: #fb923c;
-  box-shadow: 0 0 6px rgba(251, 146, 60, 0.5);
+  background: var(--warning);
+  box-shadow: var(--shadow-warning);
   animation: pulse-orange 2s ease-in-out infinite;
 }
 
@@ -387,13 +426,13 @@ function handleModelUpload() {
 }
 
 .status-completed {
-  background: #0e5a2b;
-  color: #4ade80;
+  background: var(--success-bg);
+  color: var(--success-light);
 }
 
 .status-processing {
-  background: #5a4a0e;
-  color: #fb923c;
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .record-video {
@@ -407,7 +446,7 @@ function handleModelUpload() {
 
 .record-time {
   font-size: 0.75rem;
-  color: #777;
+  color: var(--text-disabled);
 }
 
 .model-badge {
@@ -415,29 +454,31 @@ function handleModelUpload() {
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 0.6rem;
-  background: #1f6feb15;
-  border: 1px solid #1f6feb40;
+  background: var(--alpha-badge);
+  border: 1px solid var(--alpha-badge-hover);
   border-radius: 4px;
-  color: #58a6ff;
+  color: var(--accent-blue);
   font-size: 0.75rem;
   font-weight: 500;
   transition: all 0.2s;
 }
 
 :global(:root:not(.dark)) .model-badge {
-  background: #2196f315;
-  border-color: #2196f340;
-  color: #2196f3;
+  background: var(--alpha-badge);
+  border-color: var(--alpha-badge-hover);
+  color: var(--accent-blue);
 }
 
 .model-badge:hover {
-  background: #1f6feb25;
-  border-color: #1f6feb60;
+  background: var(--alpha-badge-hover);
+  border-color: var(--alpha-badge-hover);
+  filter: brightness(1.1);
 }
 
 :global(:root:not(.dark)) .model-badge:hover {
-  background: #2196f325;
-  border-color: #2196f360;
+  background: var(--alpha-badge-hover);
+  border-color: var(--alpha-badge-hover);
+  filter: brightness(1.1);
 }
 
 .model-icon {
@@ -455,7 +496,7 @@ function handleModelUpload() {
 .btn-delete {
   background: transparent;
   border: none;
-  color: #777;
+  color: var(--text-disabled);
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
@@ -471,8 +512,8 @@ function handleModelUpload() {
 }
 
 .btn-delete:hover:not(:disabled) {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
+  background: var(--alpha-hover);
+  color: var(--danger-light);
 }
 
 .btn-delete:disabled {
@@ -491,11 +532,11 @@ function handleModelUpload() {
 }
 
 .sidebar-content::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--bg-sidebar);
 }
 
 .sidebar-content::-webkit-scrollbar-thumb {
-  background: #444;
+  background: var(--border-tertiary);
   border-radius: 4px;
 }
 
@@ -506,7 +547,7 @@ function handleModelUpload() {
 /* 底部状态栏 */
 .sidebar-footer {
   padding: 1rem;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-secondary);
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -516,9 +557,9 @@ function handleModelUpload() {
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #2d2d2d;
-  border: 1px solid #444;
-  color: #e0e0e0;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -528,7 +569,7 @@ function handleModelUpload() {
 
 .btn-theme-toggle:hover {
   background: #3d3d3d;
-  border-color: #555;
+  border-color: var(--border-hover);
   transform: scale(1.05);
 }
 

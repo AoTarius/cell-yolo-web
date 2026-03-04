@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { computed } from 'vue'
 import type { CellData } from '@/stores/analysisStore'
 
@@ -198,14 +199,14 @@ const avgArea = computed(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #0d1117;
+  background: var(--bg-main);
   overflow: hidden;
 }
 
 .detail-header {
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid #21262d;
-  background: #161b22;
+  border-bottom: 1px solid var(--bg-input);
+  background: var(--bg-card);
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -213,9 +214,9 @@ const avgArea = computed(() => {
 
 .btn-back {
   padding: 0.5rem 1rem;
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.875rem;
   cursor: pointer;
@@ -226,8 +227,8 @@ const avgArea = computed(() => {
 }
 
 .btn-back:hover {
-  background: #30363d;
-  border-color: #8b949e;
+  background: var(--border-color);
+  border-color: var(--text-muted);
 }
 
 .btn-back svg {
@@ -238,7 +239,7 @@ const avgArea = computed(() => {
 .detail-header h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -261,7 +262,7 @@ const avgArea = computed(() => {
 .stats-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
 }
 
@@ -272,8 +273,8 @@ const avgArea = computed(() => {
 }
 
 .info-item {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1rem;
   display: flex;
@@ -283,47 +284,47 @@ const avgArea = computed(() => {
 
 .info-label {
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-muted);
 }
 
 .info-value {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .trajectory-placeholder,
 .stats-placeholder {
-  background: #161b22;
-  border: 2px dashed #30363d;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
   border-radius: 8px;
   padding: 4rem 2rem;
   text-align: center;
-  color: #8b949e;
+  color: var(--text-muted);
 }
 
 .placeholder-icon {
   width: 64px;
   height: 64px;
   margin: 0 auto 1rem;
-  color: #30363d;
+  color: var(--border-color);
 }
 
 .trajectory-placeholder p,
 .stats-placeholder p {
   margin: 0.5rem 0;
   font-size: 1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
 }
 
 .placeholder-hint {
   font-size: 0.875rem !important;
-  color: #6e7681 !important;
+  color: var(--text-disabled) !important;
 }
 
 .table-wrapper {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -334,24 +335,24 @@ const avgArea = computed(() => {
 }
 
 .position-table th {
-  background: #21262d;
+  background: var(--bg-input);
   padding: 0.75rem 1rem;
   text-align: left;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #8b949e;
-  border-bottom: 1px solid #30363d;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .position-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #21262d;
-  color: #c9d1d9;
+  border-bottom: 1px solid var(--bg-input);
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
 .position-table tbody tr:hover {
-  background: #0d1117;
+  background: var(--bg-main);
 }
 
 /* 滚动条样式 */
@@ -360,15 +361,15 @@ const avgArea = computed(() => {
 }
 
 .detail-content::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: var(--bg-main);
 }
 
 .detail-content::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: var(--border-color);
   border-radius: 5px;
 }
 
 .detail-content::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: var(--border-hover);
 }
 </style>

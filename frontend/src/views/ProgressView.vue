@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { computed, onMounted, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnalysisStore } from '@/stores/analysisStore'
@@ -237,8 +238,8 @@ function goBack() {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: #0d1117;
-  color: #c9d1d9;
+  background: var(--bg-main);
+  color: var(--text-secondary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
 }
@@ -265,8 +266,8 @@ function goBack() {
 }
 
 :global(:root:not(.dark)) .progress-view {
-  background: #f5f5f5;
-  color: #333;
+  background: var(--bg-main-light);
+  color: var(--text-primary-light);
 }
 
 .progress-container {
@@ -288,42 +289,42 @@ function goBack() {
 .error-icon {
   width: 80px;
   height: 80px;
-  color: #f87171;
+  color: var(--danger-light);
   margin-bottom: 1.5rem;
 }
 
 .error-container h2 {
   font-size: 1.75rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .error-container h2 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .error-message {
   font-size: 1rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .error-message {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .error-hint {
   font-size: 0.875rem;
-  color: #6e7681;
+  color: var(--text-disabled);
   margin: 0 0 2rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .error-hint {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .progress-header {
@@ -333,24 +334,24 @@ function goBack() {
 .progress-header h2 {
   font-size: 1.75rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .progress-header h2 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .video-name {
-  color: #8b949e;
+  color: var(--text-muted);
   font-size: 1rem;
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .video-name {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .progress-section {
@@ -359,7 +360,7 @@ function goBack() {
 
 .progress-bar {
   height: 12px;
-  background: #21262d;
+  background: var(--bg-input);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 0.75rem;
@@ -367,12 +368,12 @@ function goBack() {
 }
 
 :global(:root:not(.dark)) .progress-bar {
-  background: #e0e0e0;
+  background: var(--bg-input-light);
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #238636, #2ea043);
+  background: linear-gradient(90deg, var(--success), var(--success-hover));
   transition: width 0.3s ease;
   border-radius: 6px;
 }
@@ -380,18 +381,18 @@ function goBack() {
 .progress-text {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #238636;
+  color: var(--success);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .progress-text {
-  color: #4caf50;
+  color: var(--success-light);
 }
 
 .status-info {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -400,8 +401,8 @@ function goBack() {
 }
 
 :global(:root:not(.dark)) .status-info {
-  background: #fff;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 .status-item {
@@ -412,38 +413,38 @@ function goBack() {
 }
 
 .status-item:not(:last-child) {
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--bg-input);
   transition: border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .status-item:not(:last-child) {
-  border-bottom-color: #e0e0e0;
+  border-bottom-color: var(--border-color-light);
 }
 
 .status-label {
-  color: #8b949e;
+  color: var(--text-muted);
   font-size: 0.9rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .status-label {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .status-value {
-  color: #c9d1d9;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .status-value {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .steps-section {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -452,8 +453,8 @@ function goBack() {
 }
 
 :global(:root:not(.dark)) .steps-section {
-  background: #fff;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 .step-item {
@@ -465,12 +466,12 @@ function goBack() {
 }
 
 .step-item:not(:last-child) {
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--bg-input);
   transition: border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .step-item:not(:last-child) {
-  border-bottom-color: #e0e0e0;
+  border-bottom-color: var(--border-color-light);
 }
 
 .step-item.active {
@@ -482,14 +483,14 @@ function goBack() {
 }
 
 .step-item.current .step-icon {
-  color: #fb923c;
+  color: var(--warning);
 }
 
 .step-icon {
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  color: #6e7681;
+  color: var(--text-disabled);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -497,7 +498,7 @@ function goBack() {
 }
 
 :global(:root:not(.dark)) .step-icon {
-  color: #ccc;
+  color: var(--border-color-light);
 }
 
 .step-icon svg {
@@ -512,24 +513,24 @@ function goBack() {
 .step-title {
   font-size: 1rem;
   font-weight: 500;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin: 0 0 0.25rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .step-title {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .step-desc {
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .step-desc {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .hint-section {
@@ -537,18 +538,18 @@ function goBack() {
 }
 
 .hint-text {
-  color: #6e7681;
+  color: var(--text-disabled);
   font-size: 0.875rem;
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .hint-text {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .hint-subtext {
-  color: #238636;
+  color: var(--success);
   font-size: 0.875rem;
   font-weight: 500;
   margin: 0;
@@ -556,7 +557,7 @@ function goBack() {
 }
 
 :global(:root:not(.dark)) .hint-subtext {
-  color: #4caf50;
+  color: var(--success-light);
 }
 
 .hint-actions {
@@ -578,41 +579,41 @@ function goBack() {
 }
 
 .btn-primary {
-  background: #238636;
+  background: var(--success);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #2ea043;
+  background: var(--success-hover);
 }
 
 :global(:root:not(.dark)) .btn-primary {
-  background: #4caf50;
+  background: var(--success-light);
 }
 
 :global(:root:not(.dark)) .btn-primary:hover {
-  background: #66bb6a;
+  background: var(--success-hover);
 }
 
 .btn-secondary {
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover {
-  background: #30363d;
-  border-color: #484f58;
+  background: var(--border-color);
+  border-color: var(--border-hover);
 }
 
 :global(:root:not(.dark)) .btn-secondary {
-  background: #f5f5f5;
-  color: #333;
-  border-color: #ccc;
+  background: var(--bg-hover);
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
 }
 
 :global(:root:not(.dark)) .btn-secondary:hover {
-  background: #e0e0e0;
-  border-color: #bbb;
+  background: var(--bg-input-light);
+  border-color: var(--border-hover-light);
 }
 </style>

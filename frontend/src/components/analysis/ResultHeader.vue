@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { computed } from 'vue'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 
@@ -116,39 +117,39 @@ function toggleViewMode() {
 <style scoped>
 .result-header {
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid #21262d;
+  border-bottom: 1px solid var(--bg-input);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #161b22;
+  background: var(--bg-card);
   transition: border-color 0.3s, background 0.3s;
 }
 
 :global(:root:not(.dark)) .result-header {
-  border-bottom-color: #e0e0e0;
-  background: #fff;
+  border-bottom-color: var(--border-color-light);
+  background: var(--bg-card-light);
 }
 
 .result-header h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 0.25rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .result-header h2 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .header-subtitle {
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .header-subtitle {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .header-info {
@@ -163,29 +164,29 @@ function toggleViewMode() {
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 0.6rem;
-  background: #1f6feb15;
-  border: 1px solid #1f6feb40;
+  background: var(--alpha-badge);
+  border: 1px solid var(--alpha-badge-hover);
   border-radius: 4px;
-  color: #58a6ff;
+  color: var(--accent-blue);
   font-size: 0.75rem;
   font-weight: 500;
   transition: all 0.2s;
 }
 
 :global(:root:not(.dark)) .model-badge {
-  background: #2196f315;
-  border-color: #2196f340;
-  color: #2196f3;
+  background: var(--alpha-badge);
+  border-color: var(--alpha-badge-hover);
+  color: var(--accent-blue);
 }
 
 .model-badge:hover {
-  background: #1f6feb25;
-  border-color: #1f6feb60;
+  background: var(--alpha-badge-hover);
+  border-color: var(--alpha-badge-hover);
 }
 
 :global(:root:not(.dark)) .model-badge:hover {
-  background: #2196f325;
-  border-color: #2196f360;
+  background: var(--alpha-badge-hover);
+  border-color: var(--alpha-badge-hover);
 }
 
 .model-icon {
@@ -198,8 +199,8 @@ function toggleViewMode() {
   align-items: center;
   position: relative;
   padding: 0.25rem;
-  background: #21262d;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
@@ -209,8 +210,8 @@ function toggleViewMode() {
 }
 
 :global(:root:not(.dark)) .view-toggle {
-  background: #f5f5f5;
-  border-color: #ccc;
+  background: var(--bg-hover);
+  border-color: var(--border-color-light);
 }
 
 .view-toggle-slider {
@@ -218,7 +219,7 @@ function toggleViewMode() {
   top: 0;
   bottom: 0;
   left: 0;
-  background: #1f6feb;
+  background: var(--accent-blue);
   border-radius: 4px;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
@@ -226,13 +227,13 @@ function toggleViewMode() {
 }
 
 :global(:root:not(.dark)) .view-toggle-slider {
-  background: #2196f3;
+  background: var(--accent-blue);
 }
 
 .view-toggle-item {
   padding: 0.375rem 0;
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-muted);
   transition: all 0.2s;
   position: relative;
   z-index: 1;
@@ -241,7 +242,7 @@ function toggleViewMode() {
 }
 
 :global(:root:not(.dark)) .view-toggle-item {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .view-toggle-item.active {
@@ -254,22 +255,22 @@ function toggleViewMode() {
 }
 
 .view-toggle-item:hover {
-  color: #c9d1d9;
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .view-toggle-item:hover {
-  color: #555;
+  color: var(--text-disabled-light);
 }
 
 .view-toggle-divider {
   width: 1px;
   height: 16px;
-  background: #30363d;
+  background: var(--border-color);
   margin: 0 0.25rem;
 }
 
 :global(:root:not(.dark)) .view-toggle-divider {
-  background: #ccc;
+  background: var(--border-color-light);
 }
 
 .header-actions {
@@ -284,9 +285,9 @@ function toggleViewMode() {
 
 .btn-action {
   padding: 0.5rem 1rem;
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.875rem;
   cursor: pointer;
@@ -300,19 +301,19 @@ function toggleViewMode() {
 }
 
 :global(:root:not(.dark)) .btn-action {
-  background: #fff;
-  color: #333;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
 }
 
 .btn-action:hover {
-  background: #30363d;
-  border-color: #8b949e;
+  background: var(--border-color);
+  border-color: var(--text-muted);
 }
 
 :global(:root:not(.dark)) .btn-action:hover {
-  background: #f5f5f5;
-  border-color: #999;
+  background: var(--bg-hover);
+  border-color: var(--text-disabled-light);
 }
 
 .btn-action svg {

@@ -5,6 +5,7 @@ import Sidebar from '@/components/common/Sidebar.vue'
 import UploadPanel from '@/components/upload/UploadPanel.vue'
 import ProgressView from '@/views/ProgressView.vue'
 import AnalysisResult from '@/components/analysis/AnalysisResult.vue'
+import '@/assets/styles/colors.css'
 
 const store = useAnalysisStore()
 
@@ -79,8 +80,8 @@ const currentPanel = computed(() => {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: #0d1117;
-  color: #c9d1d9;
+  background: var(--bg-main);
+  color: var(--text-secondary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
   position: fixed;
@@ -110,20 +111,20 @@ const currentPanel = computed(() => {
 .welcome-icon {
   width: 120px;
   height: 120px;
-  color: #30363d;
+  color: var(--text-icon);
   margin: 0 auto 2rem;
 }
 
 .welcome-content h1 {
   font-size: 2rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
 }
 
 .welcome-content p {
   font-size: 1.1rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.6;
 }

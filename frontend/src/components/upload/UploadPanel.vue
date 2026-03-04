@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { ref, computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
@@ -408,12 +409,12 @@ function getStageLabel(stage: string): string {
   overflow: hidden;
   align-items: center;
   justify-content: center;
-  background: #0d1117;
+  background: var(--bg-main);
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-panel {
-  background: #f5f5f5;
+  background: var(--bg-main-light);
 }
 
 .upload-container {
@@ -427,59 +428,59 @@ function getStageLabel(stage: string): string {
 h2 {
   font-size: 2rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
   text-align: center;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) h2 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .upload-description {
   text-align: center;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0 0 2rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-description {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .upload-area {
-  border: 2px dashed #30363d;
+  border: 2px dashed var(--border-color);
   border-radius: 12px;
   padding: 3rem 2rem;
-  background: #161b22;
+  background: var(--bg-card);
   transition: all 0.3s;
   position: relative;
 }
 
 :global(:root:not(.dark)) .upload-area {
-  border-color: #ccc;
-  background: #fff;
+  border-color: var(--border-color-light);
+  background: var(--bg-card-light);
 }
 
 .upload-area.dragging {
-  border-color: #1f6feb;
-  background: #0d1520;
+  border-color: var(--accent-blue);
+  background: var(--upload-hover-bg);
 }
 
 :global(:root:not(.dark)) .upload-area.dragging {
-  border-color: #2196f3;
-  background: #e3f2fd;
+  border-color: var(--accent-blue);
+  background: var(--upload-hover-bg);
 }
 
 .upload-area.has-file {
-  border-color: #238636;
-  background: #0d1520;
+  border-color: var(--success);
+  background: var(--upload-hover-bg);
 }
 
 :global(:root:not(.dark)) .upload-area.has-file {
-  border-color: #4caf50;
-  background: #e8f5e9;
+  border-color: var(--success-light);
+  background: var(--upload-success-bg);
 }
 
 .upload-placeholder {
@@ -491,35 +492,35 @@ h2 {
 .upload-icon {
   width: 64px;
   height: 64px;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0 auto 1rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-icon {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .upload-text {
   font-size: 1.1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-text {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .upload-hint {
   font-size: 0.9rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-hint {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .file-input {
@@ -537,19 +538,19 @@ h2 {
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #0d1117;
+  background: var(--bg-main);
   border-radius: 8px;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .file-info {
-  background: #f5f5f5;
+  background: var(--bg-main-light);
 }
 
 .file-icon {
   width: 48px;
   height: 48px;
-  color: #58a6ff;
+  color: var(--accent-blue);
   flex-shrink: 0;
 }
 
@@ -560,7 +561,7 @@ h2 {
 
 .file-name {
   font-size: 1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin: 0 0 0.25rem 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -569,18 +570,18 @@ h2 {
 }
 
 :global(:root:not(.dark)) .file-name {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .file-size {
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .file-size {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .btn-clear {
@@ -588,9 +589,9 @@ h2 {
   height: 32px;
   padding: 0;
   background: transparent;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #8b949e;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
@@ -600,20 +601,20 @@ h2 {
 }
 
 :global(:root:not(.dark)) .btn-clear {
-  border-color: #ccc;
-  color: #666;
+  border-color: var(--border-color-light);
+  color: var(--text-muted-light);
 }
 
 .btn-clear:hover {
-  background: #21262d;
-  border-color: #8b949e;
-  color: #c9d1d9;
+  background: var(--bg-input);
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .btn-clear:hover {
-  background: #e0e0e0;
-  border-color: #999;
-  color: #333;
+  background: var(--bg-input-light);
+  border-color: var(--text-disabled-light);
+  color: var(--text-primary-light);
 }
 
 .btn-clear svg {
@@ -628,22 +629,22 @@ h2 {
 .model-label {
   display: block;
   font-size: 0.9rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .model-label {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .model-select {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
@@ -655,31 +656,31 @@ h2 {
 }
 
 :global(:root:not(.dark)) .model-select {
-  background: #fff;
-  border-color: #ccc;
-  color: #333;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+  color: var(--text-primary-light);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
 }
 
 .model-select:hover:not(:disabled) {
-  background: #21262d;
-  border-color: #58a6ff;
+  background: var(--bg-input);
+  border-color: var(--accent-blue);
 }
 
 :global(:root:not(.dark)) .model-select:hover:not(:disabled) {
-  background: #f5f5f5;
-  border-color: #2196f3;
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
 }
 
 .model-select:focus {
   outline: none;
-  border-color: #58a6ff;
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--alpha-focus);
 }
 
 :global(:root:not(.dark)) .model-select:focus {
-  border-color: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--alpha-focus);
 }
 
 .model-select:disabled {
@@ -690,18 +691,18 @@ h2 {
 .model-warning {
   margin-top: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(220, 38, 38, 0.1);
-  border-left: 3px solid #dc2626;
-  color: #f87171;
+  background: var(--danger-bg);
+  border-left: 3px solid var(--danger);
+  color: var(--danger-light);
   font-size: 0.8rem;
   border-radius: 4px;
   transition: all 0.3s;
 }
 
 :global(:root:not(.dark)) .model-warning {
-  background: rgba(239, 68, 68, 0.1);
-  border-left-color: #ef4444;
-  color: #ef4444;
+  background: var(--danger-bg);
+  border-left-color: var(--danger-hover);
+  color: var(--danger-hover);
 }
 
 .advanced-settings {
@@ -711,10 +712,10 @@ h2 {
 .btn-toggle-settings {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -725,19 +726,19 @@ h2 {
 }
 
 :global(:root:not(.dark)) .btn-toggle-settings {
-  background: #fff;
-  border-color: #ccc;
-  color: #333;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+  color: var(--text-primary-light);
 }
 
 .btn-toggle-settings:hover {
-  background: #21262d;
-  border-color: #58a6ff;
+  background: var(--bg-input);
+  border-color: var(--accent-blue);
 }
 
 :global(:root:not(.dark)) .btn-toggle-settings:hover {
-  background: #f5f5f5;
-  border-color: #2196f3;
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
 }
 
 .chevron-icon {
@@ -753,16 +754,16 @@ h2 {
 .settings-content {
   margin-top: 1rem;
   padding: 1.5rem;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   animation: slideDown 0.3s ease;
   transition: background 0.3s, border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .settings-content {
-  background: #fff;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 @keyframes slideDown {
@@ -789,28 +790,28 @@ h2 {
   align-items: center;
   justify-content: space-between;
   font-size: 0.9rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .setting-label {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .setting-value {
-  background: #21262d;
+  background: var(--bg-input);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
   font-size: 0.8rem;
-  color: #58a6ff;
+  color: var(--accent-blue);
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .setting-value {
-  background: #e0e0e0;
-  color: #2196f3;
+  background: var(--bg-input-light);
+  color: var(--accent-blue);
 }
 
 .setting-slider {
@@ -818,7 +819,7 @@ h2 {
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: #21262d;
+  background: var(--bg-input);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -826,7 +827,7 @@ h2 {
 }
 
 :global(:root:not(.dark)) .setting-slider {
-  background: #e0e0e0;
+  background: var(--bg-input-light);
 }
 
 .setting-slider::-webkit-slider-thumb {
@@ -834,20 +835,20 @@ h2 {
   appearance: none;
   width: 18px;
   height: 18px;
-  background: #58a6ff;
+  background: var(--accent-blue);
   border-radius: 50%;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .setting-slider::-webkit-slider-thumb:hover {
-  background: #1f6feb;
+  background: var(--accent-blue-hover);
 }
 
 .setting-slider::-moz-range-thumb {
   width: 18px;
   height: 18px;
-  background: #58a6ff;
+  background: var(--accent-blue);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -855,16 +856,16 @@ h2 {
 }
 
 .setting-slider::-moz-range-thumb:hover {
-  background: #1f6feb;
+  background: var(--accent-blue-hover);
 }
 
 .setting-select {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #21262d;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -877,65 +878,65 @@ h2 {
 }
 
 :global(:root:not(.dark)) .setting-select {
-  background: #fff;
-  border-color: #ccc;
-  color: #333;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+  color: var(--text-primary-light);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
 }
 
 .setting-select:hover {
-  background: #30363d;
-  border-color: #58a6ff;
-  color: #fff;
+  background: var(--border-color);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
 }
 
 :global(:root:not(.dark)) .setting-select:hover {
-  background: #f5f5f5;
-  border-color: #2196f3;
-  color: #333;
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+  color: var(--text-primary-light);
 }
 
 .setting-select:focus {
   outline: none;
-  border-color: #58a6ff;
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
-  background: #30363d;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--alpha-focus);
+  background: var(--border-color);
 }
 
 :global(:root:not(.dark)) .setting-select:focus {
-  border-color: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-  background: #fff;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--alpha-focus);
+  background: var(--bg-card-light);
 }
 
 .setting-hint {
   font-size: 0.8rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin-top: 0.5rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .setting-hint {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .upload-progress {
   margin-top: 1.5rem;
   padding: 1rem;
-  background: #161b22;
+  background: var(--bg-card);
   border-radius: 8px;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color);
   transition: background 0.3s, border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-progress {
-  background: #fff;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 .progress-bar {
   height: 8px;
-  background: #21262d;
+  background: var(--bg-input);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -943,18 +944,18 @@ h2 {
 }
 
 :global(:root:not(.dark)) .progress-bar {
-  background: #e0e0e0;
+  background: var(--bg-input-light);
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #238636, #2ea043);
+  background: linear-gradient(90deg, var(--success), var(--success-hover));
   transition: width 0.3s ease;
 }
 
 .progress-text {
   font-size: 0.875rem;
-  color: #58a6ff;
+  color: var(--accent-blue);
   font-weight: 600;
   margin: 0 0 0.5rem 0;
   text-align: center;
@@ -962,7 +963,7 @@ h2 {
 }
 
 :global(:root:not(.dark)) .progress-text {
-  color: #2196f3;
+  color: var(--accent-blue);
 }
 
 .progress-details {
@@ -971,44 +972,44 @@ h2 {
 
 .progress-message {
   font-size: 0.8rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0 0 0.25rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .progress-message {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .progress-frame-info {
   font-size: 0.8rem;
-  color: #58a6ff;
+  color: var(--accent-blue);
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .progress-frame-info {
-  color: #2196f3;
+  color: var(--accent-blue);
 }
 
 .upload-error {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
-  background: #1c1917;
-  border: 1px solid #dc2626;
+  background: var(--bg-toast);
+  border: 1px solid var(--danger);
   border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #f87171;
+  color: var(--danger-light);
   font-size: 0.875rem;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-error {
-  background: #fff5f5;
-  border-color: #ef4444;
+  background: var(--upload-error-bg);
+  border-color: var(--danger-hover);
 }
 
 .upload-error svg {
@@ -1023,7 +1024,7 @@ h2 {
   padding: 0;
   background: transparent;
   border: none;
-  color: #f87171;
+  color: var(--danger-light);
   cursor: pointer;
   margin-left: auto;
   display: flex;
@@ -1034,7 +1035,7 @@ h2 {
 }
 
 .btn-close-error:hover {
-  background: rgba(248, 113, 113, 0.1);
+  background: var(--danger-bg);
 }
 
 .btn-close-error svg {
@@ -1049,7 +1050,7 @@ h2 {
 
 .btn-submit {
   padding: 0.75rem 2rem;
-  background: #238636;
+  background: var(--success);
   color: white;
   border: none;
   border-radius: 6px;
@@ -1060,17 +1061,17 @@ h2 {
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #2ea043;
+  background: var(--success-hover);
 }
 
 .btn-submit:disabled {
-  background: #21262d;
-  color: #6e7681;
+  background: var(--bg-input);
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 
 :global(:root:not(.dark)) .btn-submit:disabled {
-  background: #e0e0e0;
-  color: #999;
+  background: var(--bg-input-light);
+  color: var(--text-disabled-light);
 }
 </style>

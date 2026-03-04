@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -316,8 +317,8 @@ function formatFileSize(bytes: number): string {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: #0d1117;
-  color: #c9d1d9;
+  background: var(--bg-main);
+  color: var(--text-secondary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
   position: fixed;
@@ -349,58 +350,58 @@ function formatFileSize(bytes: number): string {
 .upload-header h1 {
   font-size: 2rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-header h1 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .subtitle {
-  color: #8b949e;
+  color: var(--text-muted);
   font-size: 1rem;
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .subtitle {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .upload-area {
-  border: 2px dashed #30363d;
+  border: 2px dashed var(--border-color);
   border-radius: 12px;
   padding: 3rem 2rem;
-  background: #161b22;
+  background: var(--bg-card);
   transition: all 0.3s;
   position: relative;
 }
 
 :global(:root:not(.dark)) .upload-area {
-  border-color: #ccc;
-  background: #fff;
+  border-color: var(--border-color-light);
+  background: var(--bg-card-light);
 }
 
 .upload-area:hover {
-  border-color: #1f6feb;
-  background: #0d1520;
+  border-color: var(--accent-blue);
+  background: var(--upload-hover-bg);
 }
 
 :global(:root:not(.dark)) .upload-area:hover {
-  border-color: #2196f3;
-  background: #e3f2fd;
+  border-color: var(--accent-blue);
+  background: var(--upload-hover-bg);
 }
 
 .upload-area.has-file {
-  border-color: #238636;
-  background: #0d1520;
+  border-color: var(--success);
+  background: var(--upload-hover-bg);
 }
 
 :global(:root:not(.dark)) .upload-area.has-file {
-  border-color: #4caf50;
-  background: #e8f5e9;
+  border-color: var(--success-light);
+  background: var(--upload-success-bg);
 }
 
 .upload-placeholder {
@@ -412,35 +413,35 @@ function formatFileSize(bytes: number): string {
 .upload-icon {
   width: 64px;
   height: 64px;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0 auto 1rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-icon {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .upload-text {
   font-size: 1.1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-text {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .upload-hint {
   font-size: 0.9rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .upload-hint {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .file-input {
@@ -458,19 +459,19 @@ function formatFileSize(bytes: number): string {
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #0d1117;
+  background: var(--bg-main);
   border-radius: 8px;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .file-info {
-  background: #f5f5f5;
+  background: var(--bg-main-light);
 }
 
 .file-icon {
   width: 48px;
   height: 48px;
-  color: #58a6ff;
+  color: var(--accent-blue);
   flex-shrink: 0;
 }
 
@@ -481,7 +482,7 @@ function formatFileSize(bytes: number): string {
 
 .file-name {
   font-size: 1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin: 0 0 0.25rem 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -490,18 +491,18 @@ function formatFileSize(bytes: number): string {
 }
 
 :global(:root:not(.dark)) .file-name {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .file-size {
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .file-size {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .btn-clear {
@@ -509,9 +510,9 @@ function formatFileSize(bytes: number): string {
   height: 32px;
   padding: 0;
   background: transparent;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #8b949e;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
@@ -521,20 +522,20 @@ function formatFileSize(bytes: number): string {
 }
 
 :global(:root:not(.dark)) .btn-clear {
-  border-color: #ccc;
-  color: #666;
+  border-color: var(--border-color-light);
+  color: var(--text-muted-light);
 }
 
 .btn-clear:hover {
-  background: #21262d;
-  border-color: #8b949e;
-  color: #c9d1d9;
+  background: var(--bg-input);
+  border-color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .btn-clear:hover {
-  background: #e0e0e0;
-  border-color: #999;
-  color: #333;
+  background: var(--bg-input-light);
+  border-color: var(--text-disabled-light);
+  color: var(--text-primary-light);
 }
 
 .btn-clear svg {
@@ -549,7 +550,7 @@ function formatFileSize(bytes: number): string {
 
 .btn-submit {
   padding: 0.75rem 2rem;
-  background: #fb923c;
+  background: var(--btn-upload);
   color: white;
   border: none;
   border-radius: 6px;
@@ -560,37 +561,37 @@ function formatFileSize(bytes: number): string {
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #f97316;
+  background: var(--btn-upload-hover);
 }
 
 .btn-submit:disabled {
-  background: #21262d;
-  color: #6e7681;
+  background: var(--bg-input);
+  color: var(--text-disabled);
   cursor: not-allowed;
 }
 
 :global(:root:not(.dark)) .btn-submit:disabled {
-  background: #e0e0e0;
-  color: #999;
+  background: var(--bg-input-light);
+  color: var(--text-disabled-light);
 }
 
 .error-message {
   margin-top: 1rem;
   padding: 0.75rem 1rem;
-  background: #1c1917;
-  border: 1px solid #dc2626;
+  background: var(--bg-toast);
+  border: 1px solid var(--danger);
   border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #f87171;
+  color: var(--danger-light);
   font-size: 0.875rem;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .error-message {
-  background: #fff5f5;
-  border-color: #ef4444;
+  background: var(--upload-error-bg);
+  border-color: var(--danger-hover);
 }
 
 .error-message svg {
@@ -605,7 +606,7 @@ function formatFileSize(bytes: number): string {
   padding: 0;
   background: transparent;
   border: none;
-  color: #f87171;
+  color: var(--danger-light);
   cursor: pointer;
   margin-left: auto;
   display: flex;
@@ -616,7 +617,7 @@ function formatFileSize(bytes: number): string {
 }
 
 .btn-close-error:hover {
-  background: rgba(248, 113, 113, 0.1);
+  background: var(--danger-bg);
 }
 
 .btn-close-error svg {

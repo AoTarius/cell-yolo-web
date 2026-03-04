@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { ref, watch, computed } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import type { AnalysisRecord } from '@/stores/analysisStore'
@@ -401,13 +402,13 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #0d1117;
+  background: var(--bg-main);
   overflow: hidden;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .result-panel {
-  background: #f5f5f5;
+  background: var(--bg-main-light);
 }
 
 .result-content {
@@ -424,8 +425,8 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 }
 
 .stat-card {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1.25rem;
   display: flex;
@@ -435,26 +436,26 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 }
 
 :global(:root:not(.dark)) .stat-card {
-  background: #fff;
-  border-color: #e0e0e0;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 .stat-icon {
   width: 48px;
   height: 48px;
-  background: #1f6feb20;
+  background: var(--alpha-badge);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #58a6ff;
+  color: var(--accent-blue);
   flex-shrink: 0;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .stat-icon {
-  background: #2196f320;
-  color: #2196f3;
+  background: var(--alpha-badge);
+  color: var(--accent-blue);
 }
 
 .stat-icon svg {
@@ -468,25 +469,25 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 
 .stat-label {
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0 0 0.25rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .stat-label {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .stat-value {
   font-size: 1.75rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .stat-value {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .visualization-section,
@@ -498,62 +499,62 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 .cell-list-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .visualization-section h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .visualization-placeholder {
-  background: #161b22;
-  border: 2px dashed #30363d;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
   border-radius: 8px;
   padding: 4rem 2rem;
   text-align: center;
-  color: #8b949e;
+  color: var(--text-muted);
   transition: background 0.3s, border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .visualization-placeholder {
-  background: #fff;
-  border-color: #ccc;
-  color: #666;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+  color: var(--text-muted-light);
 }
 
 .placeholder-icon {
   width: 64px;
   height: 64px;
   margin: 0 auto 1rem;
-  color: #30363d;
+  color: var(--border-color);
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .placeholder-icon {
-  color: #ccc;
+  color: var(--border-color-light);
 }
 
 .visualization-placeholder p {
   margin: 0.5rem 0;
   font-size: 1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .visualization-placeholder p {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .placeholder-hint {
   font-size: 0.875rem !important;
-  color: #6e7681 !important;
+  color: var(--text-disabled) !important;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .placeholder-hint {
-  color: #999 !important;
+  color: var(--text-disabled-light) !important;
 }
 
 /* 滚动条样式 */
@@ -562,31 +563,31 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 }
 
 .result-content::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: var(--bg-main);
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .result-content::-webkit-scrollbar-track {
-  background: #f5f5f5;
+  background: var(--bg-main-light);
 }
 
 .result-content::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: var(--border-color);
   border-radius: 5px;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .result-content::-webkit-scrollbar-thumb {
-  background: #ccc;
+  background: var(--border-color-light);
 }
 
 .result-content::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: var(--border-hover);
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .result-content::-webkit-scrollbar-thumb:hover {
-  background: #bbb;
+  background: var(--border-hover-light);
 }
 
 /* 细化视图样式 */
@@ -615,13 +616,13 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 .detail-video-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-video-section h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .detail-video-wrapper {
@@ -634,8 +635,8 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 
 .detail-video-container {
   flex: 1;
-  background: #0d1117;
-  border: 1px solid #30363d;
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
   transition: border-color 0.3s;
@@ -643,8 +644,8 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 }
 
 :global(:root:not(.dark)) .detail-video-container {
-  background: #f5f5f5;
-  border-color: #ccc;
+  background: var(--bg-main-light);
+  border-color: var(--border-color-light);
 }
 
 .detail-video-player {
@@ -657,23 +658,23 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   transition: background 0.3s, border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-video-controls {
-  background: #fff;
-  border-color: #e0e0e0;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 .detail-btn-control {
   flex: 1;
   padding: 0.5rem 0.75rem;
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.8125rem;
   cursor: pointer;
@@ -686,19 +687,19 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 }
 
 :global(:root:not(.dark)) .detail-btn-control {
-  background: #fff;
-  color: #333;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
 }
 
 .detail-btn-control:hover {
-  background: #30363d;
-  border-color: #8b949e;
+  background: var(--border-color);
+  border-color: var(--text-muted);
 }
 
 :global(:root:not(.dark)) .detail-btn-control:hover {
-  background: #f5f5f5;
-  border-color: #999;
+  background: var(--bg-main-light);
+  border-color: var(--text-disabled-light);
 }
 
 .detail-btn-control svg {
@@ -714,21 +715,21 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
   justify-content: center;
   gap: 0.25rem;
   font-size: 0.875rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   font-weight: 500;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .frame-counter {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .frame-input {
   width: 50px;
   padding: 0.25rem 0.375rem;
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -738,54 +739,54 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 }
 
 :global(:root:not(.dark)) .frame-input {
-  background: #fff;
-  color: #333;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
 }
 
 .frame-input:focus {
-  border-color: #58a6ff;
-  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px var(--alpha-focus-ring);
 }
 
 :global(:root:not(.dark)) .frame-input:focus {
-  border-color: #2196f3;
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px var(--alpha-focus-ring);
 }
 
 .frame-input:hover:not(:focus) {
-  border-color: #484f58;
+  border-color: var(--border-hover);
 }
 
 :global(:root:not(.dark)) .frame-input:hover:not(:focus) {
-  border-color: #999;
+  border-color: var(--border-hover-light);
 }
 
 .frame-separator {
-  color: #6e7681;
+  color: var(--text-disabled);
   font-weight: 400;
 }
 
 :global(:root:not(.dark)) .frame-separator {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .frame-total {
-  color: #8b949e;
+  color: var(--text-muted);
   font-weight: 400;
 }
 
 :global(:root:not(.dark)) .frame-total {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .frame-label {
-  color: #6e7681;
+  color: var(--text-disabled);
   font-weight: 400;
 }
 
 :global(:root:not(.dark)) .frame-label {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .detail-video-placeholder {
@@ -795,35 +796,35 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 17, 23, 0.95);
+  background: var(--alpha-toast);
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-video-placeholder {
-  background: rgba(245, 245, 245, 0.95);
+  background: var(--alpha-toast-light);
 }
 
 .detail-video-placeholder .placeholder-icon {
   width: 64px;
   height: 64px;
-  color: #8b949e;
+  color: var(--text-muted);
   margin-bottom: 1rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-video-placeholder .placeholder-icon {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .detail-video-placeholder .placeholder-text {
   font-size: 1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-video-placeholder .placeholder-text {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .detail-info-section {
@@ -835,25 +836,25 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 .detail-info-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-info-section h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .detail-divider {
   width: 1px;
-  background: #30363d;
+  background: var(--border-color);
   height: 100%;
   align-self: stretch;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-divider {
-  background: #e0e0e0;
+  background: var(--border-color-light);
 }
 
 .detail-placeholder {
@@ -865,45 +866,45 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
 .detail-placeholder .placeholder-icon {
   width: 80px;
   height: 80px;
-  color: #30363d;
+  color: var(--border-color);
   margin: 0 auto 1.5rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-placeholder .placeholder-icon {
-  color: #ccc;
+  color: var(--border-color-light);
 }
 
 .detail-placeholder h3 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-placeholder h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .detail-placeholder > p {
   font-size: 1rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-placeholder > p {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 .detail-placeholder .placeholder-hint {
   font-size: 0.875rem;
-  color: #6e7681 !important;
+  color: var(--text-disabled) !important;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .detail-placeholder .placeholder-hint {
-  color: #999 !important;
+  color: var(--text-disabled-light) !important;
 }
 </style>

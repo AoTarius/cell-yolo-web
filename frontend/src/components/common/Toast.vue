@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { useToast } from '@/composables/useToast'
 
 const { toasts, removeToast } = useToast()
@@ -71,9 +72,9 @@ const getToastClass = (type: 'success' | 'error' | 'info' | 'warning') => {
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: #1c1917;
+  background: var(--bg-toast);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   pointer-events: auto;
   min-width: 320px;
   max-width: 420px;
@@ -83,57 +84,57 @@ const getToastClass = (type: 'success' | 'error' | 'info' | 'warning') => {
 }
 
 :global(:root:not(.dark)) .toast-item {
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--bg-toast-light);
+  box-shadow: var(--shadow-md-light);
 }
 
 .toast-success {
-  border-color: #238636;
-  background: linear-gradient(135deg, rgba(35, 134, 54, 0.1) 0%, #1c1917 100%);
+  border-color: var(--success);
+  background: linear-gradient(135deg, rgba(35, 134, 54, 0.1) 0%, var(--bg-toast) 100%);
 }
 
 :global(:root:not(.dark)) .toast-success {
-  border-color: #4caf50;
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, #ffffff 100%);
+  border-color: var(--success-light);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, var(--bg-toast-light) 100%);
 }
 
 .toast-error {
-  border-color: #dc2626;
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, #1c1917 100%);
+  border-color: var(--danger);
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, var(--bg-toast) 100%);
 }
 
 :global(:root:not(.dark)) .toast-error {
-  border-color: #ef4444;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, #ffffff 100%);
+  border-color: var(--danger-hover);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, var(--bg-toast-light) 100%);
 }
 
 .toast-warning {
-  border-color: #f59e0b;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, #1c1917 100%);
+  border-color: var(--warning);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--bg-toast) 100%);
 }
 
 :global(:root:not(.dark)) .toast-warning {
-  border-color: #ff9800;
-  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, #ffffff 100%);
+  border-color: var(--warning-hover);
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, var(--bg-toast-light) 100%);
 }
 
 .toast-info {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, #1c1917 100%);
+  border-color: var(--accent-info);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, var(--bg-toast) 100%);
 }
 
 :global(:root:not(.dark)) .toast-info {
-  border-color: #2196f3;
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, #ffffff 100%);
+  border-color: var(--accent-blue);
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, var(--bg-toast-light) 100%);
 }
 
 .toast-item:hover {
   transform: translateX(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
 }
 
 :global(:root:not(.dark)) .toast-item:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg-light);
 }
 
 .toast-icon {
@@ -148,53 +149,53 @@ const getToastClass = (type: 'success' | 'error' | 'info' | 'warning') => {
 }
 
 .toast-success .toast-icon {
-  color: #238636;
+  color: var(--success);
 }
 
 :global(:root:not(.dark)) .toast-success .toast-icon {
-  color: #4caf50;
+  color: var(--success-light);
 }
 
 .toast-error .toast-icon {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 :global(:root:not(.dark)) .toast-error .toast-icon {
-  color: #ef4444;
+  color: var(--danger-hover);
 }
 
 .toast-warning .toast-icon {
-  color: #f59e0b;
+  color: var(--warning);
 }
 
 :global(:root:not(.dark)) .toast-warning .toast-icon {
-  color: #ff9800;
+  color: var(--warning-hover);
 }
 
 .toast-info .toast-icon {
-  color: #3b82f6;
+  color: var(--accent-info);
 }
 
 :global(:root:not(.dark)) .toast-info .toast-icon {
-  color: #2196f3;
+  color: var(--accent-blue);
 }
 
 .toast-message {
   flex: 1;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.5;
 }
 
 :global(:root:not(.dark)) .toast-message {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .toast-close {
   padding: 4px;
   background: transparent;
   border: none;
-  color: #8b949e;
+  color: var(--text-muted);
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s;
@@ -205,17 +206,17 @@ const getToastClass = (type: 'success' | 'error' | 'info' | 'warning') => {
 }
 
 :global(:root:not(.dark)) .toast-close {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .toast-close:hover {
-  background: rgba(139, 148, 158, 0.1);
-  color: #c9d1d9;
+  background: var(--alpha-hover);
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .toast-close:hover {
-  background: rgba(153, 153, 153, 0.1);
-  color: #333;
+  background: var(--alpha-hover-light);
+  color: var(--text-primary-light);
 }
 
 /* 过渡动画 */

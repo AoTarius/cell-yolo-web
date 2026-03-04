@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { ref } from 'vue'
 
 // 当前选中的图表
@@ -85,13 +86,13 @@ function selectChart(chartNumber: number) {
 .cell-population-chart h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .cell-population-chart h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .content-wrapper {
@@ -109,9 +110,9 @@ function selectChart(chartNumber: number) {
 
 .chart-button {
   padding: 0.75rem 1rem;
-  background: #161b22;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 0;
   font-size: 0.875rem;
   cursor: pointer;
@@ -122,33 +123,33 @@ function selectChart(chartNumber: number) {
 }
 
 :global(:root:not(.dark)) .chart-button {
-  background: #fff;
-  color: #333;
-  border-color: #e0e0e0;
+  background: var(--bg-card-light);
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
 }
 
 .chart-button:hover {
-  background: #1f6feb20;
-  border-color: #58a6ff;
-  color: #58a6ff;
+  background: var(--alpha-badge);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }
 
 :global(:root:not(.dark)) .chart-button:hover {
-  background: #e3f2fd;
-  border-color: #2196f3;
-  color: #2196f3;
+  background: var(--upload-hover-bg);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }
 
 .chart-button.active {
-  background: #1f6feb20;
-  border-color: #58a6ff;
-  color: #58a6ff;
+  background: var(--alpha-badge);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }
 
 :global(:root:not(.dark)) .chart-button.active {
-  background: #e3f2fd;
-  border-color: #2196f3;
-  color: #2196f3;
+  background: var(--upload-hover-bg);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }
 
 /* 主内容区域 */
@@ -160,12 +161,12 @@ function selectChart(chartNumber: number) {
 }
 
 .visualization-placeholder {
-  background: #161b22;
-  border: 2px solid #30363d;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
   border-radius: 0;
   padding: 4rem 2rem;
   text-align: center;
-  color: #8b949e;
+  color: var(--text-muted);
   transition: background 0.3s, border-color 0.3s;
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -176,41 +177,41 @@ function selectChart(chartNumber: number) {
 }
 
 :global(:root:not(.dark)) .visualization-placeholder {
-  background: #fff;
-  border: 2px solid #e0e0e0;
-  color: #666;
+  background: var(--bg-card-light);
+  border: 2px solid var(--border-color-light);
+  color: var(--text-muted-light);
 }
 
 .placeholder-icon {
   width: 64px;
   height: 64px;
   margin: 0 auto 1rem;
-  color: #30363d;
+  color: var(--border-color);
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .placeholder-icon {
-  color: #ccc;
+  color: var(--border-color-light);
 }
 
 .visualization-placeholder p {
   margin: 0.5rem 0;
   font-size: 1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .visualization-placeholder p {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .placeholder-hint {
   font-size: 0.875rem !important;
-  color: #6e7681 !important;
+  color: var(--text-disabled) !important;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .placeholder-hint {
-  color: #999 !important;
+  color: var(--text-disabled-light) !important;
 }
 </style>

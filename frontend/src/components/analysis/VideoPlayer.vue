@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { ref, watch } from 'vue'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 
@@ -419,7 +420,7 @@ function handleVideoError(event: Event) {
 
 .video-divider {
   width: 1px;
-  background: #30363d;
+  background: var(--border-color);
   margin: 0 1.5rem;
   flex-shrink: 0;
   transition: background 0.3s;
@@ -433,7 +434,7 @@ function handleVideoError(event: Event) {
 }
 
 :global(:root:not(.dark)) .video-divider {
-  background: #e0e0e0;
+  background: var(--border-color-light);
 }
 
 .video-controls-bar {
@@ -441,22 +442,22 @@ function handleVideoError(event: Event) {
   gap: 0.75rem;
   margin-bottom: 2rem;
   padding: 1rem;
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   transition: background 0.3s, border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .video-controls-bar {
-  background: #fff;
-  border-color: #e0e0e0;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 .btn-control {
   padding: 0.5rem 1rem;
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.875rem;
   cursor: pointer;
@@ -467,19 +468,19 @@ function handleVideoError(event: Event) {
 }
 
 :global(:root:not(.dark)) .btn-control {
-  background: #fff;
-  color: #333;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
 }
 
 .btn-control:hover {
-  background: #30363d;
-  border-color: #8b949e;
+  background: var(--border-color);
+  border-color: var(--text-muted);
 }
 
 :global(:root:not(.dark)) .btn-control:hover {
-  background: #f5f5f5;
-  border-color: #999;
+  background: var(--bg-hover);
+  border-color: var(--text-disabled-light);
 }
 
 .btn-control svg {
@@ -488,50 +489,50 @@ function handleVideoError(event: Event) {
 }
 
 .btn-control-primary {
-  background: #1f6feb;
+  background: var(--accent-blue);
   color: #fff;
-  border-color: #1f6feb;
+  border-color: var(--accent-blue);
   transition: all 0.2s;
 }
 
 :global(:root:not(.dark)) .btn-control-primary {
-  background: #2196f3;
+  background: var(--accent-blue);
   color: #fff;
-  border-color: #2196f3;
+  border-color: var(--accent-blue);
 }
 
 .btn-control-primary:hover {
-  background: #388bfd;
-  border-color: #388bfd;
+  background: var(--accent-blue-hover);
+  border-color: var(--accent-blue-hover);
 }
 
 :global(:root:not(.dark)) .btn-control-primary:hover {
-  background: #1976d2;
-  border-color: #1976d2;
+  background: var(--accent-info-hover);
+  border-color: var(--accent-info-hover);
 }
 
 .video-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .video-section h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .video-container {
   position: relative;
-  background: #0d1117;
+  background: var(--bg-main);
   border-radius: 8px;
   overflow: hidden;
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .video-container {
-  background: #f5f5f5;
+  background: var(--bg-main-light);
 }
 
 .video-placeholder {
@@ -544,62 +545,62 @@ function handleVideoError(event: Event) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 17, 23, 0.95);
+  background: var(--alpha-toast);
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .video-placeholder {
-  background: rgba(245, 245, 245, 0.95);
+  background: var(--alpha-toast-light);
 }
 
 .placeholder-icon {
   width: 64px;
   height: 64px;
-  color: #8b949e;
+  color: var(--text-muted);
   margin-bottom: 1rem;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .placeholder-icon {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .placeholder-text {
   font-size: 1rem;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   margin: 0 0 0.5rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .placeholder-text {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .placeholder-hint {
   font-size: 0.875rem;
-  color: #8b949e;
+  color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .placeholder-hint {
-  color: #666;
+  color: var(--text-muted-light);
 }
 
 :global(:root:not(.dark)) .video-section h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .video-container {
-  background: #000;
+  background: var(--bg-video);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #30363d;
+  border: 1px solid var(--border-color);
   transition: border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .video-container {
-  border-color: #ccc;
+  border-color: var(--border-color-light);
 }
 
 .video-player {
@@ -625,25 +626,25 @@ function handleVideoError(event: Event) {
   bottom: calc(100% + 8px);
   left: 0;
   min-width: 120px;
-  background: #21262d;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 0.5rem 0;
   z-index: 100;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 :global(:root:not(.dark)) .rate-dropdown-menu {
-  background: #fff;
-  border-color: #ccc;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+  box-shadow: var(--shadow-lg-light);
 }
 
 .rate-option {
   width: 100%;
   padding: 0.5rem 1rem;
   background: transparent;
-  color: #c9d1d9;
+  color: var(--text-secondary);
   border: none;
   text-align: left;
   cursor: pointer;
@@ -652,33 +653,33 @@ function handleVideoError(event: Event) {
 }
 
 :global(:root:not(.dark)) .rate-option {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .rate-option:hover {
-  background: #30363d;
+  background: var(--border-color);
 }
 
 :global(:root:not(.dark)) .rate-option:hover {
-  background: #f5f5f5;
+  background: var(--bg-hover);
 }
 
 .rate-option-active {
-  background: #1f6feb;
+  background: var(--accent-blue);
   color: #fff;
 }
 
 :global(:root:not(.dark)) .rate-option-active {
-  background: #2196f3;
+  background: var(--accent-blue);
   color: #fff;
 }
 
 .rate-option-active:hover {
-  background: #388bfd;
+  background: var(--accent-blue-hover);
 }
 
 :global(:root:not(.dark)) .rate-option-active:hover {
-  background: #1976d2;
+  background: var(--accent-info-hover);
 }
 
 .dropdown-arrow {

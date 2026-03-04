@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '@/assets/styles/colors.css'
 import { ref, computed } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 
@@ -186,26 +187,26 @@ function handleViewCell(cellId: string) {
 .cell-list-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   transition: color 0.3s;
 }
 
 :global(:root:not(.dark)) .cell-list-section h3 {
-  color: #333;
+  color: var(--text-primary-light);
 }
 
 .table-placeholder {
-  background: #161b22;
-  border: 1px solid #30363d;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
   transition: background 0.3s, border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .table-placeholder {
-  background: #fff;
-  border-color: #e0e0e0;
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
 .cell-table {
@@ -214,20 +215,20 @@ function handleViewCell(cellId: string) {
 }
 
 .cell-table th {
-  background: #21262d;
+  background: var(--bg-input);
   padding: 0.75rem 1rem;
   text-align: left;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #8b949e;
-  border-bottom: 1px solid #30363d;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
   transition: background 0.3s, border-color 0.3s, color 0.3s;
 }
 
 :global(:root:not(.dark)) .cell-table th {
-  background: #f5f5f5;
-  border-bottom-color: #e0e0e0;
-  color: #666;
+  background: var(--bg-hover);
+  border-bottom-color: var(--border-color-light);
+  color: var(--text-muted-light);
 }
 
 .cell-table th.sortable {
@@ -237,13 +238,13 @@ function handleViewCell(cellId: string) {
 }
 
 .cell-table th.sortable:hover {
-  background: #30363d;
-  color: #c9d1d9;
+  background: var(--border-color);
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .cell-table th.sortable:hover {
-  background: #e8e8e8;
-  color: #333;
+  background: var(--bg-input-light);
+  color: var(--text-primary-light);
 }
 
 .cell-table th.sortable.disabled {
@@ -251,13 +252,13 @@ function handleViewCell(cellId: string) {
 }
 
 .cell-table th.sortable.disabled:hover {
-  background: #21262d;
-  color: #8b949e;
+  background: var(--bg-input);
+  color: var(--text-muted);
 }
 
 :global(:root:not(.dark)) .cell-table th.sortable.disabled:hover {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--bg-hover);
+  color: var(--text-muted-light);
 }
 
 .cell-table th span {
@@ -280,50 +281,50 @@ function handleViewCell(cellId: string) {
 }
 
 .cell-table th .sort-icon-neutral {
-  color: #6e7681;
+  color: var(--text-disabled);
   transition: color 0.2s;
 }
 
 :global(:root:not(.dark)) .cell-table th .sort-icon-neutral {
-  color: #999;
+  color: var(--text-disabled-light);
 }
 
 .cell-table th .sort-icon-active {
-  color: #58a6ff;
+  color: var(--accent-blue);
   transition: color 0.2s;
 }
 
 :global(:root:not(.dark)) .cell-table th .sort-icon-active {
-  color: #2196f3;
+  color: var(--accent-blue);
 }
 
 .cell-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #21262d;
-  color: #c9d1d9;
+  border-bottom: 1px solid var(--bg-input);
+  color: var(--text-secondary);
   font-size: 0.875rem;
   transition: border-color 0.3s, color 0.3s;
 }
 
 :global(:root:not(.dark)) .cell-table td {
-  border-bottom-color: #e0e0e0;
-  color: #333;
+  border-bottom-color: var(--border-color-light);
+  color: var(--text-primary-light);
 }
 
 .cell-table tbody tr:hover {
-  background: #0d1117;
+  background: var(--bg-main);
   transition: background 0.3s;
 }
 
 :global(:root:not(.dark)) .cell-table tbody tr:hover {
-  background: #f5f5f5;
+  background: var(--bg-main-light);
 }
 
 .btn-view {
   padding: 0.25rem 0.75rem;
-  background: #21262d;
-  color: #58a6ff;
-  border: 1px solid #30363d;
+  background: var(--bg-input);
+  color: var(--accent-blue);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.75rem;
   cursor: pointer;
@@ -331,18 +332,18 @@ function handleViewCell(cellId: string) {
 }
 
 :global(:root:not(.dark)) .btn-view {
-  background: #fff;
-  color: #2196f3;
-  border-color: #ccc;
+  background: var(--bg-card-light);
+  color: var(--accent-blue);
+  border-color: var(--border-color-light);
 }
 
 .btn-view:hover {
-  background: #1f6feb20;
-  border-color: #58a6ff;
+  background: var(--alpha-badge);
+  border-color: var(--accent-blue);
 }
 
 :global(:root:not(.dark)) .btn-view:hover {
-  background: #e3f2fd;
-  border-color: #2196f3;
+  background: var(--upload-hover-bg);
+  border-color: var(--accent-blue);
 }
 </style>
