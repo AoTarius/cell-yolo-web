@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import { useToast } from '@/composables/useToast'
@@ -32,9 +32,25 @@ function handleRecordClick(record: AnalysisRecord) {
   if (route.path !== '/') {
     router.push('/').then(() => {
       store.selectRecord(record.task_id)
+      // 等待 DOM 更新后滚动到顶部
+      nextTick(() => {
+        scrollToTop()
+      })
     })
   } else {
     store.selectRecord(record.task_id)
+    // 等待 DOM 更新后滚动到顶部
+    nextTick(() => {
+      scrollToTop()
+    })
+  }
+}
+
+// 滚动到顶部
+function scrollToTop() {
+  const resultContent = document.querySelector('.result-content')
+  if (resultContent) {
+    resultContent.scrollTop = 0
   }
 }
 
