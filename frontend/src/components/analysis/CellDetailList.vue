@@ -1,7 +1,108 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 
 const store = useAnalysisStore()
+
+// 排序状态
+type SortColumn = 'cell_id' | 'first_frame' | 'last_frame' | 'frame_count' | 'avg_conf' | 'avg_velocity'
+const sortColumn = ref<SortColumn | null>(null)
+const sortDirection = ref<'asc' | 'desc'>('asc')
+
+// 排序后的细胞列表
+const sortedCells = computed(() => {
+  const cells = store.selectedRecord?.result?.cells || []
+  if (!sortColumn.value) return cells
+  
+  const sorted = [...cells].sort((a, b) => {
+    let comparison = 0
+
+    switch (sortColumn.value) {
+      case 'cell_id':
+        // 提取数字部分进行比较
+        const aIdStr = typeof a.cell_id === 'string' ? a.cell_id : String(a.cell_id)
+        const bIdStr = typeof b.cell_id === 'string' ? b.cell_id : String(b.cell_id)
+        const aId = parseInt(aIdStr.replace(/\D/g, '') || '0', 10)
+        const bId = parseInt(bIdStr.replace(/\D/g, '') || '0', 10)
+        comparison = aId - bId
+        break
+      case 'first_frame':
+        comparison = (a.first_frame ?? 0) - (b.first_frame ?? 0)
+        break
+      case 'last_frame':
+        comparison = (a.last_frame ?? 0) - (b.last_frame ?? 0)
+        break
+      case 'frame_count':
+        comparison = (a.frame_count ?? 0) - (b.frame_count ?? 0)
+        break
+      case 'avg_conf':
+        comparison = (a.avg_conf ?? 0) - (b.avg_conf ?? 0)
+        break
+      case 'avg_velocity':
+        comparison = (a.avg_velocity ?? 0) - (b.avg_velocity ?? 0)
+        break
+    }
+
+    // 应用排序方向
+    if (sortDirection.value === 'desc') {
+      comparison = -comparison
+    }
+
+    // 如果主排序值相同，使用细胞ID作为二级排序
+    if (comparison === 0) {
+      const aId2 = typeof a.cell_id === 'string' ? parseInt(a.cell_id.replace(/\D/g, '') || '0') : 0
+      const bId2 = typeof b.cell_id === 'string' ? parseInt(b.cell_id.replace(/\D/g, '') || '0') : 0
+      
+      // 二级排序也遵循当前的排序方向
+      let secondaryComparison = aId2 - bId2
+      if (sortDirection.value === 'desc') {
+        secondaryComparison = -secondaryComparison
+      }
+      comparison = secondaryComparison
+    }
+
+    return comparison
+  })
+  return sorted
+})
+
+// 处理排序
+function handleSort(column: SortColumn) {
+  if (sortColumn.value === column) {
+    // 如果点击的是当前排序列，切换方向
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    // 如果点击的是新列，设置为升序
+    sortColumn.value = column
+    sortDirection.value = 'asc'
+  }
+}
+
+// 获取排序图标
+function getSortIcon(column: SortColumn) {
+  if (sortColumn.value !== column) {
+    // 未排序：显示灰色小三角（向上）
+    return `
+      <svg class="sort-icon sort-icon-neutral" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+      </svg>
+    `
+  }
+  if (sortDirection.value === 'asc') {
+    // 升序：显示蓝色向上三角
+    return `
+      <svg class="sort-icon sort-icon-active" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+      </svg>
+    `
+  }
+  // 降序：显示蓝色向下三角
+  return `
+    <svg class="sort-icon sort-icon-active" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+    </svg>
+  `
+}
 
 // 处理查看细胞详情
 function handleViewCell(cellId: string) {
@@ -16,18 +117,39 @@ function handleViewCell(cellId: string) {
       <table class="cell-table">
         <thead>
           <tr>
-            <th>细胞ID</th>
-            <th>首次出现</th>
-            <th>最后出现</th>
-            <th>存活帧数</th>
-            <th>平均尺寸</th>
-            <th>平均置信度</th>
-            <th>平均速度</th>
+            <th class="sortable" @click="handleSort('cell_id')">
+              <span>细胞ID</span>
+              <span class="sort-icon-wrapper" v-html="getSortIcon('cell_id')"></span>
+            </th>
+            <th class="sortable" @click="handleSort('first_frame')">
+              <span>首次出现</span>
+              <span class="sort-icon-wrapper" v-html="getSortIcon('first_frame')"></span>
+            </th>
+            <th class="sortable" @click="handleSort('last_frame')">
+              <span>最后出现</span>
+              <span class="sort-icon-wrapper" v-html="getSortIcon('last_frame')"></span>
+            </th>
+            <th class="sortable" @click="handleSort('frame_count')">
+              <span>存活帧数</span>
+              <span class="sort-icon-wrapper" v-html="getSortIcon('frame_count')"></span>
+            </th>
+            <th class="sortable disabled">
+              <span>平均尺寸</span>
+              <span class="sort-icon-wrapper" v-html="getSortIcon('cell_id')"></span>
+            </th>
+            <th class="sortable" @click="handleSort('avg_conf')">
+              <span>平均置信度</span>
+              <span class="sort-icon-wrapper" v-html="getSortIcon('avg_conf')"></span>
+            </th>
+            <th class="sortable" @click="handleSort('avg_velocity')">
+              <span>平均速度</span>
+              <span class="sort-icon-wrapper" v-html="getSortIcon('avg_velocity')"></span>
+            </th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="cell in store.selectedRecord?.result?.cells || []" :key="cell.cell_id">
+          <tr v-for="cell in sortedCells" :key="cell.cell_id">
             <td>{{ cell.cell_id }}</td>
             <td>
               第 {{ cell.first_frame ?? '-' }} 帧
@@ -106,6 +228,73 @@ function handleViewCell(cellId: string) {
   background: #f5f5f5;
   border-bottom-color: #e0e0e0;
   color: #666;
+}
+
+.cell-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.3s, color 0.3s;
+}
+
+.cell-table th.sortable:hover {
+  background: #30363d;
+  color: #c9d1d9;
+}
+
+:global(:root:not(.dark)) .cell-table th.sortable:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+.cell-table th.sortable.disabled {
+  cursor: default;
+}
+
+.cell-table th.sortable.disabled:hover {
+  background: #21262d;
+  color: #8b949e;
+}
+
+:global(:root:not(.dark)) .cell-table th.sortable.disabled:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.cell-table th span {
+  display: inline-block;
+}
+
+.cell-table th .sort-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.5rem;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}
+
+.cell-table th .sort-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.cell-table th .sort-icon-neutral {
+  color: #6e7681;
+  transition: color 0.2s;
+}
+
+:global(:root:not(.dark)) .cell-table th .sort-icon-neutral {
+  color: #999;
+}
+
+.cell-table th .sort-icon-active {
+  color: #58a6ff;
+  transition: color 0.2s;
+}
+
+:global(:root:not(.dark)) .cell-table th .sort-icon-active {
+  color: #2196f3;
 }
 
 .cell-table td {

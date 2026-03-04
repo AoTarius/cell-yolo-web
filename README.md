@@ -10,6 +10,15 @@
 - **参数自定义**: 支持调整置信度阈值、图像尺寸、输出帧率等参数
 - **实时进度**: 通过 WebSocket 实时推送处理进度
 - **结果展示**: 标注视频播放、细胞统计、轨迹数据查看
+- **视频播放器功能**:
+  - 双视频对比播放（原始视频 vs 标注视频）
+  - 支持并排/上下布局切换
+  - 播放速率调整（0.25x, 0.5x, 0.75x, 1x, 1.5x, 2x）
+  - 精确帧控制（前进/后退一帧）
+  - 同步播放/暂停控制
+- **视图模式**: 整体视图/细化视图切换
+  - 整体视图：展示完整的统计卡片、视频播放器、群体图表和细胞列表
+  - 细化视图：左侧标注视频播放器 + 逐帧分析控制，右侧详细数据分析
 - **数据导出**: 支持 CSV 和 JSON 格式数据导出
 - **视频下载**: 下载标注后的视频文件
 
@@ -52,13 +61,25 @@ web/
 │   ├── src/
 │   │   ├── api/            # API 服务层
 │   │   ├── components/     # Vue 组件
-│   │   │   ├── UploadPanel.vue      # 上传组件
-│   │   │   ├── ResultPanel.vue      # 结果展示组件
-│   │   │   ├── CellDetailPanel.vue  # 细胞详情组件
-│   │   │   └── ...
+│   │   │   ├── analysis/   # 分析结果组件
+│   │   │   │   ├── AnalysisResult.vue  # 分析结果主组件
+│   │   │   │   ├── ResultHeader.vue    # 结果头部（含视图切换）
+│   │   │   │   ├── VideoPlayer.vue     # 视频播放器（双视频+控制）
+│   │   │   │   ├── CellPopulationChart.vue  # 细胞群体图表
+│   │   │   │   ├── CellDetailList.vue  # 细胞详情列表
+│   │   │   │   └── CellDetailPanel.vue # 细胞详情面板
+│   │   │   ├── common/     # 通用组件
+│   │   │   │   └── Sidebar.vue         # 侧边栏导航
+│   │   │   ├── upload/     # 上传组件
+│   │   │   │   └── UploadPanel.vue     # 上传面板
+│   │   │   └── progress/   # 进度组件
+│   │   │       └── ProgressView.vue    # 进度展示
 │   │   ├── composables/    # 组合式函数
 │   │   ├── stores/         # Pinia 状态管理
 │   │   ├── views/          # 页面视图
+│   │   │   ├── CellTrackingView.vue   # 细胞追踪主视图
+│   │   │   ├── ModelUploadView.vue    # 模型上传视图
+│   │   │   └── ProgressView.vue       # 进度视图
 │   │   └── router/         # 路由配置
 │   └── package.json        # Node 依赖
 ├── docs/                   # 项目文档

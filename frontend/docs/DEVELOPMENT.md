@@ -24,13 +24,22 @@ frontend/
 │   ├── assets/           # 静态资源
 │   │   └── main.css      # 全局样式 (TailwindCSS)
 │   ├── components/       # 组件
-│   │   ├── Sidebar.vue           # 侧边栏（历史记录列表）
-│   │   ├── UploadPanel.vue       # 上传视频面板
-│   │   ├── LoadingPanel.vue      # 处理中加载面板
-│   │   ├── ResultPanel.vue       # 分析结果面板
-│   │   └── CellDetailPanel.vue   # 细胞详情面板
+│   │   ├── analysis/     # 分析结果组件
+│   │   │   ├── AnalysisResult.vue  # 分析结果主组件
+│   │   │   ├── ResultHeader.vue    # 结果头部（含视图切换）
+│   │   │   ├── VideoPlayer.vue     # 视频播放器（双视频+控制）
+│   │   │   ├── CellPopulationChart.vue  # 细胞群体图表
+│   │   │   ├── CellDetailList.vue  # 细胞详情列表
+│   │   │   └── CellDetailPanel.vue # 细胞详情面板
+│   │   ├── common/       # 通用组件
+│   │   │   └── Sidebar.vue         # 侧边栏（历史记录列表）
+│   │   ├── upload/       # 上传组件
+│   │   │   └── UploadPanel.vue     # 上传视频面板
+│   │   └── progress/     # 进度组件
+│   │       └── ProgressView.vue    # 进度展示
 │   ├── composables/      # 组合式函数
-│   │   └── useAnalysisApi.ts     # API 使用的组合式函数
+│   │   ├── useAnalysisApi.ts     # API 使用的组合式函数
+│   │   └── useToast.ts          # Toast 提示组合式函数
 │   ├── router/           # 路由配置
 │   │   └── index.ts
 │   ├── stores/           # Pinia 状态管理
@@ -38,7 +47,8 @@ frontend/
 │   │   └── counter.ts            # 示例计数器（可删除）
 │   ├── views/            # 页面视图
 │   │   ├── CellTrackingView.vue  # 主页面
-│   │   └── HomeView.vue          # 测试页面
+│   │   ├── ModelUploadView.vue    # 模型上传视图
+│   │   └── ProgressView.vue       # 进度视图
 │   ├── App.vue           # 根组件
 │   └── main.ts           # 入口文件
 ├── public/               # 公共静态文件
@@ -130,6 +140,97 @@ interface BoundingBox {
 - `selectCell(cellId)` - 选择细胞并显示详情
 - `backToResultList()` - 返回结果列表
 
+### 2. 视频播放器功能
+
+VideoPlayer.vue 组件提供强大的视频播放和控制功能。
+
+#### 核心功能
+
+**双视频对比播放**:
+- 原始视频播放器
+- 标注视频播放器
+- 支持同时播放/暂停
+- 支持同步帧控制
+
+**布局切换**:
+- 并排布局（side-by-side）：左右并排显示两个视频
+- 上下布局（stacked）：上下堆叠显示两个视频
+
+**播放控制**:
+- 播放/暂停：控制视频播放状态
+- 前进/后退一帧：精确控制视频播放位置
+- 回到开头并暂停：重置视频到开始位置
+- 播放速率调整：支持 0.25x, 0.5x, 0.75x, 1x, 1.5x, 2x 速率
+
+**智能帧率计算**:
+```typescript
+function getVideoFps(): number {
+  const totalFrames = props.record.result?.total_frames || 0
+  const duration = props.record.result?.video_duration || 0
+  if (duration > 0 && totalFrames > 0) {
+    return totalFrames / duration
+  }
+  return 30 // 默认帧率
+}
+```
+
+#### 状态管理
+
+- `currentPlaybackRate` - 当前播放速率（默认 1x）
+- `showRateMenu` - 速率菜单显示状态
+- `videoLayoutMode` - 视频布局模式（side-by-side / stacked）
+
+#### 事件处理
+
+- `videoError` - 视频加载错误时触发
+
+#### API 集成
+
+- 原始视频：`/api/original-video/{taskId}/`
+- 标注视频：`/api/video/{taskId}/`
+
+### 3. 视图模式切换
+
+在 `AnalysisResult.vue` 中实现整体视图和细化视图的切换。
+
+#### 整体视图
+
+展示完整的分析结果：
+- 统计卡片（细胞总数、总帧数、视频时长）
+- VideoPlayer 组件（双视频对比播放）
+- CellPopulationChart（细胞群体图表）
+- CellDetailList（细胞详情列表）
+
+#### 细化视图
+
+提供更详细的逐帧分析：
+- 左侧区域：
+  - 标注视频播放器
+  - 视频功能栏（播放/暂停/帧控制/回到开头）
+- 右侧区域：
+  - 逐帧分析（待开发）
+
+#### 切换逻辑
+
+```typescript
+// 切换记录时自动重置为整体模式
+watch(() => props.record, () => {
+  viewMode.value = 'overall'
+})
+
+// 切换视频记录时自动重置播放速率
+watch(() => props.record.task_id, () => {
+  currentPlaybackRate.value = 1
+  showRateMenu.value = false
+  if (originalVideoRef.value) {
+    originalVideoRef.value.playbackRate = 1
+  }
+  if (annotatedVideoRef.value) {
+    annotatedVideoRef.value.playbackRate = 1
+  }
+})
+```
+
 ### 2. 数据流详解
 
 #### 完整的数据层次结构
@@ -215,19 +316,37 @@ CellTrackingView (主页面)
   └─ 主面板 (根据状态切换)
       ├─ WelcomePanel (欢迎界面)
       ├─ UploadPanel (上传面板)
-      ├─ LoadingPanel (加载面板)
-      └─ ResultPanel (结果面板)
-          ├─ 当 store.selectedCellData 存在时
-          │   └─ CellDetailPanel
-          │       ├─ 显示细胞详情
-          │       └─ emit('back') 返回列表
+      ├─ ProgressView (进度展示)
+      └─ AnalysisResult (分析结果组件)
+          ├─ ResultHeader (结果头部)
+          │   ├─ 视频信息展示
+          │   ├─ 视图模式切换（整体/细化）
+          │   └─ 导出/下载按钮
           │
-          └─ 当 store.selectedCellData 为 null 时
-              └─ 显示分析结果列表
-                  ├─ 统计卡片
-                  ├─ 3D 轨迹图 (占位)
-                  └─ 细胞列表表格
-                      └─ 点击"查看详情" → handleViewCell(cellId)
+          └─ 结果内容 (根据 viewMode 切换)
+              ├─ 整体模式 (viewMode === 'overall')
+              │   ├─ 统计卡片
+              │   ├─ VideoPlayer (视频播放器)
+              │   │   ├─ 原始视频播放
+              │   │   ├─ 标注视频播放
+              │   │   ├─ 布局切换（并排/上下）
+              │   │   ├─ 播放控制（播放/暂停/帧控制/速率调整）
+              │   │   └─ 视频功能栏
+              │   ├─ CellPopulationChart (细胞群体图表)
+              │   └─ CellDetailList (细胞详情列表)
+              │       └─ 点击"查看详情" → store.selectCell(cellId)
+              │
+              └─ 细化模式 (viewMode === 'detail')
+                  ├─ 标注视频播放器
+                  │   ├─ 视频显示
+                  │   └─ 视频功能栏（播放/暂停/帧控制/回到开头）
+                  └─ 逐帧分析区域
+                      └─ 占位符（待开发）
+
+  当 store.selectedCellData 存在时
+  └─ CellDetailPanel (覆盖显示)
+      ├─ 显示细胞详情
+      └─ emit('back') 返回列表
 ```
 
 #### 页面状态切换逻辑
@@ -244,6 +363,35 @@ const currentPanel = computed(() => {
   return 'welcome'
 })
 ```
+
+#### 视图模式切换
+
+在 `AnalysisResult.vue` 中实现整体/细化视图切换：
+
+```typescript
+// 视图模式：整体/细化
+const viewMode = ref<'overall' | 'detail'>('overall')
+
+// 监听 record 变化，切换记录时重置为整体模式
+watch(() => props.record, () => {
+  viewMode.value = 'overall'
+})
+
+// 处理视图模式切换
+function handleViewModeChange(mode: 'overall' | 'detail') {
+  viewMode.value = mode
+}
+```
+
+**整体模式** (viewMode === 'overall'):
+- 显示统计卡片（细胞总数、总帧数、视频时长）
+- 显示 VideoPlayer 组件（双视频对比播放）
+- 显示 CellPopulationChart（细胞群体图表）
+- 显示 CellDetailList（细胞详情列表）
+
+**细化模式** (viewMode === 'detail'):
+- 左侧：标注视频播放器 + 视频功能栏
+- 右侧：逐帧分析区域（待开发）
 
 ### 4. 数据来源
 
@@ -554,23 +702,43 @@ export default defineConfig({
 ### ✅ 已实现
 - [x] API 服务封装 (src/api/analysisApi.ts)
 - [x] Composable 函数 (src/composables/useAnalysisApi.ts)
+- [x] Toast 提示组合式函数 (src/composables/useToast.ts)
 - [x] WebSocket 实时更新支持
 - [x] 上传进度显示
 - [x] 数据导出功能（CSV/JSON）
 - [x] 视频下载功能
 - [x] 状态轮询机制
 - [x] Store 集成支持
+- [x] 视频播放器 API 集成（原始视频/标注视频）
+- [x] 视图模式切换功能
+- [x] 视频播放控制功能（播放/暂停/帧控制/速率调整）
 
 ### 🔄 待对接
 - [ ] 后端 API 实现（当前使用模拟数据）
 - [ ] WebSocket 服务端实现
 - [ ] 在 UploadPanel.vue 中启用真实 API 调用（当前被注释）
+- [ ] 逐帧分析数据 API
 
 详细信息请查看 [API-INTEGRATION.md](./API-INTEGRATION.md)
 
 ## 待实现功能
 
-- [ ] 对接后端 API（API 封装已完成）
+### ✅ 已完成
+- [x] 对接后端 API（API 封装已完成）
+- [x] 视频播放器功能（双视频对比、布局切换、播放控制）
+- [x] 视图模式切换（整体/细化视图）
+- [x] 细化视图基础结构（视频播放器 + 逐帧分析区域）
+- [x] 视频功能栏（播放/暂停/帧控制/速率调整/回到开头）
+- [x] 结果头部组件（视图切换、导出功能）
+- [x] 细胞群体图表组件
+- [x] 细胞详情列表组件
+- [x] Toast 提示功能
+- [x] 数据导出功能（CSV/JSON）
+- [x] 视频下载功能
+- [x] 状态轮询机制
+
+### 🔄 待开发
+- [ ] 逐帧分析功能（细化视图右侧区域）
 - [ ] 添加 3D 轨迹可视化（Three.js / D3.js）
 - [ ] 添加数据筛选和排序
 - [ ] 实现轨迹动画播放
@@ -578,6 +746,7 @@ export default defineConfig({
 - [ ] 添加错误处理和重试机制
 - [ ] 优化大数据集的渲染性能
 - [ ] 添加单元测试
+- [ ] 添加模型上传功能
 
 ## 参考文档
 
