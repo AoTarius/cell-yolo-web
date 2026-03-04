@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
@@ -21,13 +21,21 @@ const { showToast } = useToast()
 // 视图模式：整体/细化
 const viewMode = ref<'overall' | 'detail'>('overall')
 
-// 监听 record 变化，切换记录时重置为整体模式
+// 监听 record 变化，切换记录时重置为整体模式和视频播放器
 watch(() => props.record, () => {
   viewMode.value = 'overall'
+  currentFrameIndex.value = 0
+  if (detailVideoRef.value) {
+    detailVideoRef.value.currentTime = 0
+    detailVideoRef.value.pause()
+  }
 })
 
 // 细化视图视频播放器引用
 const detailVideoRef = ref<HTMLVideoElement | null>(null)
+
+// 响应式的当前帧号
+const currentFrameIndex = ref(0)
 
 const isExporting = ref(false)
 const exportError = ref<string | null>(null)
@@ -42,47 +50,60 @@ function getVideoFps(): number {
   return 30 // 默认帧率
 }
 
-// 播放视频
-function handlePlay() {
-  if (detailVideoRef.value) {
-    detailVideoRef.value.play()
+// 下一帧
+function handleNextFrame() {
+  const totalFrames = props.record.result?.total_frames || 0
+  if (currentFrameIndex.value < totalFrames - 1) {
+    currentFrameIndex.value++
+    const fps = getVideoFps()
+    if (detailVideoRef.value) {
+      detailVideoRef.value.currentTime = currentFrameIndex.value / fps
+      detailVideoRef.value.pause()
+    }
   }
 }
 
-// 暂停视频
-function handlePause() {
-  if (detailVideoRef.value) {
-    detailVideoRef.value.pause()
+// 上一帧
+function handlePrevFrame() {
+  if (currentFrameIndex.value > 0) {
+    currentFrameIndex.value--
+    const fps = getVideoFps()
+    if (detailVideoRef.value) {
+      detailVideoRef.value.currentTime = currentFrameIndex.value / fps
+      detailVideoRef.value.pause()
+    }
   }
 }
 
-// 后退一帧
-function handleBackwardFrame() {
-  const fps = getVideoFps()
-  const frameDuration = 1 / fps
-  if (detailVideoRef.value) {
-    detailVideoRef.value.currentTime = Math.max(0, detailVideoRef.value.currentTime - frameDuration)
-    detailVideoRef.value.pause()
-  }
-}
-
-// 前进一帧
-function handleForwardFrame() {
-  const fps = getVideoFps()
-  const frameDuration = 1 / fps
-  if (detailVideoRef.value) {
-    detailVideoRef.value.currentTime += frameDuration
-    detailVideoRef.value.pause()
-  }
-}
-
-// 回到开头
-function handleRewindToStart() {
+// 回到第一帧
+function handleGoToFirstFrame() {
+  currentFrameIndex.value = 0
   if (detailVideoRef.value) {
     detailVideoRef.value.currentTime = 0
     detailVideoRef.value.pause()
   }
 }
+
+// 跳转到指定帧
+function handleJumpToFrame(frameStr: string) {
+  const frame = parseInt(frameStr, 10)
+  const total = props.record.result?.total_frames || 0
+
+  if (!isNaN(frame) && frame >= 1 && frame <= total) {
+    currentFrameIndex.value = frame - 1
+    const fps = getVideoFps()
+    if (detailVideoRef.value) {
+      detailVideoRef.value.currentTime = currentFrameIndex.value / fps
+      detailVideoRef.value.pause()
+    }
+  }
+}
+
+// 计算属性：当前帧号（从1开始显示）
+const currentFrameNumber = computed(() => currentFrameIndex.value + 1)
+
+// 计算属性：总帧数
+const totalFrames = computed(() => props.record.result?.total_frames || 0)
 
 // 处理返回结果列表
 function handleBackToList() {
@@ -251,8 +272,8 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
                   ref="detailVideoRef"
                   v-if="record.result?.output_video_path"
                   :src="`/api/video/${record.task_id}/`"
-                  controls
                   class="detail-video-player"
+                  @error="handleVideoError"
                 >
                   您的浏览器不支持视频播放
                 </video>
@@ -275,9 +296,9 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
                 </div>
               </div>
 
-              <!-- 视频功能栏 -->
+              <!-- 帧控制栏 -->
               <div v-if="record.result?.output_video_path" class="detail-video-controls">
-                <button class="detail-btn-control" @click="handlePlay">
+                <button class="detail-btn-control" @click="handleGoToFirstFrame">
                   <svg
                     fill="none"
                     stroke="currentColor"
@@ -288,18 +309,12 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       stroke-width="2"
-                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                    ></path>
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
                     ></path>
                   </svg>
-                  播放
+                  第一帧
                 </button>
-                <button class="detail-btn-control" @click="handlePause">
+                <button class="detail-btn-control" @click="handlePrevFrame">
                   <svg
                     fill="none"
                     stroke="currentColor"
@@ -310,12 +325,28 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       stroke-width="2"
-                      d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      d="M15 19l-7-7 7-7"
                     ></path>
                   </svg>
-                  暂停
+                  上一帧
                 </button>
-                <button class="detail-btn-control" @click="handleBackwardFrame">
+                <div class="frame-counter">
+                  <input
+                    type="number"
+                    :value="currentFrameNumber"
+                    :min="1"
+                    :max="totalFrames"
+                    @input="handleJumpToFrame(($event.target as HTMLInputElement).value)"
+                    @blur="handleJumpToFrame(($event.target as HTMLInputElement).value)"
+                    @keyup.enter="handleJumpToFrame(($event.target as HTMLInputElement).value)"
+                    class="frame-input"
+                  />
+                  <span class="frame-separator">/</span>
+                  <span class="frame-total">{{ totalFrames }}</span>
+                  <span class="frame-label">帧</span>
+                </div>
+                <button class="detail-btn-control" @click="handleNextFrame">
+                  下一帧
                   <svg
                     fill="none"
                     stroke="currentColor"
@@ -326,42 +357,9 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       stroke-width="2"
-                      d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"
+                      d="M9 5l7 7-7 7"
                     ></path>
                   </svg>
-                  后退一帧
-                </button>
-                <button class="detail-btn-control" @click="handleForwardFrame">
-                  <svg
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"
-                    ></path>
-                  </svg>
-                  前进一帧
-                </button>
-                <button class="detail-btn-control" @click="handleRewindToStart">
-                  <svg
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                    ></path>
-                  </svg>
-                  回到开头
                 </button>
               </div>
             </div>
@@ -707,6 +705,87 @@ function handleViewModeChange(mode: 'overall' | 'detail') {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+}
+
+.frame-counter {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #c9d1d9;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .frame-counter {
+  color: #333;
+}
+
+.frame-input {
+  width: 50px;
+  padding: 0.25rem 0.375rem;
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  transition: all 0.2s;
+  outline: none;
+}
+
+:global(:root:not(.dark)) .frame-input {
+  background: #fff;
+  color: #333;
+  border-color: #ccc;
+}
+
+.frame-input:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+}
+
+:global(:root:not(.dark)) .frame-input:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.frame-input:hover:not(:focus) {
+  border-color: #484f58;
+}
+
+:global(:root:not(.dark)) .frame-input:hover:not(:focus) {
+  border-color: #999;
+}
+
+.frame-separator {
+  color: #6e7681;
+  font-weight: 400;
+}
+
+:global(:root:not(.dark)) .frame-separator {
+  color: #666;
+}
+
+.frame-total {
+  color: #8b949e;
+  font-weight: 400;
+}
+
+:global(:root:not(.dark)) .frame-total {
+  color: #666;
+}
+
+.frame-label {
+  color: #6e7681;
+  font-weight: 400;
+}
+
+:global(:root:not(.dark)) .frame-label {
+  color: #666;
 }
 
 .detail-video-placeholder {
