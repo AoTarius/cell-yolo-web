@@ -111,7 +111,7 @@ const currentPanel = computed(() => {
 .welcome-icon {
   width: 120px;
   height: 120px;
-  color: var(--text-icon);
+  color: var(--accent-blue);
   margin: 0 auto 2rem;
 }
 
@@ -124,7 +124,7 @@ const currentPanel = computed(() => {
 
 .welcome-content p {
   font-size: 1.1rem;
-  color: var(--text-muted);
+  color: var(--text-primary);
   margin: 0;
   line-height: 1.6;
 }

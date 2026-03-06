@@ -259,12 +259,12 @@ function handleModelUpload() {
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-secondary);
+  border-right: 2px solid var(--border-secondary);
 }
 
 .sidebar-header {
   padding: 1.5rem;
-  border-bottom: 1px solid var(--border-secondary);
+  border-bottom: 2px solid var(--border-secondary);
 }
 
 .sidebar-header h1 {
@@ -279,7 +279,7 @@ function handleModelUpload() {
   padding: 0.75rem 1rem;
   background: var(--accent-info);
   color: var(--text-primary);
-  border: none;
+  border: var(--border-color) 1px solid;
   border-radius: 6px;
   font-size: 0.95rem;
   font-weight: 500;
@@ -305,7 +305,7 @@ function handleModelUpload() {
   padding: 0.75rem 1rem;
   background: var(--btn-upload);
   color: var(--text-primary);
-  border: none;
+  border: var(--border-color) 1px solid;
   border-radius: 6px;
   font-size: 0.95rem;
   font-weight: 500;
@@ -337,7 +337,7 @@ function handleModelUpload() {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--text-primary);
   margin: 0 0 0.75rem 0.5rem;
   font-weight: 600;
 }
@@ -354,7 +354,7 @@ function handleModelUpload() {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  border: 1px solid transparent;
+  border: var(--border-color) 1px solid;
 }
 
 .record-item:hover {
@@ -437,7 +437,7 @@ function handleModelUpload() {
 
 .record-video {
   font-size: 0.85rem;
-  color: #b0b0b0;
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -446,7 +446,7 @@ function handleModelUpload() {
 
 .record-time {
   font-size: 0.75rem;
-  color: var(--text-disabled);
+  color: var(--text-muted);
 }
 
 .model-badge {
@@ -547,7 +547,7 @@ function handleModelUpload() {
 /* 底部状态栏 */
 .sidebar-footer {
   padding: 1rem;
-  border-top: 1px solid var(--border-secondary);
+  border-top: 2px solid var(--border-secondary);
   display: flex;
   justify-content: flex-end;
   align-items: center;

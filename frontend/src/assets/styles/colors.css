@@ -23,12 +23,11 @@
   --bg-overlay: rgba(0, 0, 0, 0.5);  /* 遮罩层背景（dialog-overlay） */
 
   /* ========== 深色模式 - 边框色 ========== */
-  --border-color: #30363d;     /* 通用边框（按钮、输入框、卡片等） */
-  --border-secondary: #333;    /* 次级边框（侧边栏边框、对话框边框等） */
-  --border-tertiary: #444;     /* 三级边框（滚动条、hover边框等） */
-  --border-hover: #484f58;     /* hover状态边框（输入框hover、按钮hover等） */
-  --border-active: #58a6ff;    /* 激活状态边框（focus、active状态） */
-
+  --border-color: #ccc;        /* 通用边框（按钮、输入框、卡片等） */
+  --border-secondary: #e0e0e0; /* 次级边框（表格边框、对话框边框等） */
+  --border-tertiary: #999;     /* 三级边框（滚动条、hover边框等） */
+  --border-hover: #bbb;        /* hover状态边框（输入框hover、按钮hover等） */
+  --border-active: #2196f3;    /* 激活状态边框（focus、active状态） */
   /* ========== 深色模式 - 文字色 ========== */
   --text-primary: #fff;        /* 主要文字（标题、重要内容） */
   --text-secondary: #c9d1d9;   /* 次要文字（描述、内容文字） */
@@ -85,9 +84,9 @@
 
 :root:not(.dark) {
   /* ========== 浅色模式 - 背景色 ========== */
-  --bg-main: #f5f5f5;          /* 主区域背景（所有主面板） */
-  --bg-sidebar: #fff;          /* 侧边栏背景（sidebar整体） */
-  --bg-record: #f5f5f5;        /* 侧边栏记录项背景（record-item） */
+  --bg-main: #cdcdcdf8;          /* 主区域背景（所有主面板） */
+  --bg-sidebar: #adadad;          /* 侧边栏背景（sidebar整体） */
+  --bg-record: #cacaca;        /* 侧边栏记录项背景（record-item） */
   --bg-record-hover: #e0e0e0;  /* 记录项hover背景（record-item:hover） */
   --bg-record-active: #e3f2fd; /* 记录项激活背景（record-item.active） */
   --bg-dialog: #fff;           /* 对话框背景（dialog-container） */
@@ -99,16 +98,16 @@
   --bg-overlay: rgba(0, 0, 0, 0.5);  /* 遮罩层背景（dialog-overlay） */
 
   /* ========== 浅色模式 - 边框色 ========== */
-  --border-color: #ccc;        /* 通用边框（按钮、输入框、卡片等） */
-  --border-secondary: #e0e0e0; /* 次级边框（表格边框、对话框边框等） */
-  --border-tertiary: #999;     /* 三级边框（滚动条、hover边框等） */
-  --border-hover: #bbb;        /* hover状态边框（输入框hover、按钮hover等） */
-  --border-active: #2196f3;    /* 激活状态边框（focus、active状态） */
+  --border-color: #30363d;     /* 通用边框（按钮、输入框、卡片等） */
+  --border-secondary: #333;    /* 次级边框（侧边栏边框、对话框边框等） */
+  --border-tertiary: #444;     /* 三级边框（滚动条、hover边框等） */
+  --border-hover: #484f58;     /* hover状态边框（输入框hover、按钮hover等） */
+  --border-active: #58a6ff;    /* 激活状态边框（focus、active状态） */
 
   /* ========== 浅色模式 - 文字色 ========== */
   --text-primary: #333;        /* 主要文字（标题、重要内容） */
   --text-secondary: #666;      /* 次要文字（描述、内容文字） */
-  --text-muted: #999;          /* 弱化文字（标签、提示） */
+  --text-muted: #575757;          /* 弱化文字（标签、提示） */
   --text-disabled: #999;       /* 禁用文字（disabled状态） */
   --text-icon: #ccc;           /* 图标颜色（占位符图标） */
 
@@ -121,7 +120,8 @@
   /* ========== 浅色模式 - 状态色 ========== */
   --success: #4caf50;          /* 成功色（成功按钮、成功图标） */
   --success-hover: #66bb6a;    /* 成功色hover */
-  --success-light: #4caf50;    /* 成功色浅色（状态点、进度条） */
+  --success-light: #57c75b;    /* 成功色浅色（状态点、进度条） */
+  --success-bg: #15833f;       /* 成功色背景（状态徽章） */
   
   --warning: #ff9800;          /* 警告色（警告按钮、警告图标） */
   --warning-hover: #fbbf24;    /* 警告色hover */
@@ -129,8 +129,8 @@
   
   --danger: #ef4444;           /* 危险色（危险按钮、危险图标） */
   --danger-hover: #f87171;     /* 危险色hover */
-  --danger-light: #f87171;     /* 危险色浅色（错误文字、删除hover） */
-  --danger-bg: rgba(239, 68, 68, 0.1); /* 危险色背景（警告框、危险图标背景） */
+  --danger-light: rgb(247, 85, 85);     /* 危险色浅色（错误文字、删除hover） */
+  --danger-bg: rgba(239, 68, 68, 0.163); /* 危险色背景（警告框、危险图标背景） */
 
   /* ========== 浅色模式 - 特殊色 ========== */
   --upload-hover-bg: #e3f2fd;  /* 上传区域hover背景 */

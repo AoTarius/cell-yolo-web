@@ -162,7 +162,7 @@ function selectChart(chartNumber: number) {
 
 .visualization-placeholder {
   background: var(--bg-card);
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 0;
   padding: 4rem 2rem;
   text-align: center;

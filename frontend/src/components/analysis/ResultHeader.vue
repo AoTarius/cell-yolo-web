@@ -117,7 +117,7 @@ function toggleViewMode() {
 <style scoped>
 .result-header {
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid var(--bg-input);
+  border-bottom: 2px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -286,7 +286,7 @@ function toggleViewMode() {
 .btn-action {
   padding: 0.5rem 1rem;
   background: var(--bg-input);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.875rem;
@@ -309,6 +309,7 @@ function toggleViewMode() {
 .btn-action:hover {
   background: var(--border-color);
   border-color: var(--text-muted);
+  color: var(--bg-hover);
 }
 
 :global(:root:not(.dark)) .btn-action:hover {
