@@ -22,19 +22,13 @@ const taskToDelete = ref<string | null>(null)
 // 主题切换
 const isDark = ref(true)
 
-// 初始化主题
+// 初始化主题状态（在 main.ts 中已经应用到 DOM）
 onMounted(async () => {
   await store.loadHistoryTasks()
   
-  // 从localStorage读取主题设置
+  // 从localStorage读取主题设置来同步状态
   const savedTheme = localStorage.getItem('theme')
-  if (savedTheme === 'light') {
-    isDark.value = false
-    document.documentElement.classList.remove('dark')
-  } else {
-    isDark.value = true
-    document.documentElement.classList.add('dark')
-  }
+  isDark.value = savedTheme !== 'light'
 })
 
 // 切换主题
