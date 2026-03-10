@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick, computed, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from './ConfirmDialog.vue'
+import axios from 'axios'
 import '@/assets/styles/colors.css'
 
 const store = useAnalysisStore()
@@ -12,6 +13,21 @@ const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 const { showToast } = useToast()
+
+// 连接状态
+const isConnected = ref(true)
+let connectionCheckInterval: number | null = null
+
+// 检查后端连接状态
+async function checkConnection() {
+  try {
+    // 尝试调用一个简单的 API 来检查连接
+    await axios.get('/api/tasks/', { timeout: 3000 })
+    isConnected.value = true
+  } catch (error) {
+    isConnected.value = false
+  }
+}
 
 // 计算用户头像首字母
 const avatarInitials = computed(() => {
@@ -30,6 +46,22 @@ const avatarInitials = computed(() => {
 // 组件挂载时加载历史记录
 onMounted(async () => {
   await store.loadHistoryTasks()
+
+  // 从localStorage读取主题设置来同步状态
+  const savedTheme = localStorage.getItem('theme')
+  isDark.value = savedTheme !== 'light'
+
+  // 启动连接状态检查
+  await checkConnection()
+  connectionCheckInterval = window.setInterval(checkConnection, 10000) // 每10秒检查一次
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (connectionCheckInterval !== null) {
+    clearInterval(connectionCheckInterval)
+    connectionCheckInterval = null
+  }
 })
 
 const showDeleteDialog = ref(false)
@@ -37,15 +69,6 @@ const taskToDelete = ref<string | null>(null)
 
 // 主题切换
 const isDark = ref(true)
-
-// 初始化主题状态（在 main.ts 中已经应用到 DOM）
-onMounted(async () => {
-  await store.loadHistoryTasks()
-  
-  // 从localStorage读取主题设置来同步状态
-  const savedTheme = localStorage.getItem('theme')
-  isDark.value = savedTheme !== 'light'
-})
 
 // 切换主题
 function toggleTheme() {
@@ -245,6 +268,13 @@ function handleLogout() {
           <div class="user-sub">Signed in</div>
         </div>
       </div>
+      <!-- 连接状态 -->
+      <div class="connection-status">
+        <div class="status-indicator" :class="{ connected: isConnected, disconnected: !isConnected }">
+          <div class="status-dot"></div>
+          <span class="status-text">{{ isConnected ? '已连接' : '未连接' }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- 信息面板 -->
@@ -304,12 +334,12 @@ function handleLogout() {
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
-  border-right: 2px solid var(--border-secondary);
+  border-right: 1px solid var(--border-secondary);
 }
 
 .sidebar-header {
   padding: 1.5rem;
-  border-bottom: 2px solid var(--border-secondary);
+  border-bottom: 1px solid var(--border-secondary);
 }
 
 .sidebar-header h1 {
@@ -594,6 +624,10 @@ function handleLogout() {
   margin-top: auto;
   padding: 18px 20px;
   border-top: 1px solid var(--border-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 /* 用户信息 */
@@ -601,6 +635,8 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .avatar {
@@ -654,10 +690,61 @@ function handleLogout() {
 
 .info-content {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   width: 100%;
   gap: 0.75rem;
+}
+
+/* 连接状态 */
+.connection-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.status-indicator.connected {
+  background: var(--success-bg);
+  color: var(--success-light);
+  border: 1px solid var(--success);
+}
+
+.status-indicator.disconnected {
+  background: var(--danger-bg);
+  color: var(--danger-light);
+  border: 1px solid var(--danger);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.status-indicator.connected .status-dot {
+  background-color: var(--success-light);
+  box-shadow: 0 0 8px var(--success-light);
+}
+
+.status-indicator.disconnected .status-dot {
+  background-color: var(--danger-light);
+  box-shadow: 0 0 8px var(--danger-light);
+}
+
+.status-text {
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 /* 主题切换按钮 */
@@ -706,6 +793,7 @@ function handleLogout() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .btn-logout:hover {

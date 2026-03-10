@@ -75,106 +75,6 @@ export interface AnalysisRecord {
 }
 
 export const useAnalysisStore = defineStore('analysis', () => {
-  // 生成模拟细胞数据的辅助函数（符合新数据结构）
-  function generateMockCells(count: number, totalFrames: number): CellData[] {
-    return Array.from({ length: count }, (_, i) => {
-      const firstFrame = Math.floor(Math.random() * 20)
-      const lastFrame = totalFrames - Math.floor(Math.random() * 20)
-      const framesToGenerate = Math.min(lastFrame - firstFrame, 50) // 限制生成帧数
-
-      // 使用 for 循环生成每一帧的数据（避免闭包问题）
-      const frames: CellFrameData[] = []
-      let prevX = Math.random() * 500
-      let prevY = Math.random() * 500
-
-      for (let j = 0; j < framesToGenerate; j++) {
-        const frameNumber = firstFrame + Math.floor((j * (lastFrame - firstFrame)) / framesToGenerate)
-
-        // 生成新位置（在前一帧基础上略微移动）
-        const dx = (Math.random() - 0.5) * 10
-        const dy = (Math.random() - 0.5) * 10
-        const x = prevX + dx
-        const y = prevY + dy
-
-        frames.push({
-          frame_number: frameNumber,
-          position: { x, y },
-          area: Math.random() * 200 + 100, // 100-300 平方像素
-          velocity: {
-            vx: dx,
-            vy: dy,
-            speed: Math.sqrt(dx * dx + dy * dy),
-          },
-          bounding_box: {
-            x: x - 10,
-            y: y - 10,
-            width: 20 + Math.random() * 10,
-            height: 20 + Math.random() * 10,
-          },
-        })
-
-        // 更新前一帧位置
-        prevX = x
-        prevY = y
-      }
-
-      // 计算统计信息
-      const avgWidth = frames.reduce((sum, f) => sum + f.bounding_box.width, 0) / framesToGenerate
-      const avgHeight = frames.reduce((sum, f) => sum + f.bounding_box.height, 0) / framesToGenerate
-      const avgSpeed = frames.reduce((sum, f) => sum + f.velocity.speed, 0) / framesToGenerate
-
-      return {
-        cell_id: `Cell #${i + 1}`,
-        first_frame: firstFrame,
-        last_frame: lastFrame,
-        frame_count: framesToGenerate,
-        avg_width: Number(avgWidth.toFixed(2)),
-        avg_height: Number(avgHeight.toFixed(2)),
-        avg_conf: 0.95,
-        avg_velocity: Number(avgSpeed.toFixed(2)),
-        frames,
-      }
-    })
-  }
-
-  // 预制记录（示例数据）
-  const PRESET_RECORDS: AnalysisRecord[] = [
-    {
-      task_id: 'demo_001',
-      video_name: 'sample_video_1.mp4',
-      video_path: 'demo_001', // 使用 task_id 作为视频标识
-      status: 'completed',
-      progress: 100,
-      start_time: new Date('2024-02-10 10:00:00'),
-      end_time: new Date('2024-02-10 10:05:30'),
-      result: {
-        output_video_path: 'demo_001', // 使用 task_id 作为视频标识
-        cell_count: 25,
-        total_frames: 120,
-        video_duration: 4.0, // 120帧 / 30fps
-        model_name: 'best_split.pt',
-        cells: generateMockCells(25, 120),
-      },
-    },
-    {
-      task_id: 'demo_002',
-      video_name: 'sample_video_2.mp4',
-      video_path: 'demo_002', // 使用 task_id 作为视频标识
-      status: 'completed',
-      progress: 100,
-      start_time: new Date('2024-02-10 14:30:00'),
-      end_time: new Date('2024-02-10 14:38:20'),
-      result: {
-        output_video_path: 'demo_002', // 使用 task_id 作为视频标识
-        cell_count: 18,
-        total_frames: 200,
-        video_duration: 6.67, // 200帧 / 30fps
-        model_name: 'best_split.pt',
-        cells: generateMockCells(18, 200),
-      },
-    },
-  ]
-
   // 所有分析记录
   const records = ref<AnalysisRecord[]>([])
 
@@ -271,12 +171,12 @@ export const useAnalysisStore = defineStore('analysis', () => {
         }
       })
 
-      // 合并历史任务和预制记录（历史任务在前）
-      records.value = [...convertedRecords, ...PRESET_RECORDS]
+      // 只显示历史任务
+      records.value = convertedRecords
     } catch (error) {
       console.error('加载历史任务失败:', error)
-      // 加载失败时只显示预制记录
-      records.value = PRESET_RECORDS
+      // 加载失败时显示空列表
+      records.value = []
     }
   }
 
@@ -320,7 +220,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
           total_frames: totalFrames,
           video_duration: totalFrames / 30, // 假设 30fps
           model_name: 'best_split.pt', // 模拟数据使用默认模型
-          cells: generateMockCells(cellCount, totalFrames),
+          cells: [], // 空数组，实际数据由后端提供
         }
       }
     }, 3000)
