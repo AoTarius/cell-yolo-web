@@ -1,15 +1,31 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
+import { useUserStore } from '@/stores/userStore'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from './ConfirmDialog.vue'
 import '@/assets/styles/colors.css'
 
 const store = useAnalysisStore()
+const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 const { showToast } = useToast()
+
+// 计算用户头像首字母
+const avatarInitials = computed(() => {
+  try {
+    const name = String(userStore.currentUser?.username || '').trim()
+    if (!name) return ''
+    const parts = name.split(/\s|[._-]+/).filter(Boolean)
+    if (parts.length === 0) return name.slice(0, 2).toUpperCase()
+    if (parts.length === 1) return (parts[0]?.slice(0, 2) || '').toUpperCase()
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase()
+  } catch (e) {
+    return ''
+  }
+})
 
 // 组件挂载时加载历史记录
 onMounted(async () => {
@@ -117,6 +133,11 @@ function handleNewAnalysis() {
 function handleModelUpload() {
   router.push('/model-upload')
 }
+
+function handleLogout() {
+  userStore.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -216,31 +237,61 @@ function handleModelUpload() {
     />
 
     <!-- 底部状态栏 -->
-    <div class="sidebar-footer">
-      <button class="btn-theme-toggle" title="切换主题" @click="toggleTheme">
-        <svg
-          class="theme-icon"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            v-if="!isDark"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M20.354 15.354A9 9 0 018.646 3.646 9 9 0 0012.708-3.646 9 9 0 01-2.708 3.646M3 12a9 9 0 0112.708-3.646M9 21V9a9 9 0 00-9-9m9 12a9 9 0 01-9-9m6 2a7 7 0 01-7 7m0 0v-3m0 0a7 7 0 017 7m0 0h3m0 0v-3"
-          ></path>
-          <path
-            v-else
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-          ></path>
-        </svg>
-      </button>
+    <div class="user-panel" v-if="userStore.currentUser">
+      <div class="user-info">
+        <div class="avatar">{{ avatarInitials }}</div>
+        <div class="user-meta">
+          <div class="user-name">{{ userStore.currentUser.username }}</div>
+          <div class="user-sub">Signed in</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 信息面板 -->
+    <div class="info-panel">
+      <div class="info-content">
+        <button class="btn-theme-toggle" title="切换主题" @click="toggleTheme">
+          <svg
+            class="theme-icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <!-- 太阳图标（浅色模式显示） -->
+            <path
+              v-if="!isDark"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+            ></path>
+            <!-- 月亮图标（深色模式显示） -->
+            <path
+              v-else
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            ></path>
+          </svg>
+        </button>
+        <button class="btn-logout" title="退出登录" @click="handleLogout">
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            ></path>
+          </svg>
+        </button>
+      </div>
     </div>
   </aside>
 </template>
@@ -539,32 +590,96 @@ function handleModelUpload() {
 }
 
 /* 底部状态栏 */
-.sidebar-footer {
-  padding: 1rem;
-  border-top: 2px solid var(--border-secondary);
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
+.user-panel {
+  margin-top: auto;
+  padding: 18px 20px;
+  border-top: 1px solid var(--border-secondary);
 }
 
+/* 用户信息 */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.3), rgba(88, 166, 255, 0.5));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-sub {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* 信息面板 */
+.info-panel {
+  padding: 16px 20px;
+  height: 65px;
+  background: var(--bg-sidebar);
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--border-secondary);
+  backdrop-filter: blur(10px);
+}
+
+.info-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 0.75rem;
+}
+
+/* 主题切换按钮 */
 .btn-theme-toggle {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   background: var(--bg-record-hover);
   border: 1px solid var(--border-tertiary);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-theme-toggle:hover {
-  background: #3d3d3d;
+  background: var(--bg-hover);
   border-color: var(--border-hover);
-  transform: scale(1.05);
+  transform: translateY(-1px);
 }
 
 .btn-theme-toggle:active {
@@ -572,8 +687,36 @@ function handleModelUpload() {
 }
 
 .theme-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   transition: all 0.3s ease;
+}
+
+/* 登出按钮 */
+.btn-logout {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-logout:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-light);
+  color: var(--danger-light);
+  transform: translateY(-1px);
+}
+
+.btn-logout svg {
+  width: 18px;
+  height: 18px;
 }
 </style>

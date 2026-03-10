@@ -80,6 +80,17 @@
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.5);      /* 特大阴影（对话框深色） */
   --shadow-success: 0 0 6px rgba(74, 222, 128, 0.5); /* 成功状态阴影（完成状态点） */
   --shadow-warning: 0 0 6px rgba(251, 146, 60, 0.5); /* 警告状态阴影（处理状态点） */
+
+  /* ========== 深色模式 - 登录页专用 ========== */
+  --login-bg-gradient-start: #0066ffab;  /* 登录页背景渐变起始色 */
+  --login-bg-gradient-end: #021a43;    /* 登录页背景渐变结束色 */
+  --login-card-bg: #1e1e1e;            /* 登录卡片背景 */
+  --login-card-shadow: -55px -55px 0 rgba(0,0,0,0.3); /* 登录卡片阴影 */
+  --login-border-before: #252525;      /* 登录卡片左侧边框伪元素 */
+  --login-border-after: #2d2d2d;       /* 登录s卡片顶部边框伪元素 */
+  --login-input-line-gradient: linear-gradient(45deg, #58a6ff, #1f6feb); /* 登录输入框下划线渐变 */
+  --login-link-primary: #58a6ff;       /* 登录页主链接颜色 */
+  --login-link-secondary: #1f6feb;     /* 登录页次链接颜色 */
 }
 
 :root:not(.dark) {
@@ -152,4 +163,15 @@
   --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.15);      /* 中阴影（Toast hover） */
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);      /* 大阴影（下拉菜单浅色） */
   --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.3);      /* 特大阴影（对话框浅色） */
+
+  /* ========== 浅色模式 - 登录页专用 ========== */
+  --login-bg-gradient-start: #81bcff;  /* 登录页背景渐变起始色 */
+  --login-bg-gradient-end: #1f71ebda;    /* 登录页背景渐变结束色 */
+  --login-card-bg: #ffffff;            /* 登录卡片背景 */
+  --login-card-shadow: -55px -55px 0 rgba(0, 0, 0, 0.05); /* 登录卡片阴影 */
+  --login-border-before: #dadada;      /* 登录卡片左侧边框伪元素 */
+  --login-border-after: #dddddd;       /* 登录卡片顶部边框伪元素 */
+  --login-input-line-gradient: linear-gradient(45deg, #2196f3, #1976d2); /* 登录输入框下划线渐变 */
+  --login-link-primary: #2196f3;       /* 登录页主链接颜色 */
+  --login-link-secondary: #1976d2;     /* 登录页次链接颜色 */
 }
