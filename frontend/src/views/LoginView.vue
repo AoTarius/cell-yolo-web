@@ -61,6 +61,11 @@ async function handleSubmit(event: Event) {
     if (response.status === 'success' && response.user) {
       // 登录成功，保存用户信息到 store
       userStore.login(response.user.username, response.user)
+
+      // 根据用户的 dark_mode 设置主题
+      isDark.value = response.user.dark_mode
+      applyTheme()
+
       router.push('/cellTracking')
     } else {
       errorMessage.value = '登录失败，请重试'

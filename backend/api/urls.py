@@ -6,7 +6,7 @@ urlpatterns = [
 
     # 登录相关接口
     path('login/', views.LoginView.as_view(), name='login'),
-
+    path('update-user/', views.UpdateUserView.as_view(), name='update_user'),
     # 视频处理相关接口
     path('upload/', views.UploadVideoView.as_view(), name='upload_video'),
     path('process/', views.ProcessTaskView.as_view(), name='process_task'),

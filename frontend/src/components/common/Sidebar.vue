@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
 import { useToast } from '@/composables/useToast'
+import { authApi } from '@/api/authApi'
 import ConfirmDialog from './ConfirmDialog.vue'
 import SettingsDialog from './SettingsDialog.vue'
 import axios from 'axios'
@@ -48,9 +49,14 @@ const avatarInitials = computed(() => {
 onMounted(async () => {
   await store.loadHistoryTasks()
 
-  // 从localStorage读取主题设置来同步状态
-  const savedTheme = localStorage.getItem('theme')
-  isDark.value = savedTheme !== 'light'
+  // 如果已登录，根据用户的 dark_mode 设置主题；否则从 localStorage 读取
+  if (userStore.currentUser && userStore.currentUser.dark_mode !== undefined) {
+    isDark.value = userStore.currentUser.dark_mode
+  } else {
+    const savedTheme = localStorage.getItem('theme')
+    isDark.value = savedTheme !== 'light'
+  }
+  applyTheme()
 
   // 启动连接状态检查
   await checkConnection()
@@ -74,15 +80,42 @@ const outputPath = ref('')
 // 主题切换
 const isDark = ref(true)
 
-// 切换主题
-function toggleTheme() {
-  isDark.value = !isDark.value
+// 应用主题
+function applyTheme() {
   if (isDark.value) {
     document.documentElement.classList.add('dark')
     localStorage.setItem('theme', 'dark')
   } else {
     document.documentElement.classList.remove('dark')
     localStorage.setItem('theme', 'light')
+  }
+}
+
+// 切换主题
+async function toggleTheme() {
+  const newMode = !isDark.value
+  isDark.value = newMode
+
+  // 更新本地状态和 localStorage
+  if (newMode) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('theme', 'light')
+  }
+
+  // 如果已登录，更新数据库
+  if (userStore.currentUser) {
+    try {
+      await authApi.updateUserDarkMode(userStore.currentUser.username, newMode)
+      // 更新 store 中的用户信息
+      userStore.currentUser.dark_mode = newMode
+      localStorage.setItem('currentUser', JSON.stringify(userStore.currentUser))
+    } catch (error) {
+      console.error('更新用户颜色模式失败:', error)
+      // 不影响本地切换，只记录错误
+    }
   }
 }
 
