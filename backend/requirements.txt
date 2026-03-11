@@ -6,6 +6,7 @@ channels>=4.0.0
 opencv-python>=4.8.0
 numpy>=1.24.0
 pymysql>=1.1.0
+bcrypt>=4.0.0
 
 # YOLO and DeepSORT dependencies
 torch>=1.7.0

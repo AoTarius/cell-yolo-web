@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import { authApi, type User } from '@/api/authApi'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -9,6 +10,10 @@ const userStore = useUserStore()
 // 表单数据
 const username = ref('')
 const password = ref('')
+
+// 加载状态
+const isLoading = ref(false)
+const errorMessage = ref('')
 
 // 主题切换
 const isDark = ref(true)
@@ -37,13 +42,42 @@ function applyTheme() {
 }
 
 // 表单处理
-function handleSubmit(event: Event) {
+async function handleSubmit(event: Event) {
   event.preventDefault()
+  errorMessage.value = ''
 
-  // 简单登录：直接使用用户名登录，不校验密码
-  if (username.value.trim()) {
-    userStore.login(username.value.trim())
-    router.push('/cellTracking')
+  // 验证输入
+  if (!username.value.trim() || !password.value) {
+    errorMessage.value = '用户名和密码不能为空'
+    return
+  }
+
+  isLoading.value = true
+
+  try {
+    // 调用后端登录 API
+    const response = await authApi.login(username.value.trim(), password.value)
+
+    if (response.status === 'success' && response.user) {
+      // 登录成功，保存用户信息到 store
+      userStore.login(response.user.username, response.user)
+      router.push('/cellTracking')
+    } else {
+      errorMessage.value = '登录失败，请重试'
+    }
+  } catch (error: any) {
+    console.error('Login error:', error)
+
+    // 处理错误响应
+    if (error.response?.data?.error) {
+      errorMessage.value = error.response.data.error
+    } else if (error.message) {
+      errorMessage.value = error.message
+    } else {
+      errorMessage.value = '登录失败，请检查网络连接'
+    }
+  } finally {
+    isLoading.value = false
   }
 }
 </script>
@@ -81,13 +115,19 @@ function handleSubmit(event: Event) {
     <div class="login-card">
       <form @submit="handleSubmit">
         <h2>细胞跟踪分析</h2>
+
+        <!-- 错误消息 -->
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
+
         <div class="input-box">
-          <input type="text" v-model="username" required>
+          <input type="text" v-model="username" required :disabled="isLoading">
           <span>用户名</span>
           <i></i>
         </div>
         <div class="input-box">
-          <input type="password" v-model="password" required>
+          <input type="password" v-model="password" required :disabled="isLoading">
           <span>密码</span>
           <i></i>
         </div>
@@ -96,7 +136,7 @@ function handleSubmit(event: Event) {
           <a href="#">注册账号</a>
         </div>
         <div class="input-box">
-          <input type="submit" value="登录">
+          <input type="submit" :value="isLoading ? '登录中...' : '登录'" :disabled="isLoading">
         </div>
       </form>
     </div>
@@ -197,6 +237,26 @@ function handleSubmit(event: Event) {
   font-size: 1.5rem;
 }
 
+/* 错误消息 */
+.error-message {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.9em;
+  text-align: center;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
 /* 输入框 */
 .login-card .input-box {
   position: relative;
@@ -214,7 +274,6 @@ function handleSubmit(event: Event) {
   color: var(--text-primary);
   font-size: 1.1em;
   letter-spacing: 0.1em;
-  text-transform: uppercase;
   z-index: 2;
 }
 
@@ -253,6 +312,11 @@ function handleSubmit(event: Event) {
 .login-card .input-box input:focus ~ i {
   height: 100%;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.25);
+}
+
+.login-card .input-box input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* 链接 */
@@ -300,5 +364,10 @@ function handleSubmit(event: Event) {
 
 .login-card .input-box input[type="submit"]:active {
   background: var(--accent-blue-active);
+}
+
+.login-card .input-box input[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

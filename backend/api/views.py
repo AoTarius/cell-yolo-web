@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import threading
+import bcrypt
 from pathlib import Path
 from datetime import datetime
 
@@ -13,6 +14,13 @@ from rest_framework import status
 from rest_framework.views import APIView
 
 from .services.video_processor import get_video_processor
+
+
+# 数据库连接配置
+import pymysql
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # 全局任务状态存储（生产环境应使用数据库或 Redis）
@@ -631,5 +639,89 @@ class ModelUploadView(APIView):
         except Exception as e:
             return Response(
                 {'error': f'上传失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class LoginView(APIView):
+    """登录验证接口"""
+
+    def post(self, request):
+        """验证用户名和密码"""
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            password = data.get('password')
+
+            if not username or not password:
+                return Response(
+                    {'error': '用户名和密码不能为空'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 连接数据库
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 查询用户
+                    sql = "SELECT * FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户名或密码错误'},
+                            status=status.HTTP_401_UNAUTHORIZED
+                        )
+
+                    # 验证密码
+                    password_bytes = password.encode('utf-8')
+                    hashed_password = user['password_hash'].encode('utf-8')
+
+                    if not bcrypt.checkpw(password_bytes, hashed_password):
+                        return Response(
+                            {'error': '用户名或密码错误'},
+                            status=status.HTTP_401_UNAUTHORIZED
+                        )
+
+                    # 登录成功
+                    return Response({
+                        'status': 'success',
+                        'message': '登录成功',
+                        'user': {
+                            'id': user['id'],
+                            'username': user['username'],
+                            'email': user['email'],
+                            'dark_mode': user['dark_mode'],
+                            'model_base_path': user['model_base_path'],
+                            'output_base_path': user['output_base_path']
+                        }
+                    }, status=status.HTTP_200_OK)
+
+            finally:
+                connection.close()
+
+        except json.JSONDecodeError:
+            return Response(
+                {'error': '无效的 JSON 格式'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'登录失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

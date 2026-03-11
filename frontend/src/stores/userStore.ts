@@ -2,8 +2,12 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export interface User {
+  id: number
   username: string
-  email?: string
+  email: string | null
+  dark_mode: boolean
+  model_base_path: string
+  output_base_path: string
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -11,12 +15,17 @@ export const useUserStore = defineStore('user', () => {
   const currentUser = ref<User | null>(null)
 
   // 登录
-  function login(username: string) {
+  function login(username: string, userData?: Partial<User>) {
     currentUser.value = {
+      id: userData?.id || 0,
       username,
+      email: userData?.email || null,
+      dark_mode: userData?.dark_mode ?? true,
+      model_base_path: userData?.model_base_path || 'models',
+      output_base_path: userData?.output_base_path || 'output',
     }
     // 保存到 localStorage
-    localStorage.setItem('currentUser', JSON.stringify({ username }))
+    localStorage.setItem('currentUser', JSON.stringify(currentUser.value))
   }
 
   // 登出
