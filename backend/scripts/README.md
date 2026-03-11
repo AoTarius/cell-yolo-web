@@ -8,7 +8,7 @@
 
 用于初始化 MySQL 数据库的脚本，会自动创建：
 - 数据库（如果不存在）
-- 表结构（users, models, tasks, cells）
+- 表结构（users, videos, models, tasks, cells）
 - 初始数据（可选）
 
 ### 使用方法
@@ -77,7 +77,7 @@ python scripts/init_db.py
 - `id`: 用户 ID（主键，INTEGER, 自增）
 - `username`: 用户名（VARCHAR(100), NOT NULL）
 - `password_hash`: 密码哈希（VARCHAR(255), NOT NULL）
-- `email`: 邮箱（VARCHAR(255))
+- `email`: 邮箱（VARCHAR(255)
 - `dark_mode`: 色彩模式（BOOLEAN, NOT NULL, 默认True）
 - `model_base_path`: 用户模型文件基础路径（VARCHAR(500), NOT NULL）
 - `output_base_path`: 用户输出文件基础路径（VARCHAR(500), NOT NULL）
@@ -156,18 +156,19 @@ python scripts/init_db.py
 - PRIMARY KEY: `id`
 - UNIQUE INDEX: `idx_username` (username)
 - INDEX: `idx_email` (email)
+- INDEX: `idx_deleted` (is_deleted)
 
 #### videos表索引
 - PRIMARY KEY: `id`
 - INDEX: `idx_user_id` (user_id)
 - INDEX: `idx_user_deleted` (user_id, is_deleted)
-- UNIQUE INDEX: `idx_user_video_name` (user_id, video_name) WHERE is_deleted = false - 同一用户内视频名称唯一
+- UNIQUE INDEX: `idx_user_video_name` (user_id, video_name) - 同一用户内视频名称唯一
 
 #### models表索引
 - PRIMARY KEY: `id`
 - INDEX: `idx_user_id` (user_id)
 - INDEX: `idx_user_deleted` (user_id, is_deleted)
-- UNIQUE INDEX: `idx_user_model_name` (user_id, model_name) WHERE is_deleted = false - 同一用户内模型名称唯一
+- UNIQUE INDEX: `idx_user_model_name` (user_id, model_name) - 同一用户内模型名称唯一
 
 #### tasks表索引
 - PRIMARY KEY: `id`
@@ -202,8 +203,8 @@ python scripts/init_db.py
 
 **查询注意事项：**
 - 所有查询默认添加 `WHERE is_deleted = false` 条件
-- 唯一性约束只在 `is_deleted = false` 的记录间生效
 - 支持数据恢复操作（将 `is_deleted` 改回 `false`）
+- **唯一性约束**：数据库层面的唯一性约束会检查所有记录（包括已删除的），因此在代码层面需要确保用户名/视频名/模型名的唯一性只在未删除记录间生效
 
 ### 文件路径生成规则
 
@@ -280,8 +281,9 @@ python scripts/init_db.py
 6. 删除用户/任务/模型时，需要同步清理文件系统
 7. **所有查询默认需要过滤 `is_deleted = true` 的记录**
 8. **代码层面需要实现以下约束**：
-   - 唯一性检查：创建 `videos` 时检查 `user_id + video_name` 的唯一性
-   - 唯一性检查：创建 `models` 时检查 `user_id + model_name` 的唯一性
+   - 唯一性检查：创建 `users` 时检查 `username` 的唯一性（排除已删除记录）
+   - 唯一性检查：创建 `videos` 时检查 `user_id + video_name` 的唯一性（排除已删除记录）
+   - 唯一性检查：创建 `models` 时检查 `user_id + model_name` 的唯一性（排除已删除记录）
    - 引用完整性：创建记录时验证关联的 `id` 存在且 `is_deleted = false`
    - 级联删除：实现上述软删除的级联逻辑
    - 数据恢复：支持将 `is_deleted` 改回 `false` 进行数据恢复

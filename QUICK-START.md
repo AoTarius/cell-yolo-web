@@ -12,7 +12,105 @@ conda create -n cell-yolo python=3.8 -y
 conda activate cell-yolo
 ```
 
-### 第二步：安装 Python 依赖
+### 第二步：安装 MySQL 数据库
+
+项目使用 MySQL 作为数据库，需要先安装并配置 MySQL。
+
+#### macOS 用户安装步骤
+
+```bash
+# 使用 Homebrew 安装 MySQL
+brew install mysql
+
+# 启动 MySQL 服务
+brew services start mysql
+
+# 设置 root 密码（按提示操作）
+mysql_secure_installation
+```
+
+#### Windows 用户安装步骤
+
+1. 下载 MySQL Installer: https://dev.mysql.com/downloads/installer/
+2. 运行安装程序，选择 "Developer Default"
+3. 按提示完成安装，记住设置的 root 密码
+4. 启动 MySQL 服务：
+   - 打开"服务"（Win + R，输入 `services.msc`）
+   - 找到 "MySQLxx" 服务，右键选择"启动"
+
+#### 创建数据库（可选）
+
+初始化脚本会自动创建数据库，但也可以手动创建：
+
+```bash
+# 登录 MySQL
+mysql -u root -p
+
+# 创建数据库
+CREATE DATABASE cell_tracking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# 退出
+EXIT;
+```
+
+### 第三步：配置环境变量
+
+在 `backend` 目录下创建 `.env` 文件：
+
+```bash
+cd backend
+
+# 复制示例配置
+cp .env.example .env
+```
+
+编辑 `.env` 文件，将以下内容添加进去（将 `your_password` 替换为你的 MySQL root 密码）：
+
+```env
+SECRET_KEY=django-insecure-changeme-in-production
+DEBUG=True
+
+# 数据库配置
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=cell_tracking
+```
+
+**Windows 用户注意事项**：
+- 在记事本中编辑 `.env` 文件时，注意选择"所有文件"类型
+- 路径中使用正斜杠 `/` 或双反斜杠 `\\`
+
+### 第四步：初始化数据库
+
+运行数据库初始化脚本，创建表结构：
+
+```bash
+cd scripts
+python init_db.py
+```
+
+成功后会显示：
+```
+✓ 成功连接到 MySQL 服务器 (localhost:3306)
+✓ 数据库 'cell_tracking' 创建成功或已存在
+✓ 表 'users' 创建成功或已存在
+✓ 表 'videos' 创建成功或已存在
+✓ 表 'models' 创建成功或已存在
+✓ 表 'tasks' 创建成功或已存在
+✓ 表 'cells' 创建成功或已存在
+✓ 数据库初始化完成！
+```
+
+**如果连接失败**，检查：
+1. MySQL 服务是否启动
+   - macOS: `brew services list`
+   - Windows: 查看服务管理器
+2. `.env` 文件中的密码是否正确
+3. MySQL root 用户权限设置
+
+### 第五步：安装 Python 依赖
 
 进入 backend 目录并安装所需的 Python 库：
 
@@ -44,7 +142,7 @@ pip install -r requirements.txt
 2. `backend/settings.py` 中的 sys.path 配置
 3. VSCode 的 `.vscode/settings.json` 配置
 
-### 第三步：配置 YOLO 模型
+### 第六步：配置 YOLO 模型
 
 确保 YOLO 模型文件已放置在正确位置：
 
@@ -60,7 +158,7 @@ ls backend/models/yolov8s-seg.pt
 cp models/yolov8s-seg.pt backend/models/
 ```
 
-### 第三步（可选）：验证 ultralytics 本地库
+### 第六步（可选）：验证 ultralytics 本地库
 
 项目使用本地化的 ultralytics 库，可以通过以下命令验证：
 
@@ -76,7 +174,7 @@ python -c "from deep_sort_pytorch.deep_sort import DeepSort; print('✓ DeepSORT
 2. 检查 `.pth` 文件是否存在：`ls ~/miniconda3/envs/cell-yolo/lib/python3.8/site-packages/ultralytics_local.pth`
 3. 如果使用 VSCode，重新加载窗口：`Cmd + Shift + P` → "Reload Window"
 
-### 第四步：安装前端 npm 包
+### 第七步：安装前端 npm 包
 
 进入 frontend 目录并安装 Node.js 依赖：
 
@@ -94,9 +192,9 @@ npm install
 - Pinia 3.0.4
 - Axios 1.13.5
 
-### 第五步：初始化数据库
+### 第八步：执行 Django 迁移
 
-返回 backend 目录并执行数据库迁移：
+虽然已经使用 `init_db.py` 初始化了数据库表结构，但仍需执行 Django 迁移以确保 Django 管理后台等功能正常工作：
 
 ```bash
 cd ../backend

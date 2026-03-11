@@ -108,7 +108,8 @@ web/
 - NumPy
 - django-cors-headers
 - python-dotenv
-- SQLite
+- PyMySQL
+- MySQL
 
 ### AI 模型
 - **ultralytics 8.0.3** (本地库，位于 `web/libs/ultralytics`)
@@ -163,17 +164,24 @@ python3 convert.py --input /path/to/images --fps 10
 
 ## ⚠️ 注意事项
 
-1. **YOLO 模型**: 确保 `web/backend/models/` 目录下有 `yolov8s-seg.pt` 模型文件
-2. **依赖安装**:
+1. **MySQL 数据库**:
+   - 需要先安装并启动 MySQL 服务
+   - macOS: `brew install mysql && brew services start mysql`
+   - Windows: 下载 MySQL Installer 并安装
+   - 配置 `.env` 文件中的数据库连接信息
+   - 运行 `scripts/init_db.py` 初始化数据库表结构
+2. **YOLO 模型**: 确保 `web/backend/models/` 目录下有 `yolov8s-seg.pt` 模型文件
+3. **依赖安装**:
+   - 需要安装 PyMySQL 和 python-dotenv
    - 需要安装 OpenCV 和 Channels 支持 WebSocket
    - 需要安装 PyTorch 和 torchvision
    - ultralytics 和 deep_sort_pytorch 使用本地库（`web/libs/ultralytics`）
-3. **Python 路径配置**:
+4. **Python 路径配置**:
    - 项目自动通过 `.pth` 文件和 `settings.py` 配置 Python 路径
    - VSCode 用户：已配置 `.vscode/settings.json`，可能需要重新加载窗口
-4. **Conda 环境**: 推荐使用 Conda 虚拟环境，便于管理依赖
-5. **内存要求**: 视频处理需要较多内存，建议 8GB+ RAM
-6. **处理时间**: 视频处理可能需要几分钟到几十分钟
+5. **Conda 环境**: 推荐使用 Conda 虚拟环境，便于管理依赖
+6. **内存要求**: 视频处理需要较多内存，建议 8GB+ RAM
+7. **处理时间**: 视频处理可能需要几分钟到几十分钟
 
 ## 🤝 贡献
 
