@@ -56,11 +56,12 @@ python scripts/init_db.py
 └── {model_name}.pt         # 用户模型文件
 
 {user.output_base_path}/
+└── videos/                 # 视频库，统一管理所有原始视频
+    └── {video_id}/         # 视频专属文件夹
+        └── {video_name}.{ext}
+
 └── tasks/
     └── {task_id}/          # 任务专属文件夹
-        ├── original/       # 原始视频文件夹
-        │   ├── {original_video_name}.{ext}
-        │   └── frames/     # 原始视频帧图像（可选）
         ├── output/         # 处理后视频文件夹
         │   ├── {annotated_video_name}.{ext}
         │   ├── frames/     # 处理后视频帧图像（可选）
@@ -74,47 +75,66 @@ python scripts/init_db.py
 #### users 表
 记录用户信息的表
 - `id`: 用户 ID（主键，INTEGER, 自增）
-- `username`: 用户名（VARCHAR(100), NOT NULL, UNIQUE）
+- `username`: 用户名（VARCHAR(100), NOT NULL）
 - `password_hash`: 密码哈希（VARCHAR(255), NOT NULL）
-- `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
-- `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
-- `dark_mode`: 使用的色彩模式（BOOLEAN, NOT NULL, 默认True）
-- `email`: 邮箱（VARCHAR(255), UNIQUE）
+- `email`: 邮箱（VARCHAR(255))
+- `dark_mode`: 色彩模式（BOOLEAN, NOT NULL, 默认True）
 - `model_base_path`: 用户模型文件基础路径（VARCHAR(500), NOT NULL）
 - `output_base_path`: 用户输出文件基础路径（VARCHAR(500), NOT NULL）
+- `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
+- `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
+- `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
+- `deleted_at`: 删除时间（DATETIME, 可为NULL）
+
+#### videos 表
+记录原始视频信息的表，支持视频复用
+- `id`: 视频ID（主键，INTEGER, 自增）
+- `user_id`: 所属用户ID（INTEGER, NOT NULL）
+- `video_name`: 原始视频文件名（VARCHAR(255), NOT NULL）
+- `video_path`: 原始视频相对路径（VARCHAR(255), NOT NULL）
+- `total_frames`: 总帧数（INTEGER）
+- `video_duration`: 视频时长（FLOAT, 单位：秒）
+- `file_size`: 文件大小（INTEGER, 单位：字节）
+- `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
+- `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
+- `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
+- `deleted_at`: 删除时间（DATETIME, 可为NULL）
 
 #### models 表
 记录模型信息的表，模型存储在本地文件夹下，路径记录在users表内
 - `id`: 模型 ID（主键，INTEGER, 自增）
-- `user_id`: 所属用户ID（INTEGER, NOT NULL, 外键到users表的id）
-- `model_name`: 模型名称（VARCHAR(100), NOT NULL, 同一用户内唯一）
+- `user_id`: 所属用户ID（INTEGER, NOT NULL）
+- `model_name`: 模型名称（VARCHAR(100), NOT NULL）
 - `model_path`: 模型文件相对路径（VARCHAR(255), NOT NULL, 相对于用户的model_base_path）
+- `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
+- `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
+- `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
+- `deleted_at`: 删除时间（DATETIME, 可为NULL）
 
 #### tasks 表
-记录所有任务信息的表，视频存储在本地文件夹下，路径记录在users表内
+记录所有任务信息的表
 - `id`: 任务 ID（主键，INTEGER, 自增）
-- `user_id`: 提出任务的用户ID（INTEGER, NOT NULL, 外键到users表的id）
+- `user_id`: 提出任务的用户ID（INTEGER, NOT NULL）
+- `video_id`: 使用的原始视频ID（INTEGER, NOT NULL）
+- `model_id`: 使用的模型ID（INTEGER, NOT NULL）
 - `task_id`: 任务唯一标识（VARCHAR(36), NOT NULL, UNIQUE），是创建tasks内文件夹的标识
-- `video_name`: 视频名（VARCHAR(255), NOT NULL）
-- `task_name`: 任务名（VARCHAR(255), NOT NULL, 默认等于视频名）
+- `task_name`: 任务名（VARCHAR(255), NOT NULL）
 - `status`: 任务状态（VARCHAR(20), NOT NULL, 枚举值: 'pending', 'processing', 'completed', 'failed'）
 - `progress`: 进度（INTEGER, NOT NULL, 默认0, 范围0-100）
-- `total_frames`: 总帧数（INTEGER）
-- `video_duration`: 视频时长（FLOAT, 单位：秒）
-- `model_id`: 使用的模型id（INTEGER, 外键到models表的id）
 - `conf`: 置信度阈值（FLOAT, 默认0.3, 范围0-1）
 - `imgsz`: 图像尺寸（INTEGER, 默认1024）
 - `fps`: 帧率（INTEGER, 默认10）
 - `annotated_video_name`: 处理后视频文件名（VARCHAR(255), 存储在任务文件夹内）
-- `original_video_name`: 原始视频文件名（VARCHAR(255), 上传时直接存储在任务文件夹内）
 - `error_message`: 错误信息（TEXT）
 - `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
 - `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
+- `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
+- `deleted_at`: 删除时间（DATETIME, 可为NULL）
 
 #### cells 表
 记录每个任务的细胞的具体信息
 - `id`: 细胞 ID（主键，INTEGER, 自增）
-- `task_id`: 关联的任务ID（INTEGER, NOT NULL, 外键到tasks表的id）
+- `task_id`: 关联的任务ID（INTEGER, NOT NULL）
 - `frame`: 帧号（INTEGER, NOT NULL），表示该检测记录出现在视频的第几帧
 - `track_id`: 轨迹ID（INTEGER, NOT NULL），用于追踪同一个细胞在不同帧中的位置（DeepSORT分配的唯一标识）
 - `bb_left`: 边界框左上角X坐标（FLOAT, NOT NULL）
@@ -125,69 +145,89 @@ python scripts/init_db.py
 - `class`: 类别（INTEGER, NOT NULL, 默认0），检测到的细胞类别（0表示细胞）
 - `visibility`: 可见性（FLOAT, 范围0-1），细胞的可见程度
 - `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
+- `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
+- `deleted_at`: 删除时间（DATETIME, 可为NULL）
 
 ### 索引设计
 
+**注意：本设计不使用数据库外键约束，所有关联关系通过代码层面维护。**
+
 #### users表索引
 - PRIMARY KEY: `id`
+- UNIQUE INDEX: `idx_username` (username)
+- INDEX: `idx_email` (email)
+
+#### videos表索引
+- PRIMARY KEY: `id`
+- INDEX: `idx_user_id` (user_id)
+- INDEX: `idx_user_deleted` (user_id, is_deleted)
+- UNIQUE INDEX: `idx_user_video_name` (user_id, video_name) WHERE is_deleted = false - 同一用户内视频名称唯一
 
 #### models表索引
 - PRIMARY KEY: `id`
-- UNIQUE INDEX: `user_model_name` (user_id, model_name) - 同一用户内模型名称唯一
-- INDEX: `idx_user_id` (user_id) - 外键索引
+- INDEX: `idx_user_id` (user_id)
+- INDEX: `idx_user_deleted` (user_id, is_deleted)
+- UNIQUE INDEX: `idx_user_model_name` (user_id, model_name) WHERE is_deleted = false - 同一用户内模型名称唯一
 
 #### tasks表索引
 - PRIMARY KEY: `id`
-- UNIQUE INDEX: `task_id` (业务唯一标识)
-- INDEX: `idx_user_status` (user_id, status) - 用于查询用户的任务列表
-- INDEX: `idx_created_at` (created_at) - 用于按时间排序
-- INDEX: `idx_user_id` (user_id) - 外键索引
-- INDEX: `idx_model_id` (model_id) - 外键索引
+- UNIQUE INDEX: `idx_task_id` (task_id)
+- INDEX: `idx_user_id` (user_id)
+- INDEX: `idx_user_status` (user_id, status)
+- INDEX: `idx_user_deleted` (user_id, is_deleted)
+- INDEX: `idx_video_id` (video_id)
+- INDEX: `idx_model_id` (model_id)
+- INDEX: `idx_created_at` (created_at)
+- 复合索引：`idx_user_status_deleted` (user_id, status, is_deleted)
 
 #### cells表索引
 - PRIMARY KEY: `id`
+- INDEX: `idx_task_id` (task_id)
 - INDEX: `idx_task_frame_track` (task_id, frame, track_id) - 核心查询：按任务、帧、轨迹查询
 - INDEX: `idx_task_track` (task_id, track_id) - 查询特定细胞轨迹
 - INDEX: `idx_task_frame` (task_id, frame) - 按帧加载数据
-- INDEX: `idx_task_id` (task_id) - 外键索引
+- INDEX: `idx_task_deleted` (task_id, is_deleted)
 
-### 外键约束
+### 软删除策略
 
-#### models表
-- FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
-  - 当用户被删除时，如果用户拥有模型，则阻止删除，防止误删
+所有表统一使用软删除策略：
+- `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
+- `deleted_at`: 删除时间（DATETIME, 可为NULL）
 
-#### tasks表
-- FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  - 当用户被删除时，其所有任务也会被删除
-- FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE RESTRICT
-  - 当模型被删除时，使用该模型的任务将保留，防止误删
+**删除操作流程：**
+1. 将记录的 `is_deleted` 设为 `true`
+2. 将 `deleted_at` 设为当前时间
+3. 代码层面处理级联逻辑
+4. 代码层面清理文件系统
 
-#### cells表
-- FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-  - 当任务被删除时，其所有细胞数据也会被删除
+**查询注意事项：**
+- 所有查询默认添加 `WHERE is_deleted = false` 条件
+- 唯一性约束只在 `is_deleted = false` 的记录间生效
+- 支持数据恢复操作（将 `is_deleted` 改回 `false`）
 
 ### 文件路径生成规则
 
-所有文件路径均通过用户配置和任务ID动态生成，避免在数据库中存储重复的完整路径：
+所有文件路径均通过用户配置和ID动态生成，避免在数据库中存储重复的完整路径：
 
 #### 模型文件路径
 - **存储位置**: `{user.model_base_path}/{model.model_path}`
 - **查询时拼接**: `model_base_path` + `model_path`
 
+#### 原始视频文件路径
+- **存储位置**: `{user.output_base_path}/videos/{video.video_id}/{video.video_name}`
+- **查询时拼接**: `output_base_path` + "videos/" + `video_id` + "/" + `video_name`
+
 #### 任务文件夹路径
 - **存储位置**: `{user.output_base_path}/tasks/{task.task_id}/`
 - **查询时拼接**: `output_base_path` + "tasks/" + `task_id`
 
-#### 视频文件路径
-- **原始视频**: `{user.output_base_path}/tasks/{task.task_id}/original/{task.original_video_name}`
-- **处理后视频**: `{user.output_base_path}/tasks/{task.task_id}/output/{task.annotated_video_name}`
-- **查询时拼接**: `output_base_path` + "tasks/" + `task_id` + "/" + 子文件夹 + 文件名
+#### 处理后视频文件路径
+- **存储位置**: `{user.output_base_path}/tasks/{task.task_id}/output/{task.annotated_video_name}`
+- **查询时拼接**: `output_base_path` + "tasks/" + `task_id` + "/output/" + `annotated_video_name`
 
 #### 帧图像路径
-- **原始视频帧**: `{user.output_base_path}/tasks/{task.task_id}/original/frames/frame_{frame_number}.{ext}`
 - **处理后视频帧**: `{user.output_base_path}/tasks/{task.task_id}/output/frames/frame_{frame_number}.{ext}`
-- **查询时拼接**: `output_base_path` + "tasks/" + `task_id` + "/" + 子文件夹 + "frames/" + 文件名
+- **查询时拼接**: `output_base_path` + "tasks/" + `task_id` + "/output/frames/" + 文件名
 
 #### 标签文件路径
 - **标注信息**: `{user.output_base_path}/tasks/{task.task_id}/output/labels/{label_name}.txt`
@@ -199,10 +239,36 @@ python scripts/init_db.py
 - **导出功能**: 根据需要实时生成CSV、JSON等格式
 
 #### API访问路径
-- **原始视频**: `/api/original-video/{task_id}`
-- **处理后视频**: `/api/video/{task_id}`
+- **原始视频**: `/api/video/{video_id}`
+- **处理后视频**: `/api/task-video/{task_id}`
 - **检测结果**: `/api/result/{task_id}`（从数据库实时查询生成）
 - **细胞数据**: `/api/cells/{task_id}`（从数据库查询）
+
+### 软删除的级联逻辑
+
+由于不使用数据库外键约束，所有级联删除逻辑需要在代码层面实现：
+
+#### 删除用户
+1. 将 `users` 表中对应记录的 `is_deleted` 设为 `true`，`deleted_at` 设为当前时间
+2. **代码级联**：将该用户的所有 `videos`、`models`、`tasks` 的 `is_deleted` 设为 `true`
+3. **代码级联**：将所有关联的 `tasks` 对应的 `cells` 的 `is_deleted` 设为 `true`
+4. 清理文件系统中的用户文件夹
+
+#### 删除视频
+1. 将 `videos` 表中对应记录的 `is_deleted` 设为 `true`，`deleted_at` 设为当前时间
+2. **代码级联**：将使用该视频的所有 `tasks` 的 `is_deleted` 设为 `true`
+3. **代码级联**：将所有关联的 `cells` 的 `is_deleted` 设为 `true`
+4. 清理文件系统中的视频文件
+
+#### 删除模型
+1. 将 `models` 表中对应记录的 `is_deleted` 设为 `true`，`deleted_at` 设为当前时间
+2. **检查**：是否有正在使用该模型的 `tasks`（`status` 为 `processing`），如有则阻止删除
+3. 清理文件系统中的模型文件
+
+#### 删除任务
+1. 将 `tasks` 表中对应记录的 `is_deleted` 设为 `true`，`deleted_at` 设为当前时间
+2. **代码级联**：将所有关联的 `cells` 的 `is_deleted` 设为 `true`
+3. 清理文件系统中的任务文件夹（保留视频文件，因为可能在 `videos` 表中）
 
 ## 注意事项
 
@@ -212,3 +278,10 @@ python scripts/init_db.py
 4. 根据实际需求修改表结构
 5. 帧图像存储在文件系统，不存储在数据库BLOB字段中
 6. 删除用户/任务/模型时，需要同步清理文件系统
+7. **所有查询默认需要过滤 `is_deleted = true` 的记录**
+8. **代码层面需要实现以下约束**：
+   - 唯一性检查：创建 `videos` 时检查 `user_id + video_name` 的唯一性
+   - 唯一性检查：创建 `models` 时检查 `user_id + model_name` 的唯一性
+   - 引用完整性：创建记录时验证关联的 `id` 存在且 `is_deleted = false`
+   - 级联删除：实现上述软删除的级联逻辑
+   - 数据恢复：支持将 `is_deleted` 改回 `false` 进行数据恢复

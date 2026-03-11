@@ -5,6 +5,7 @@ import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
 import { useToast } from '@/composables/useToast'
 import ConfirmDialog from './ConfirmDialog.vue'
+import SettingsDialog from './SettingsDialog.vue'
 import axios from 'axios'
 import '@/assets/styles/colors.css'
 
@@ -66,6 +67,9 @@ onUnmounted(() => {
 
 const showDeleteDialog = ref(false)
 const taskToDelete = ref<string | null>(null)
+const showSettingsDialog = ref(false)
+const modelPath = ref('')
+const outputPath = ref('')
 
 // 主题切换
 const isDark = ref(true)
@@ -160,6 +164,28 @@ function handleModelUpload() {
 function handleLogout() {
   userStore.logout()
   router.push('/login')
+}
+
+function handleSettings() {
+  showSettingsDialog.value = true
+}
+
+function handleSettingsSave(savedModelPath: string, savedOutputPath: string) {
+  modelPath.value = savedModelPath
+  outputPath.value = savedOutputPath
+  // TODO: 保存到用户配置或发送到后端
+  showToast('设置已保存', 'success')
+}
+
+function handleBrowseModel() {
+  // TODO: 实现文件夹选择功能
+  // 在 Web 环境中，可以使用 Electron 的 API 或文件选择器
+  showToast('文件夹选择功能待实现', 'info')
+}
+
+function handleBrowseOutput() {
+  // TODO: 实现文件夹选择功能
+  showToast('文件夹选择功能待实现', 'info')
 }
 </script>
 
@@ -259,6 +285,16 @@ function handleLogout() {
       @cancel="handleDeleteCancel"
     />
 
+    <!-- 设置对话框 -->
+    <SettingsDialog
+      v-model:visible="showSettingsDialog"
+      :model-path="modelPath"
+      :output-path="outputPath"
+      @save="handleSettingsSave"
+      @browse-model="handleBrowseModel"
+      @browse-output="handleBrowseOutput"
+    />
+
     <!-- 底部状态栏 -->
     <div class="user-panel" v-if="userStore.currentUser">
       <div class="user-info">
@@ -303,6 +339,28 @@ function handleLogout() {
               stroke-linejoin="round"
               stroke-width="2"
               d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            ></path>
+          </svg>
+        </button>
+        <button class="btn-settings" title="设置" @click="handleSettings">
+          <svg
+            class="settings-icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            ></path>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
             ></path>
           </svg>
         </button>
@@ -774,6 +832,38 @@ function handleLogout() {
 }
 
 .theme-icon {
+  width: 20px;
+  height: 20px;
+  transition: all 0.3s ease;
+}
+
+/* 设置按钮 */
+.btn-settings {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-settings:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-settings:active {
+  transform: scale(0.95);
+}
+
+.settings-icon {
   width: 20px;
   height: 20px;
   transition: all 0.3s ease;
