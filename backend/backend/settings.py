@@ -15,6 +15,10 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
+# 配置 pymysql 作为 MySQL 驱动
+import pymysql
+pymysql.install_as_MySQLdb()
+
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
