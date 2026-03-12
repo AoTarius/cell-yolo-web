@@ -142,7 +142,7 @@ python scripts/init_db.py
 - `bb_width`: 边界框宽度（FLOAT, NOT NULL）
 - `bb_height`: 边界框高度（FLOAT, NOT NULL）
 - `conf`: 置信度（FLOAT, NOT NULL, 范围0-1），模型检测该细胞的置信度分数
-- `class`: 类别（INTEGER, NOT NULL, 默认0），检测到的细胞类别（0表示细胞）
+- `class_id`: 类别（INTEGER, NOT NULL, 默认0），检测到的细胞类别（0表示细胞）
 - `visibility`: 可见性（FLOAT, 范围0-1），细胞的可见程度
 - `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
 - `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）

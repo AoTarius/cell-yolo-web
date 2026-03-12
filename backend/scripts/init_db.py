@@ -182,7 +182,7 @@ class DatabaseInitializer:
                 bb_width FLOAT NOT NULL,
                 bb_height FLOAT NOT NULL,
                 conf FLOAT NOT NULL,
-                class INT NOT NULL DEFAULT 0,
+                class_id INT NOT NULL DEFAULT 0,
                 visibility FLOAT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
