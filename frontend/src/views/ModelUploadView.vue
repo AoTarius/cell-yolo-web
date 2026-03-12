@@ -21,6 +21,7 @@ const isLoadingModels = ref(false)
 const showDeleteDialog = ref(false)
 const modelToDelete = ref<string | null>(null)
 const isDeleting = ref(false)
+const currentModelPath = ref('')
 
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
@@ -94,7 +95,14 @@ async function loadModels() {
 
     if (!username) {
       models.value = []
+      currentModelPath.value = ''
       return
+    }
+
+    // 获取用户的model_base_path
+    if (currentUser) {
+      const userData = JSON.parse(currentUser)
+      currentModelPath.value = userData.model_base_path || 'models'
     }
 
     const response = await axios.get('/api/models/', { params: { username } })
@@ -194,6 +202,28 @@ onMounted(() => {
 
             <p class="subtitle">上传 YOLOv8 模型文件 (.pt 格式)</p>
 
+          </div>
+
+          <!-- 路径提示框 -->
+          <div class="path-info-box">
+            <svg
+              class="path-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <div class="path-content">
+              <p class="path-label">当前模型存储路径：</p>
+              <p class="path-value">{{ currentModelPath || '未设置' }}</p>
+            </div>
           </div>
 
           <!-- 上传区域 -->
@@ -613,7 +643,7 @@ onMounted(() => {
 
 .upload-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .upload-header h1 {
@@ -625,6 +655,59 @@ onMounted(() => {
 }
 
 :global(:root:not(.dark)) .upload-header h1 {
+  color: var(--text-primary-light);
+}
+
+.path-info-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--alpha-badge);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s;
+}
+
+:global(:root:not(.dark)) .path-info-box {
+  background: var(--alpha-badge-light);
+  border-color: var(--border-color-light);
+}
+
+.path-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--accent-blue);
+}
+
+.path-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.path-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0 0 0.25rem 0;
+}
+
+:global(:root:not(.dark)) .path-label {
+  color: var(--text-muted-light);
+}
+
+.path-value {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin: 0;
+  font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(:root:not(.dark)) .path-value {
   color: var(--text-primary-light);
 }
 

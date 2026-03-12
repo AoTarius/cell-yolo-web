@@ -187,8 +187,16 @@ class ProcessTaskView(APIView):
                             status=status.HTTP_404_NOT_FOUND
                         )
 
-                    # 拼接完整路径
-                    full_model_path = os.path.join(model_base_path, model_record['model_path'])
+                    # 拼接完整路径（绝对路径）
+                    models_dir = Path(model_base_path)
+                    full_model_path = str(models_dir / model_record['model_path'])
+
+                    # 验证模型文件是否存在
+                    if not Path(full_model_path).exists():
+                        return Response(
+                            {'error': f'模型文件不存在: {full_model_path}'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
             finally:
                 connection.close()
 
@@ -524,10 +532,9 @@ class ModelListView(APIView):
                 cursor.execute(models_sql, (user_id,))
                 model_records = cursor.fetchall()
 
-                # 构建模型列表，拼接完整路径
+                # 构建模型列表，使用绝对路径
                 models = []
-                backend_dir = Path(settings.BASE_DIR).parent
-                models_dir = backend_dir / 'backend' / 'models'
+                models_dir = Path(model_base_path)
 
                 for record in model_records:
                     model_file = models_dir / record['model_path']
@@ -535,9 +542,8 @@ class ModelListView(APIView):
                         models.append({
                             'name': record['model_name'],
                             'size_mb': round(model_file.stat().st_size / (1024 * 1024), 2),
-                            'path': str(model_file.relative_to(backend_dir))
+                            'path': str(model_file.relative_to(models_dir))
                         })
-
                 # 按名称排序
                 models.sort(key=lambda x: x['name'])
 
@@ -606,13 +612,14 @@ class DeleteModelView(APIView):
 
                     user_id = user['id']
 
-                    # 查询模型信息
-                    model_sql = """
-                    SELECT model_path
-                    FROM models
-                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    # 查询用户信息和模型信息
+                    user_model_sql = """
+                    SELECT m.model_path, u.model_base_path
+                    FROM models m
+                    JOIN users u ON m.user_id = u.id
+                    WHERE m.user_id = %s AND m.model_name = %s AND m.is_deleted = FALSE AND u.is_deleted = FALSE
                     """
-                    cursor.execute(model_sql, (user_id, model_name))
+                    cursor.execute(user_model_sql, (user_id, model_name))
                     model_record = cursor.fetchone()
 
                     if not model_record:
@@ -622,6 +629,7 @@ class DeleteModelView(APIView):
                         )
 
                     model_filename = model_record['model_path']
+                    model_base_path = model_record['model_base_path']
 
                     # 删除数据库记录（软删除）
                     delete_sql = """
@@ -632,9 +640,8 @@ class DeleteModelView(APIView):
                     cursor.execute(delete_sql, (user_id, model_name))
                     connection.commit()
 
-                # 删除本地文件
-                backend_dir = Path(settings.BASE_DIR).parent
-                models_dir = backend_dir / 'backend' / 'models'
+                # 删除本地文件（使用绝对路径）
+                models_dir = Path(model_base_path)
                 model_file = models_dir / model_filename
 
                 if model_file.exists():
@@ -871,12 +878,24 @@ class ModelUploadView(APIView):
                     user_id = user['id']
                     model_base_path = user['model_base_path']
 
-                # 获取 models 目录路径
-                backend_dir = Path(settings.BASE_DIR).parent
-                models_dir = backend_dir / 'backend' / 'models'
+                # 使用用户配置的绝对路径
+                models_dir = Path(model_base_path)
+
+                # 验证路径是否为绝对路径
+                if not models_dir.is_absolute():
+                    return Response(
+                        {'error': f'模型路径必须是绝对路径，当前路径: {model_base_path}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
                 # 确保目录存在
-                models_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    models_dir.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    return Response(
+                        {'error': f'无法创建模型目录 {model_base_path}: {str(e)}'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
 
                 # 保存模型文件
                 model_path = models_dir / model_file.name
@@ -886,20 +905,50 @@ class ModelUploadView(APIView):
                     for chunk in model_file.chunks():
                         f.write(chunk)
 
-                # 插入数据库记录
+                # 插入或更新数据库记录
                 with connection.cursor() as cursor:
                     model_name = model_file.name.rsplit('.', 1)[0]  # 去掉后缀名
-                    insert_sql = """
-                    INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted)
-                    VALUES (%s, %s, %s, NOW(), NOW(), FALSE)
+                    
+                    # 检查模型是否已存在
+                    check_sql = """
+                    SELECT id, is_deleted FROM models
+                    WHERE user_id = %s AND model_name = %s
                     """
-                    cursor.execute(insert_sql, (user_id, model_name, model_file.name))
-                    connection.commit()
+                    cursor.execute(check_sql, (user_id, model_name))
+                    existing_model = cursor.fetchone()
+
+                    if existing_model:
+                        # 模型已存在
+                        if existing_model['is_deleted']:
+                            # 已软删除，恢复记录
+                            update_sql = """
+                            UPDATE models
+                            SET model_path = %s, is_deleted = FALSE, updated_at = NOW()
+                            WHERE id = %s
+                            """
+                            cursor.execute(update_sql, (model_file.name, existing_model['id']))
+                            connection.commit()
+                            message = '模型已恢复'
+                        else:
+                            # 未删除，返回错误
+                            return Response(
+                                {'error': f'模型 "{model_name}" 已存在，请先删除旧版本再上传'},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                    else:
+                        # 模型不存在，插入新记录
+                        insert_sql = """
+                        INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted)
+                        VALUES (%s, %s, %s, NOW(), NOW(), FALSE)
+                        """
+                        cursor.execute(insert_sql, (user_id, model_name, model_file.name))
+                        connection.commit()
+                        message = '模型上传成功'
 
                 # 返回成功响应
                 return Response({
                     'status': 'success',
-                    'message': '模型上传成功',
+                    'message': message,
                     'model_name': model_name,
                     'model_path': model_file.name,
                     'model_size_mb': round(model_file.size / (1024 * 1024), 2)
