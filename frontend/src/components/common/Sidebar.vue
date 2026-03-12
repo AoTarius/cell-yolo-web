@@ -200,14 +200,40 @@ function handleLogout() {
 }
 
 function handleSettings() {
+  // 从 userStore 中读取用户的路径配置
+  if (userStore.currentUser) {
+    modelPath.value = userStore.currentUser.model_base_path || 'models'
+    outputPath.value = userStore.currentUser.output_base_path || 'output'
+  }
   showSettingsDialog.value = true
 }
 
-function handleSettingsSave(savedModelPath: string, savedOutputPath: string) {
+async function handleSettingsSave(savedModelPath: string, savedOutputPath: string) {
   modelPath.value = savedModelPath
   outputPath.value = savedOutputPath
-  // TODO: 保存到用户配置或发送到后端
-  showToast('设置已保存', 'success')
+
+  // 如果已登录，更新数据库
+  if (userStore.currentUser) {
+    try {
+      await authApi.updateUserPaths(
+        userStore.currentUser.username,
+        savedModelPath,
+        savedOutputPath
+      )
+
+      // 更新 store 中的用户信息
+      userStore.currentUser.model_base_path = savedModelPath
+      userStore.currentUser.output_base_path = savedOutputPath
+      localStorage.setItem('currentUser', JSON.stringify(userStore.currentUser))
+
+      showToast('设置已保存', 'success')
+    } catch (error) {
+      console.error('更新路径配置失败:', error)
+      showToast('保存设置失败', 'error')
+    }
+  } else {
+    showToast('设置已保存', 'success')
+  }
 }
 
 function handleBrowseModel() {

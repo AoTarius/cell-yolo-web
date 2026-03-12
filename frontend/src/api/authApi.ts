@@ -85,6 +85,27 @@ export const authApi = {
     })
     return data
   },
+
+  /**
+   * 更新用户路径配置
+   * POST /api/update-user-paths/
+   * @param username 用户名
+   * @param modelBasePath 模型基础路径
+   * @param outputBasePath 输出基础路径
+   * @returns 更新结果
+   */
+  async updateUserPaths(
+    username: string,
+    modelBasePath: string,
+    outputBasePath: string
+  ): Promise<{ status: string; message: string }> {
+    const { data } = await api.post<{ status: string; message: string }>('/update-user-paths/', {
+      username,
+      model_base_path: modelBasePath,
+      output_base_path: outputBasePath,
+    })
+    return data
+  },
 }
 
 export default api

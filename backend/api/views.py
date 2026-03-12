@@ -786,3 +786,65 @@ class UpdateUserView(APIView):
                 {'error': f'更新用户信息失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class UpdateUserPathsView(APIView):
+    """更新用户路径配置接口"""
+
+    def post(self, request):
+        """更新用户的 model_base_path 和 output_base_path"""
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            model_base_path = data.get('model_base_path')
+            output_base_path = data.get('output_base_path')
+
+            if not username:
+                return Response(
+                    {'error': '用户名不能为空'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if model_base_path is None or output_base_path is None:
+                return Response(
+                    {'error': 'model_base_path 和 output_base_path 不能为空'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 导入 sql 模块
+            import sys
+            from pathlib import Path
+            scripts_dir = Path(__file__).parent.parent / 'scripts'
+            sys.path.insert(0, str(scripts_dir))
+            from sql import DatabaseOperator
+
+            with DatabaseOperator() as db:
+                # 更新用户的路径配置
+                update_sql = """
+                UPDATE users
+                SET model_base_path = %s, output_base_path = %s, updated_at = NOW()
+                WHERE username = %s AND is_deleted = FALSE
+                """
+                success = db.execute_update(update_sql, (model_base_path, output_base_path, username))
+
+                if success:
+                    return Response({
+                        'status': 'success',
+                        'message': '路径配置更新成功'
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response(
+                        {'error': '更新失败，用户不存在'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+        except json.JSONDecodeError:
+            return Response(
+                {'error': '无效的 JSON 格式'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'更新路径配置失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
