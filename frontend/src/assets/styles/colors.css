@@ -137,11 +137,12 @@
   --warning: #ff9800;          /* 警告色（警告按钮、警告图标） */
   --warning-hover: #fbbf24;    /* 警告色hover */
   --warning-light: #fbbf24;    /* 警告色浅色（警告图标） */
+  --warning-bg: #a48618;       /* 警告色背景（状态徽章） */
   
   --danger: #ef4444;           /* 危险色（危险按钮、危险图标） */
   --danger-hover: #f87171;     /* 危险色hover */
   --danger-light: rgb(247, 85, 85);     /* 危险色浅色（错误文字、删除hover） */
-  --danger-bg: rgba(239, 68, 68, 0.163); /* 危险色背景（警告框、危险图标背景） */
+  --danger-bg: rgba(193, 44, 44, 0.739); /* 危险色背景（警告框、危险图标背景） */
 
   /* ========== 浅色模式 - 特殊色 ========== */
   --upload-hover-bg: #e3f2fd;  /* 上传区域hover背景 */

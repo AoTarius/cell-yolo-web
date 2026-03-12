@@ -45,7 +45,10 @@ const totalFrames = ref<number | null>(null)
 async function loadModels() {
   try {
     isLoadingModels.value = true
-    const data = await analysisApi.getModels()
+    // 获取当前用户名
+    const currentUser = localStorage.getItem('currentUser')
+    const username = currentUser ? JSON.parse(currentUser).username : ''
+    const data = await analysisApi.getModels(username)
     models.value = data.models
     // 始终默认为空，让用户手动选择
     selectedModel.value = ''
@@ -121,12 +124,17 @@ async function submitUpload() {
     uploadStatus.value = 'processing'
 
     // 2. 启动处理任务
+    // 获取当前用户名
+    const currentUser = localStorage.getItem('currentUser')
+    const username = currentUser ? JSON.parse(currentUser).username : ''
+
     await axios.post('/api/process/', {
       task_id: taskId.value!,
       conf: modelParams.value.conf,
       imgsz: modelParams.value.imgsz,
       fps: modelParams.value.fps,
       model_name: selectedModel.value,
+      username: username,
     })
 
     // 3. 添加处理中记录到 store（store 会自动轮询进度）

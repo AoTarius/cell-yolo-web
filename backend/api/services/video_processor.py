@@ -96,7 +96,7 @@ class VideoProcessor:
         conf: float = 0.3,
         imgsz: int = 1024,
         fps: int = 10,
-        model_name: str = 'best_split.pt',
+        model_path: str = None,
         progress_callback: Optional[Callable[[str, int, Dict[str, Any]], None]] = None
     ) -> Dict[str, Any]:
         """
@@ -108,12 +108,15 @@ class VideoProcessor:
             conf: 置信度阈值
             imgsz: 图像尺寸
             fps: 输出视频帧率
-            model_name: 模型文件名
+            model_path: 模型完整路径
             progress_callback: 进度回调函数 (stage, progress, data)
 
         Returns:
             处理结果 JSON
         """
+        # 如果没有提供 model_path，使用默认路径
+        if model_path is None:
+            model_path = str(MODEL_DIR / MODEL_NAME)
         task_dir = self.output_base_dir / task_id
         task_dir.mkdir(parents=True, exist_ok=True)
 
@@ -142,9 +145,6 @@ class VideoProcessor:
         # 构建输出目录
         output_dir = task_dir / 'output'
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        # 构建模型路径
-        model_path = str(MODEL_DIR / model_name)
 
         # 构建命令
         convert_script = Path(__file__).parent / 'convert_results.py'
@@ -211,6 +211,9 @@ class VideoProcessor:
         # 阶段3: 生成 JSON 结果
         if progress_callback:
             progress_callback('packaging', 0, {'message': '生成 JSON 结果...'})
+
+        # 从完整路径中提取模型名称（用于显示）
+        model_name = Path(model_path).stem if model_path else MODEL_NAME
 
         result = self._generate_json_result(
             task_id,

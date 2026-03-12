@@ -132,6 +132,65 @@ class ProcessTaskView(APIView):
             imgsz = data.get('imgsz', 1024)
             fps = data.get('fps', 10)
             model_name = data.get('model_name', 'best_split.pt')
+            username = data.get('username', '')
+
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 查询用户和模型信息，获取完整路径
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 查询用户信息
+                    user_sql = "SELECT id, model_base_path FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(user_sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    user_id = user['id']
+                    model_base_path = user['model_base_path']
+
+                    # 查询模型信息
+                    model_sql = """
+                    SELECT model_path
+                    FROM models
+                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(model_sql, (user_id, model_name.rsplit('.', 1)[0]))
+                    model_record = cursor.fetchone()
+
+                    if not model_record:
+                        return Response(
+                            {'error': f'模型 {model_name} 不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    # 拼接完整路径
+                    full_model_path = os.path.join(model_base_path, model_record['model_path'])
+            finally:
+                connection.close()
 
             # 检查任务是否存在
             with task_lock:
@@ -155,13 +214,14 @@ class ProcessTaskView(APIView):
                     'conf': conf,
                     'imgsz': imgsz,
                     'fps': fps,
-                    'model_name': model_name
+                    'model_name': model_name,
+                    'model_path': full_model_path
                 }
 
             # 在后台线程中处理视频
             thread = threading.Thread(
                 target=self._process_video,
-                args=(task_id, conf, imgsz, fps, model_name),
+                args=(task_id, conf, imgsz, fps, full_model_path),
                 daemon=True
             )
             thread.start()
@@ -178,7 +238,7 @@ class ProcessTaskView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def _process_video(self, task_id: str, conf: float, imgsz: int, fps: int, model_name: str):
+    def _process_video(self, task_id: str, conf: float, imgsz: int, fps: int, model_path: str):
         """后台处理视频"""
         print(f"{get_thread_prefix(task_id)} 开始处理任务")
         try:
@@ -202,7 +262,7 @@ class ProcessTaskView(APIView):
                         task_status[task_id]['current_frame'] = data.get('current_frame')
                         task_status[task_id]['total_frames'] = data.get('total_frames')
 
-            print(f"{get_thread_prefix(task_id)} 开始处理视频，参数: conf={conf}, imgsz={imgsz}, fps={fps}, model={model_name}")
+            print(f"{get_thread_prefix(task_id)} 开始处理视频，参数: conf={conf}, imgsz={imgsz}, fps={fps}, model_path={model_path}")
 
             # 处理视频
             result = processor.process_video(
@@ -211,7 +271,7 @@ class ProcessTaskView(APIView):
                 conf=conf,
                 imgsz=imgsz,
                 fps=fps,
-                model_name=model_name,
+                model_path=model_path,
                 progress_callback=progress_callback
             )
 
@@ -413,31 +473,189 @@ class ModelListView(APIView):
     """获取可用模型列表接口"""
 
     def get(self, request):
-        """获取 models 目录下所有 .pt 模型文件"""
-        backend_dir = Path(settings.BASE_DIR).parent
-        models_dir = backend_dir / 'backend' / 'models'
+        """从数据库获取用户的模型列表，并拼接完整路径"""
+        username = request.GET.get('username')
 
-        if not models_dir.exists():
-            return Response({'models': [], 'count': 0}, status=status.HTTP_200_OK)
+        if not username:
+            return Response(
+                {'error': '未提供用户名'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        models = []
-        
-        # 遍历所有 .pt 文件
-        for model_file in models_dir.glob('*.pt'):
-            models.append({
-                'name': model_file.name,
-                'size_mb': round(model_file.stat().st_size / (1024 * 1024), 2),
-                'path': str(model_file.relative_to(backend_dir))
-            })
+        # 连接数据库
+        try:
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        # 按名称排序
-        models.sort(key=lambda x: x['name'])
+        try:
+            with connection.cursor() as cursor:
+                # 查询用户信息
+                user_sql = "SELECT id, model_base_path FROM users WHERE username = %s AND is_deleted = FALSE"
+                cursor.execute(user_sql, (username,))
+                user = cursor.fetchone()
 
-        return Response({
-            'models': models,
-            'count': len(models),
-            'default': 'best_split.pt'
-        }, status=status.HTTP_200_OK)
+                if not user:
+                    return Response(
+                        {'error': '用户不存在'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                user_id = user['id']
+                model_base_path = user['model_base_path']
+
+                # 查询用户的模型列表
+                models_sql = """
+                SELECT model_name, model_path
+                FROM models
+                WHERE user_id = %s AND is_deleted = FALSE
+                ORDER BY created_at DESC
+                """
+                cursor.execute(models_sql, (user_id,))
+                model_records = cursor.fetchall()
+
+                # 构建模型列表，拼接完整路径
+                models = []
+                backend_dir = Path(settings.BASE_DIR).parent
+                models_dir = backend_dir / 'backend' / 'models'
+
+                for record in model_records:
+                    model_file = models_dir / record['model_path']
+                    if model_file.exists():
+                        models.append({
+                            'name': record['model_name'],
+                            'size_mb': round(model_file.stat().st_size / (1024 * 1024), 2),
+                            'path': str(model_file.relative_to(backend_dir))
+                        })
+
+                # 按名称排序
+                models.sort(key=lambda x: x['name'])
+
+                return Response({
+                    'models': models,
+                    'count': len(models),
+                    'default': 'best_split.pt'
+                }, status=status.HTTP_200_OK)
+
+        finally:
+            connection.close()
+
+
+class DeleteModelView(APIView):
+    """删除模型接口"""
+
+    def delete(self, request):
+        """删除指定的模型文件和数据库记录"""
+        try:
+            import os
+            import shutil
+
+            username = request.GET.get('username')
+            model_name = request.GET.get('model_name')
+
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not model_name:
+                return Response(
+                    {'error': '未提供模型名称'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 连接数据库
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 查询用户信息
+                    user_sql = "SELECT id FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(user_sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    user_id = user['id']
+
+                    # 查询模型信息
+                    model_sql = """
+                    SELECT model_path
+                    FROM models
+                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(model_sql, (user_id, model_name))
+                    model_record = cursor.fetchone()
+
+                    if not model_record:
+                        return Response(
+                            {'error': f'模型 {model_name} 不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    model_filename = model_record['model_path']
+
+                    # 删除数据库记录（软删除）
+                    delete_sql = """
+                    UPDATE models
+                    SET is_deleted = TRUE, deleted_at = NOW()
+                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(delete_sql, (user_id, model_name))
+                    connection.commit()
+
+                # 删除本地文件
+                backend_dir = Path(settings.BASE_DIR).parent
+                models_dir = backend_dir / 'backend' / 'models'
+                model_file = models_dir / model_filename
+
+                if model_file.exists():
+                    os.remove(model_file)
+                else:
+                    # 文件不存在但数据库有记录，只记录警告
+                    print(f"警告：模型文件 {model_file} 不存在，但已从数据库删除记录")
+
+                return Response({
+                    'message': '模型已成功删除',
+                    'model_name': model_name
+                }, status=status.HTTP_200_OK)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return Response(
+                {'error': f'删除模型失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class DeleteTaskView(APIView):
@@ -600,9 +818,17 @@ class ModelUploadView(APIView):
         """上传模型文件到 models 目录"""
         try:
             model_file = request.FILES.get('model')
+            username = request.POST.get('username')
+
             if not model_file:
                 return Response(
                     {'error': '未找到模型文件'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -613,28 +839,74 @@ class ModelUploadView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # 获取 models 目录路径
-            backend_dir = Path(settings.BASE_DIR).parent
-            models_dir = backend_dir / 'backend' / 'models'
+            # 查询用户信息
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-            # 确保目录存在
-            models_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                with connection.cursor() as cursor:
+                    # 查询用户
+                    sql = "SELECT id, model_base_path FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(sql, (username,))
+                    user = cursor.fetchone()
 
-            # 保存模型文件
-            model_path = models_dir / model_file.name
-            
-            # 如果文件已存在，询问是否覆盖（这里简单处理为覆盖）
-            with open(model_path, 'wb') as f:
-                for chunk in model_file.chunks():
-                    f.write(chunk)
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
 
-            # 返回成功响应
-            return Response({
-                'status': 'success',
-                'message': '模型上传成功',
-                'model_name': model_file.name,
-                'model_size_mb': round(model_file.size / (1024 * 1024), 2)
-            }, status=status.HTTP_201_CREATED)
+                    user_id = user['id']
+                    model_base_path = user['model_base_path']
+
+                # 获取 models 目录路径
+                backend_dir = Path(settings.BASE_DIR).parent
+                models_dir = backend_dir / 'backend' / 'models'
+
+                # 确保目录存在
+                models_dir.mkdir(parents=True, exist_ok=True)
+
+                # 保存模型文件
+                model_path = models_dir / model_file.name
+
+                # 如果文件已存在，询问是否覆盖（这里简单处理为覆盖）
+                with open(model_path, 'wb') as f:
+                    for chunk in model_file.chunks():
+                        f.write(chunk)
+
+                # 插入数据库记录
+                with connection.cursor() as cursor:
+                    model_name = model_file.name.rsplit('.', 1)[0]  # 去掉后缀名
+                    insert_sql = """
+                    INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted)
+                    VALUES (%s, %s, %s, NOW(), NOW(), FALSE)
+                    """
+                    cursor.execute(insert_sql, (user_id, model_name, model_file.name))
+                    connection.commit()
+
+                # 返回成功响应
+                return Response({
+                    'status': 'success',
+                    'message': '模型上传成功',
+                    'model_name': model_name,
+                    'model_path': model_file.name,
+                    'model_size_mb': round(model_file.size / (1024 * 1024), 2)
+                }, status=status.HTTP_201_CREATED)
+
+            finally:
+                connection.close()
 
         except Exception as e:
             return Response(

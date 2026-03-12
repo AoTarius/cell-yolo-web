@@ -183,10 +183,26 @@ export const analysisApi = {
   /**
    * 获取可用模型列表
    * GET /api/models
+   * @param username 用户名
    * @returns 模型列表
    */
-  async getModels(): Promise<{ models: Array<{ name: string; size_mb: number; path: string }>; count: number; default: string }> {
-    const { data } = await api.get('/models')
+  async getModels(username?: string): Promise<{ models: Array<{ name: string; size_mb: number; path: string }>; count: number; default: string }> {
+    const params = username ? { username } : {}
+    const { data } = await api.get('/models', { params })
+    return data
+  },
+
+  /**
+   * 删除模型
+   * DELETE /api/models/delete
+   * @param username 用户名
+   * @param modelName 模型名称
+   * @returns 删除结果
+   */
+  async deleteModel(username: string, modelName: string): Promise<{ message: string }> {
+    const { data } = await api.delete('/models/delete/', {
+      params: { username, model_name: modelName }
+    })
     return data
   },
 }

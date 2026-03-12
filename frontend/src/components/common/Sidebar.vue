@@ -257,8 +257,8 @@ function handleBrowseOutput() {
         新建分析
       </button>
       <button class="btn-upload-model" @click="handleModelUpload">
-        <span class="icon">+</span>
-        上传模型
+        <span class="icon">⚙</span>
+        管理模型
       </button>
     </div>
 
@@ -282,7 +282,9 @@ function handleBrowseOutput() {
                     ? '已完成'
                     : record.status === 'processing'
                       ? '分析中'
-                      : record.status
+                      : record.status === 'failed'
+                        ? '失败'
+                        : record.status
                 }}
               </span>
             </div>
@@ -601,6 +603,11 @@ function handleBrowseOutput() {
   animation: pulse-orange 2s ease-in-out infinite;
 }
 
+.dot-failed {
+  background: var(--danger-light);
+  box-shadow: var(--shadow-danger);
+}
+
 @keyframes pulse-orange {
   0%, 100% {
     opacity: 1;
@@ -625,6 +632,11 @@ function handleBrowseOutput() {
 .status-processing {
   background: var(--warning-bg);
   color: var(--warning);
+}
+
+.status-failed {
+  background: var(--danger-bg);
+  color: var(--danger-light);
 }
 
 .record-video {
