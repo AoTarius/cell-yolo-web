@@ -665,6 +665,132 @@ class DeleteModelView(APIView):
             )
 
 
+class RenameModelView(APIView):
+    """修改模型名称接口"""
+
+    def post(self, request):
+        """修改模型的名称（只修改数据库中的model_name，不修改文件名）"""
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            old_model_name = data.get('old_model_name')
+            new_model_name = data.get('new_model_name')
+
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not old_model_name:
+                return Response(
+                    {'error': '未提供原模型名称'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not new_model_name:
+                return Response(
+                    {'error': '未提供新模型名称'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 验证新名称不为空
+            if not new_model_name.strip():
+                return Response(
+                    {'error': '新模型名称不能为空'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 连接数据库
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 查询用户信息
+                    user_sql = "SELECT id FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(user_sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    user_id = user['id']
+
+                    # 查询原模型是否存在
+                    check_old_sql = """
+                    SELECT id FROM models
+                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(check_old_sql, (user_id, old_model_name))
+                    old_model = cursor.fetchone()
+
+                    if not old_model:
+                        return Response(
+                            {'error': f'模型 {old_model_name} 不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    # 检查新名称是否已被其他模型使用
+                    check_new_sql = """
+                    SELECT id FROM models
+                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(check_new_sql, (user_id, new_model_name))
+                    existing_model = cursor.fetchone()
+
+                    if existing_model:
+                        return Response(
+                            {'error': f'模型名称 {new_model_name} 已存在'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    # 更新模型名称
+                    update_sql = """
+                    UPDATE models
+                    SET model_name = %s, updated_at = NOW()
+                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(update_sql, (new_model_name, user_id, old_model_name))
+                    connection.commit()
+
+                return Response({
+                    'status': 'success',
+                    'message': '模型名称修改成功',
+                    'old_model_name': old_model_name,
+                    'new_model_name': new_model_name
+                }, status=status.HTTP_200_OK)
+
+            finally:
+                connection.close()
+
+        except json.JSONDecodeError:
+            return Response(
+                {'error': '无效的 JSON 格式'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'修改模型名称失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class DeleteTaskView(APIView):
     """删除任务接口"""
 

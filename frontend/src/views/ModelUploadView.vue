@@ -23,6 +23,12 @@ const modelToDelete = ref<string | null>(null)
 const isDeleting = ref(false)
 const currentModelPath = ref('')
 
+// 改名相关
+const showRenameDialog = ref(false)
+const modelToRename = ref<string | null>(null)
+const newModelName = ref('')
+const isRenaming = ref(false)
+
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
   if (target.files && target.files.length > 0 && target.files[0]) {
@@ -155,6 +161,66 @@ async function handleDeleteConfirm() {
 function handleDeleteCancel() {
   modelToDelete.value = null
   showDeleteDialog.value = false
+}
+
+// 显示改名对话框
+function showRenameInputDialog(modelName: string) {
+  modelToRename.value = modelName
+  newModelName.value = modelName
+  showRenameDialog.value = true
+}
+
+// 确认改名
+async function handleRenameConfirm() {
+  if (!modelToRename.value || !newModelName.value) return
+
+  isRenaming.value = true
+  try {
+    const currentUser = localStorage.getItem('currentUser')
+    const username = currentUser ? JSON.parse(currentUser).username : ''
+
+    if (!username) {
+      showToast('请先登录', 'error')
+      return
+    }
+
+    // 验证新名称
+    if (!newModelName.value.trim()) {
+      showToast('新模型名称不能为空', 'error')
+      return
+    }
+
+    if (newModelName.value === modelToRename.value) {
+      showToast('新名称与原名称相同', 'warning')
+      showRenameDialog.value = false
+      return
+    }
+
+    await axios.post('/api/models/rename/', {
+      username,
+      old_model_name: modelToRename.value,
+      new_model_name: newModelName.value
+    })
+
+    showToast('模型名称修改成功', 'success')
+    // 重新加载模型列表
+    await loadModels()
+  } catch (error: any) {
+    console.error('修改模型名称失败:', error)
+    showToast(error.response?.data?.error || '修改模型名称失败', 'error')
+  } finally {
+    isRenaming.value = false
+    modelToRename.value = null
+    newModelName.value = ''
+    showRenameDialog.value = false
+  }
+}
+
+// 取消改名
+function handleRenameCancel() {
+  modelToRename.value = null
+  newModelName.value = ''
+  showRenameDialog.value = false
 }
 
 // 格式化时间
@@ -386,26 +452,48 @@ onMounted(() => {
                   <p class="model-name">{{ model.name }}</p>
                   <p class="model-size">{{ formatFileSize(model.size_mb * 1024 * 1024) }}</p>
                 </div>
-                <button
-                  class="btn-delete-model"
-                  @click="showDeleteConfirm(model.name)"
-                  :disabled="isDeleting"
-                  title="删除模型"
-                >
-                  <svg
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
+                <div class="model-actions">
+                  <button
+                    class="btn-rename-model"
+                    @click="showRenameInputDialog(model.name)"
+                    :disabled="isRenaming"
+                    title="重命名模型"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    ></path>
-                  </svg>
-                </button>
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      ></path>
+                    </svg>
+                  </button>
+                  <button
+                    class="btn-delete-model"
+                    @click="showDeleteConfirm(model.name)"
+                    :disabled="isDeleting"
+                    title="删除模型"
+                  >
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      ></path>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -424,6 +512,57 @@ onMounted(() => {
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
+
+    <!-- 改名对话框 -->
+    <div v-if="showRenameDialog" class="rename-dialog-overlay" @click="handleRenameCancel">
+      <div class="rename-dialog" @click.stop>
+        <div class="rename-dialog-header">
+          <h3>重命名模型</h3>
+          <button class="btn-close-rename" @click="handleRenameCancel">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="rename-dialog-body">
+          <div class="rename-field">
+            <label class="rename-label">原名称</label>
+            <input
+              type="text"
+              class="rename-input"
+              :value="modelToRename"
+              disabled
+            />
+          </div>
+          <div class="rename-field">
+            <label class="rename-label">新名称</label>
+            <input
+              type="text"
+              class="rename-input"
+              v-model="newModelName"
+              placeholder="请输入新的模型名称"
+              :disabled="isRenaming"
+            />
+          </div>
+        </div>
+        <div class="rename-dialog-footer">
+          <button
+            class="btn-cancel-rename"
+            @click="handleRenameCancel"
+            :disabled="isRenaming"
+          >
+            取消
+          </button>
+          <button
+            class="btn-confirm-rename"
+            @click="handleRenameConfirm"
+            :disabled="isRenaming || !newModelName.trim()"
+          >
+            {{ isRenaming ? '修改中...' : '确认修改' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
 </template>
@@ -637,6 +776,47 @@ onMounted(() => {
 }
 
 .btn-delete-model svg {
+  width: 16px;
+  height: 16px;
+}
+
+.model-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-rename-model {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(:root:not(.dark)) .btn-rename-model {
+  color: var(--text-muted-light);
+}
+
+.btn-rename-model:hover:not(:disabled) {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.btn-rename-model:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-rename-model svg {
   width: 16px;
   height: 16px;
 }
@@ -975,5 +1155,230 @@ onMounted(() => {
 .btn-close-error svg {
   width: 16px;
   height: 16px;
+}
+
+/* 改名对话框样式 */
+.rename-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rename-dialog {
+  background: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  min-width: 400px;
+  max-width: 500px;
+  animation: slideUp 0.3s ease;
+}
+
+:global(:root:not(.dark)) .rename-dialog {
+  background: var(--bg-card-light);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.rename-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+:global(:root:not(.dark)) .rename-dialog-header {
+  border-color: var(--border-color-light);
+}
+
+.rename-dialog-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+:global(:root:not(.dark)) .rename-dialog-header h3 {
+  color: var(--text-primary-light);
+}
+
+.btn-close-rename {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(:root:not(.dark)) .btn-close-rename {
+  color: var(--text-muted-light);
+}
+
+.btn-close-rename:hover {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+:global(:root:not(.dark)) .btn-close-rename:hover {
+  background: var(--bg-input-light);
+  color: var(--text-primary-light);
+}
+
+.btn-close-rename svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rename-dialog-body {
+  padding: 1.5rem;
+}
+
+.rename-field {
+  margin-bottom: 1rem;
+}
+
+.rename-field:last-child {
+  margin-bottom: 0;
+}
+
+.rename-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+:global(:root:not(.dark)) .rename-label {
+  color: var(--text-primary-light);
+}
+
+.rename-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  outline: none;
+}
+
+:global(:root:not(.dark)) .rename-input {
+  background: var(--bg-input-light);
+  border-color: var(--border-color-light);
+  color: var(--text-primary-light);
+}
+
+.rename-input:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+
+:global(:root:not(.dark)) .rename-input:hover:not(:disabled) {
+  border-color: var(--text-disabled-light);
+}
+
+.rename-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.rename-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--bg-main);
+}
+
+:global(:root:not(.dark)) .rename-input:disabled {
+  background: var(--bg-main-light);
+}
+
+.rename-dialog-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
+}
+
+:global(:root:not(.dark)) .rename-dialog-footer {
+  border-color: var(--border-color-light);
+}
+
+.btn-cancel-rename,
+.btn-confirm-rename {
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-cancel-rename {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+:global(:root:not(.dark)) .btn-cancel-rename {
+  background: var(--bg-input-light);
+  color: var(--text-primary-light);
+}
+
+.btn-cancel-rename:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+:global(:root:not(.dark)) .btn-cancel-rename:hover:not(:disabled) {
+  background: var(--border-color-light);
+}
+
+.btn-confirm-rename {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.btn-confirm-rename:hover:not(:disabled) {
+  background: var(--btn-upload-hover);
+}
+
+.btn-cancel-rename:disabled,
+.btn-confirm-rename:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

@@ -24,6 +24,7 @@ urlpatterns = [
     path('models/', views.ModelListView.as_view(), name='model_list'),
     path('models/upload/', views.ModelUploadView.as_view(), name='upload_model'),
     path('models/delete/', views.DeleteModelView.as_view(), name='delete_model'),
+    path('models/rename/', views.RenameModelView.as_view(), name='rename_model'),
 
     # 数据导出接口
     path('export/<str:task_id>/', views.ExportDataView.as_view(), name='export_data'),

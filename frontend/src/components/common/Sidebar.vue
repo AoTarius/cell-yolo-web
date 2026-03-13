@@ -80,6 +80,14 @@ const outputPath = ref('')
 // 主题切换
 const isDark = ref(true)
 
+// Sidebar 折叠状态
+const isCollapsed = ref(false)
+
+// 切换 sidebar 折叠状态
+function toggleSidebar() {
+  isCollapsed.value = !isCollapsed.value
+}
+
 // 应用主题
 function applyTheme() {
   if (isDark.value) {
@@ -249,20 +257,32 @@ function handleBrowseOutput() {
 </script>
 
 <template>
-  <aside class="sidebar">
+  <aside class="sidebar" :class="{ collapsed: isCollapsed }">
     <div class="sidebar-header">
-      <h1>细胞跟踪分析</h1>
-      <button class="btn-new-analysis" @click="handleNewAnalysis">
-        <span class="icon">+</span>
-        新建分析
-      </button>
-      <button class="btn-upload-model" @click="handleModelUpload">
-        <span class="icon">⚙</span>
-        管理模型
-      </button>
+      <div class="header-top">
+        <h1 v-if="!isCollapsed">细胞跟踪分析</h1>
+        <button class="btn-collapse" @click="toggleSidebar" :title="isCollapsed ? '展开侧边栏' : '收起侧边栏'">
+          <svg v-if="!isCollapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+          </svg>
+          <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+      <template v-if="!isCollapsed">
+        <button class="btn-new-analysis" @click="handleNewAnalysis">
+          <span class="icon">+</span>
+          新建分析
+        </button>
+        <button class="btn-upload-model" @click="handleModelUpload">
+          <span class="icon">⚙</span>
+          管理模型
+        </button>
+      </template>
     </div>
 
-    <div class="sidebar-content">
+    <div v-if="!isCollapsed" class="sidebar-content">
       <h2 class="section-title">历史记录</h2>
       <div class="records-list">
         <div
@@ -357,7 +377,7 @@ function handleBrowseOutput() {
     />
 
     <!-- 底部状态栏 -->
-    <div class="user-panel" v-if="userStore.currentUser">
+    <div class="user-panel" v-if="userStore.currentUser && !isCollapsed">
       <div class="user-info">
         <div class="avatar">{{ avatarInitials }}</div>
         <div class="user-meta">
@@ -377,69 +397,122 @@ function handleBrowseOutput() {
     <!-- 信息面板 -->
     <div class="info-panel">
       <div class="info-content">
-        <button class="btn-theme-toggle" title="切换主题" @click="toggleTheme">
-          <svg
-            class="theme-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <!-- 太阳图标（浅色模式显示） -->
-            <path
-              v-if="!isDark"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-            ></path>
-            <!-- 月亮图标（深色模式显示） -->
-            <path
-              v-else
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-            ></path>
-          </svg>
-        </button>
-        <button class="btn-settings" title="设置" @click="handleSettings">
-          <svg
-            class="settings-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            ></path>
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            ></path>
-          </svg>
-        </button>
-        <button class="btn-logout" title="退出登录" @click="handleLogout">
-          <svg
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            ></path>
-          </svg>
-        </button>
+        <template v-if="!isCollapsed">
+          <button class="btn-theme-toggle" title="切换主题" @click="toggleTheme">
+            <svg
+              class="theme-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <!-- 太阳图标（浅色模式显示） -->
+              <path
+                v-if="!isDark"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              ></path>
+              <!-- 月亮图标（深色模式显示） -->
+              <path
+                v-else
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+              ></path>
+            </svg>
+          </button>
+          <button class="btn-settings" title="设置" @click="handleSettings">
+            <svg
+              class="settings-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+          </button>
+          <button class="btn-logout" title="退出登录" @click="handleLogout">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              ></path>
+            </svg>
+          </button>
+        </template>
+        <!-- 折叠状态下显示主题切换按钮和设置按钮 -->
+        <template v-else>
+          <button class="btn-theme-toggle btn-collapsed" title="切换主题" @click="toggleTheme">
+            <svg
+              class="theme-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <!-- 太阳图标（浅色模式显示） -->
+              <path
+                v-if="!isDark"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              ></path>
+              <!-- 月亮图标（深色模式显示） -->
+              <path
+                v-else
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+              ></path>
+            </svg>
+          </button>
+          <button class="btn-settings btn-collapsed" title="设置" @click="handleSettings">
+            <svg
+              class="settings-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+          </button>
+        </template>
       </div>
     </div>
   </aside>
@@ -454,18 +527,88 @@ function handleBrowseOutput() {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-secondary);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.sidebar.collapsed {
+  width: 70px;
+  align-items: center;
 }
 
 .sidebar-header {
   padding: 1.5rem;
   border-bottom: 1px solid var(--border-secondary);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .sidebar-header {
+  padding: 1.25rem 0.75rem;
+  align-items: center;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.sidebar.collapsed .header-top {
+  justify-content: center;
+  margin-bottom: 0;
 }
 
 .sidebar-header h1 {
   font-size: 1.25rem;
   font-weight: 600;
-  margin: 0 0 1rem 0;
+  margin: 0;
   color: var(--text-primary);
+}
+
+.btn-collapse {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .btn-collapse {
+  width: 36px;
+  height: 36px;
+}
+
+.btn-collapse:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-collapse:active {
+  transform: scale(0.95);
+}
+
+.btn-collapse svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed .btn-collapse svg {
+  width: 20px;
+  height: 20px;
 }
 
 .btn-new-analysis {
@@ -757,6 +900,11 @@ function handleBrowseOutput() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .user-panel {
+  display: none;
 }
 
 /* 用户信息 */
@@ -815,6 +963,16 @@ function handleBrowseOutput() {
   align-items: center;
   border-top: 1px solid var(--border-secondary);
   backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .info-panel {
+  padding: 12px;
+  height: auto;
+  border-top: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .info-content {
@@ -823,6 +981,12 @@ function handleBrowseOutput() {
   align-items: center;
   width: 100%;
   gap: 0.75rem;
+}
+
+.sidebar.collapsed .info-content {
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* 连接状态 */
@@ -967,5 +1131,12 @@ function handleBrowseOutput() {
 .btn-logout svg {
   width: 18px;
   height: 18px;
+}
+
+/* 折叠状态下按钮的样式 */
+.btn-collapsed {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
 }
 </style>
