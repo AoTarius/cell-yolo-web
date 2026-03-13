@@ -39,12 +39,11 @@
   /* ========== 深色模式 - 强调色 ========== */
   --accent-blue: #58a6ff;      /* 蓝色强调（主要按钮、链接、图标） */
   --accent-blue-hover: #1f6feb;/* 蓝色hover（按钮hover、链接hover） */
-  --accent-blue-active: #388bfd; /* 蓝色激活（按下状态） */
   --accent-purple: #8b5cf6;   /* 紫色强调（对比分析、特殊功能） */
   --accent-purple-hover: #7c3aed; /* 紫色hover（按钮hover、链接hover） */
   --accent-info: #007acc;      /* 信息色（信息按钮、信息图标） */
   --accent-info-hover: #005a9e; /* 信息色hover */
-  --accent-green: #10b981;     /* 绿色强调（数据导出按钮） */
+  --accent-green: #10b981;     /* 绿色强调（四号按钮） */
   --accent-green-hover: #059669; /* 绿色hover（按钮hover） */
 
   /* ========== 深色模式 - 状态色 ========== */
@@ -130,12 +129,11 @@
 
   /* ========== 浅色模式 - 强调色 ========== */
   --accent-blue: #2196f3;      /* 蓝色强调（主要按钮、链接、图标） */
-  --accent-blue-hover: #1976d2;/* 蓝色hover（按钮hover、链接hover） */
-  --accent-blue-active: #1976d2; /* 蓝色激活（按下状态） */
-  --accent-purple: #8b5cf6;   /* 紫色强调（对比分析、特殊功能） */
-  --accent-purple-hover: #7c3aed; /* 紫色hover（按钮hover、链接hover） */
+  --accent-blue-hover: #3d8ad8;/* 蓝色hover（按钮hover、链接hover） */
+  --accent-purple: #9974f0;   /* 紫色强调（对比分析、特殊功能） */
+  --accent-purple-hover: #864fe5; /* 紫色hover（按钮hover、链接hover） */
   --accent-info: #2196f3;      /* 信息色（信息按钮、信息图标） */
-  --accent-green: #10b981;     /* 绿色强调（数据导出按钮） */
+  --accent-green: #10b981;     /* 绿色强调（四号按钮） */
   --accent-green-hover: #059669; /* 绿色hover（按钮hover） */
 
   /* ========== 浅色模式 - 状态色 ========== */

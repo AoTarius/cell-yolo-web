@@ -352,13 +352,14 @@ defineExpose({
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+  border: 1px solid var(--border-color);
 }
 
 .btn-confirm:hover:not(.disabled) {
   background: var(--accent-purple-hover);
   border-color: var(--accent-purple-hover);
+  border: 1px solid var(--border-color);
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-  transform: translateY(-1px);
 }
 
 .btn-confirm:active:not(.disabled) {

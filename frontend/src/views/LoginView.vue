@@ -368,7 +368,7 @@ async function handleSubmit(event: Event) {
 }
 
 .login-card .input-box input[type="submit"]:active {
-  background: var(--accent-blue-active);
+  background: var(--accent-blue);
 }
 
 .login-card .input-box input[type="submit"]:disabled {

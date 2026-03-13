@@ -768,7 +768,7 @@ const displayRecords = computed(() => {
 .btn-new-analysis {
   width: 100%;
   padding: 0.75rem 0.5rem;
-  background: var(--accent-info);
+  background: var(--accent-blue);
   color: var(--text-primary);
   border: var(--border-color) 1px solid;
   border-radius: 6px;
@@ -783,7 +783,7 @@ const displayRecords = computed(() => {
 }
 
 .btn-new-analysis:hover {
-  background: var(--accent-info-hover);
+  background: var(--accent-blue-hover);
 }
 
 .btn-new-analysis .icon {

@@ -215,7 +215,7 @@ function handleVideoError() {
         <div class="video-compare-wrapper">
           <!-- 左侧：记录A的标注视频 -->
           <div class="video-panel video-panel-left">
-            <h3>标注视频 A</h3>
+            <h3>标注视频 A - {{ recordA?.video_name || '未知' }}</h3>
             <div class="video-container">
               <div class="video-wrapper">
                 <video
@@ -320,7 +320,7 @@ function handleVideoError() {
 
           <!-- 右侧：记录B的标注视频 -->
           <div class="video-panel video-panel-right">
-            <h3>标注视频 B</h3>
+            <h3>标注视频 B - {{ recordB?.video_name || '未知' }}</h3>
             <div class="video-container">
               <div class="video-wrapper">
                 <video
@@ -422,49 +422,109 @@ function handleVideoError() {
         </div>
       </div>
 
-      <!-- 图表部分（仅标题） -->
+      <!-- 图表部分（左右两块） -->
       <div class="chart-section">
         <h3>对比图表</h3>
-        <div class="chart-placeholder">
-          <svg
-            class="placeholder-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            ></path>
-          </svg>
-          <p>对比图表区域</p>
-          <p class="placeholder-hint">功能开发中...</p>
+        <div class="chart-wrapper">
+          <!-- 左侧：记录A的图表 -->
+          <div class="chart-panel chart-panel-left">
+            <div class="chart-placeholder">
+              <svg
+                class="placeholder-icon"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                ></path>
+              </svg>
+              <p>任务 A 图表区域</p>
+              <p class="placeholder-hint">功能开发中...</p>
+            </div>
+          </div>
+
+          <!-- 中间分隔线 -->
+          <div class="chart-divider"></div>
+
+          <!-- 右侧：记录B的图表 -->
+          <div class="chart-panel chart-panel-right">
+            <div class="chart-placeholder">
+              <svg
+                class="placeholder-icon"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                ></path>
+              </svg>
+              <p>任务 B 图表区域</p>
+              <p class="placeholder-hint">功能开发中...</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 细胞详细信息部分（仅标题） -->
+      <!-- 细胞详细信息部分（左右两块） -->
       <div class="cell-detail-section">
         <h3>细胞详细信息</h3>
-        <div class="cell-detail-placeholder">
-          <svg
-            class="placeholder-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-            ></path>
-          </svg>
-          <p>细胞详细信息区域</p>
-          <p class="placeholder-hint">功能开发中...</p>
+        <div class="cell-detail-wrapper">
+          <!-- 左侧：记录A的细胞信息 -->
+          <div class="cell-detail-panel cell-detail-panel-left">
+            <div class="cell-detail-placeholder">
+              <svg
+                class="placeholder-icon"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+                ></path>
+              </svg>
+              <p>任务 A 细胞详细信息</p>
+              <p class="placeholder-hint">功能开发中...</p>
+            </div>
+          </div>
+
+          <!-- 中间分隔线 -->
+          <div class="cell-detail-divider"></div>
+
+          <!-- 右侧：记录B的细胞信息 -->
+          <div class="cell-detail-panel cell-detail-panel-right">
+            <div class="cell-detail-placeholder">
+              <svg
+                class="placeholder-icon"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+                ></path>
+              </svg>
+              <p>任务 B 细胞详细信息</p>
+              <p class="placeholder-hint">功能开发中...</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -813,13 +873,11 @@ function handleVideoError() {
   color: var(--text-muted-light);
 }
 
-.chart-section,
-.cell-detail-section {
+.chart-section {
   margin-bottom: 2rem;
 }
 
-.chart-section h3,
-.cell-detail-section h3 {
+.chart-section h3 {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -831,12 +889,43 @@ function handleVideoError() {
   color: var(--text-primary-light);
 }
 
-:global(:root:not(.dark)) .cell-detail-section h3 {
+.chart-wrapper {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+  min-height: 300px;
+}
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-panel h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .chart-panel h4 {
   color: var(--text-primary-light);
 }
 
-.chart-placeholder,
-.cell-detail-placeholder {
+.chart-divider {
+  width: 1px;
+  background: var(--border-color);
+  align-self: stretch;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .chart-divider {
+  background: var(--border-color-light);
+}
+
+.chart-placeholder {
+  flex: 1;
   background: var(--bg-card);
   border: 2px dashed var(--border-color);
   border-radius: 8px;
@@ -850,6 +939,68 @@ function handleVideoError() {
   background: var(--bg-card-light);
   border-color: var(--border-color-light);
   color: var(--text-muted-light);
+}
+
+.cell-detail-section {
+  margin-bottom: 2rem;
+}
+
+.cell-detail-section h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .cell-detail-section h3 {
+  color: var(--text-primary-light);
+}
+
+.cell-detail-wrapper {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+  min-height: 300px;
+}
+
+.cell-detail-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.cell-detail-panel h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .cell-detail-panel h4 {
+  color: var(--text-primary-light);
+}
+
+.cell-detail-divider {
+  width: 1px;
+  background: var(--border-color);
+  align-self: stretch;
+  transition: background 0.3s;
+}
+
+:global(:root:not(.dark)) .cell-detail-divider {
+  background: var(--border-color-light);
+}
+
+.cell-detail-placeholder {
+  flex: 1;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  transition: background 0.3s, border-color 0.3s;
 }
 
 :global(:root:not(.dark)) .cell-detail-placeholder {
@@ -878,10 +1029,7 @@ function handleVideoError() {
   transition: color 0.3s;
 }
 
-:global(:root:not(.dark)) .chart-placeholder > p {
-  color: var(--text-primary-light);
-}
-
+:global(:root:not(.dark)) .chart-placeholder > p,
 :global(:root:not(.dark)) .cell-detail-placeholder > p {
   color: var(--text-primary-light);
 }
