@@ -277,7 +277,7 @@ function getStageLabel(stage: string): string {
           </option>
         </select>
         <p v-if="!isLoadingModels && models.length === 0" class="model-warning">
-          ⚠️ 检测到没有可用的模型文件，请将 .pt 模型文件放置在 backend/models/ 目录下
+          ⚠️ 检测到没有可用的模型文件，请在“模型管理”中上传模型。
         </p>
       </div>
 
@@ -895,7 +895,7 @@ h2 {
 .setting-select:hover {
   background: var(--border-color);
   border-color: var(--accent-blue);
-  color: var(--text-primary);
+  color: var(--bg-hover);
 }
 
 :global(:root:not(.dark)) .setting-select:hover {

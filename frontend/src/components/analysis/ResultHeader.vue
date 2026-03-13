@@ -117,7 +117,7 @@ function toggleViewMode() {
 <style scoped>
 .result-header {
   padding: 1.5rem 2rem;
-  border-bottom: 2px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -131,8 +131,8 @@
   /* ========== 浅色模式 - 状态色 ========== */
   --success: #4caf50;          /* 成功色（成功按钮、成功图标） */
   --success-hover: #66bb6a;    /* 成功色hover */
-  --success-light: #57c75b;    /* 成功色浅色（状态点、进度条） */
-  --success-bg: #15833f;       /* 成功色背景（状态徽章） */
+  --success-light: #57c75bd6;    /* 成功色浅色（状态点、进度条） */
+  --success-bg: #1aa34e;       /* 成功色背景（状态徽章） */
   
   --warning: #ff9800;          /* 警告色（警告按钮、警告图标） */
   --warning-hover: #fbbf24;    /* 警告色hover */
