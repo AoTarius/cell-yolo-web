@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import Sidebar from '@/components/common/Sidebar.vue'
 import '@/assets/styles/colors.css'
 
+const router = useRouter()
 const store = useAnalysisStore()
 
 // 选中的对比记录（最多两条）
@@ -26,8 +28,9 @@ const canConfirm = computed(() => selectedRecords.value.length === 2)
 
 // 点击确定按钮
 function handleConfirm() {
-  // TODO: 实现具体的跳转逻辑
-  console.log('确定按钮被点击，选中的记录:', selectedRecords.value)
+  if (selectedRecords.value.length === 2) {
+    store.goToCompareResult(selectedRecords.value[0], selectedRecords.value[1], router)
+  }
 }
 
 // 暴露方法给 Sidebar 调用
@@ -184,6 +187,7 @@ defineExpose({
   flex: 1;
   display: flex;
   overflow: hidden;
+  align-items: center;
 }
 
 .compare-content {

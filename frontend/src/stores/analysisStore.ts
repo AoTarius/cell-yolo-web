@@ -104,11 +104,21 @@ export const useAnalysisStore = defineStore('analysis', () => {
     )
   })
 
+  
+  // 对比模式相关状态
+  const compareRecords = ref<AnalysisRecord[]>([])
+
   // 选择记录
   function selectRecord(id: string) {
     selectedId.value = id
     showUploadPanel.value = false
     selectedCellId.value = null // 重置细胞选择
+  }
+
+  // 清除选中状态
+  function clearSelection() {
+    selectedId.value = null
+    selectedCellId.value = null
   }
 
   // 创建新分析
@@ -126,6 +136,22 @@ export const useAnalysisStore = defineStore('analysis', () => {
   // 返回结果列表（关闭细胞详情）
   function backToResultList() {
     selectedCellId.value = null
+  }
+
+  // 跳转到对比结果页面
+  function goToCompareResult(recordA: AnalysisRecord | undefined, recordB: AnalysisRecord | undefined, router: any) {
+    if (!recordA || !recordB) {
+      console.error('缺少对比记录')
+      return
+    }
+    compareRecords.value = [recordA, recordB]
+    router.push({ name: 'compareResult' })
+  }
+
+  // 返回对比列表
+  function backToCompareList(router: any) {
+    compareRecords.value = []
+    router.push({ name: 'compare' })
   }
 
   // 加载历史任务
@@ -409,11 +435,15 @@ export const useAnalysisStore = defineStore('analysis', () => {
     showUploadPanel,
     selectedCellId,
     selectedCellData,
+    compareRecords,
     selectRecord,
+    clearSelection,
     createNewAnalysis,
     addRecord,
     selectCell,
     backToResultList,
+    goToCompareResult,
+    backToCompareList,
     addUploadedRecord,
     updateTaskStatus,
     updateTaskResult,

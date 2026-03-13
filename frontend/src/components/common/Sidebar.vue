@@ -217,11 +217,21 @@ function handleNewAnalysis() {
 }
 
 function handleModelUpload() {
+  // 清除历史记录选中状态
+  store.clearSelection()
   router.push('/model-upload')
 }
 
 function handleCompare() {
-  router.push('/compare')
+  // 清除历史记录选中状态
+  store.clearSelection()
+
+  // 如果当前在对比页面，则返回主页；否则进入对比页面
+  if (route.path === '/compare') {
+    router.push('/')
+  } else {
+    router.push('/compare')
+  }
 }
 
 function handleLogout() {
