@@ -29,106 +29,144 @@ onMounted(() => {
 const videoARef = ref<HTMLVideoElement | null>(null)
 const videoBRef = ref<HTMLVideoElement | null>(null)
 
-// 响应式的当前帧号
-const currentFrameIndex = ref(0)
+// 响应式的当前帧号（各自独立）
+const currentFrameIndexA = ref(0)
+const currentFrameIndexB = ref(0)
 
 const isExporting = ref(false)
 const exportError = ref<string | null>(null)
 
-// 计算视频帧率（使用两个记录的较小值）
-function getVideoFps(): number {
+// ==================== 视频A的控制函数 ====================
+
+// 计算视频A的帧率
+function getVideoFpsA(): number {
   const totalFramesA = recordA.value?.result?.total_frames || 0
   const durationA = recordA.value?.result?.video_duration || 0
-  const totalFramesB = recordB.value?.result?.total_frames || 0
-  const durationB = recordB.value?.result?.video_duration || 0
-
-  const fpsA = durationA > 0 && totalFramesA > 0 ? totalFramesA / durationA : 30
-  const fpsB = durationB > 0 && totalFramesB > 0 ? totalFramesB / durationB : 30
-
-  return Math.min(fpsA, fpsB)
+  if (durationA > 0 && totalFramesA > 0) {
+    return totalFramesA / durationA
+  }
+  return 30
 }
 
-// 下一帧
-function handleNextFrame() {
-  const totalFrames = Math.min(
-    recordA.value?.result?.total_frames || 0,
-    recordB.value?.result?.total_frames || 0
-  )
-  if (currentFrameIndex.value < totalFrames - 1) {
-    currentFrameIndex.value++
-    const fps = getVideoFps()
+// 视频A下一帧
+function handleNextFrameA() {
+  const totalFrames = recordA.value?.result?.total_frames || 0
+  if (currentFrameIndexA.value < totalFrames - 1) {
+    currentFrameIndexA.value++
+    const fps = getVideoFpsA()
     if (videoARef.value) {
-      videoARef.value.currentTime = currentFrameIndex.value / fps
+      videoARef.value.currentTime = currentFrameIndexA.value / fps
       videoARef.value.pause()
-    }
-    if (videoBRef.value) {
-      videoBRef.value.currentTime = currentFrameIndex.value / fps
-      videoBRef.value.pause()
     }
   }
 }
 
-// 上一帧
-function handlePrevFrame() {
-  if (currentFrameIndex.value > 0) {
-    currentFrameIndex.value--
-    const fps = getVideoFps()
+// 视频A上一帧
+function handlePrevFrameA() {
+  if (currentFrameIndexA.value > 0) {
+    currentFrameIndexA.value--
+    const fps = getVideoFpsA()
     if (videoARef.value) {
-      videoARef.value.currentTime = currentFrameIndex.value / fps
+      videoARef.value.currentTime = currentFrameIndexA.value / fps
       videoARef.value.pause()
-    }
-    if (videoBRef.value) {
-      videoBRef.value.currentTime = currentFrameIndex.value / fps
-      videoBRef.value.pause()
     }
   }
 }
 
-// 回到第一帧
-function handleGoToFirstFrame() {
-  currentFrameIndex.value = 0
+// 视频A回到第一帧
+function handleGoToFirstFrameA() {
+  currentFrameIndexA.value = 0
   if (videoARef.value) {
     videoARef.value.currentTime = 0
     videoARef.value.pause()
   }
+}
+
+// 视频A跳转到指定帧
+function handleJumpToFrameA(frameStr: string) {
+  const frame = parseInt(frameStr, 10)
+  const total = recordA.value?.result?.total_frames || 0
+
+  if (!isNaN(frame) && frame >= 1 && frame <= total) {
+    currentFrameIndexA.value = frame - 1
+    const fps = getVideoFpsA()
+    if (videoARef.value) {
+      videoARef.value.currentTime = currentFrameIndexA.value / fps
+      videoARef.value.pause()
+    }
+  }
+}
+
+// ==================== 视频B的控制函数 ====================
+
+// 计算视频B的帧率
+function getVideoFpsB(): number {
+  const totalFramesB = recordB.value?.result?.total_frames || 0
+  const durationB = recordB.value?.result?.video_duration || 0
+  if (durationB > 0 && totalFramesB > 0) {
+    return totalFramesB / durationB
+  }
+  return 30
+}
+
+// 视频B下一帧
+function handleNextFrameB() {
+  const totalFrames = recordB.value?.result?.total_frames || 0
+  if (currentFrameIndexB.value < totalFrames - 1) {
+    currentFrameIndexB.value++
+    const fps = getVideoFpsB()
+    if (videoBRef.value) {
+      videoBRef.value.currentTime = currentFrameIndexB.value / fps
+      videoBRef.value.pause()
+    }
+  }
+}
+
+// 视频B上一帧
+function handlePrevFrameB() {
+  if (currentFrameIndexB.value > 0) {
+    currentFrameIndexB.value--
+    const fps = getVideoFpsB()
+    if (videoBRef.value) {
+      videoBRef.value.currentTime = currentFrameIndexB.value / fps
+      videoBRef.value.pause()
+    }
+  }
+}
+
+// 视频B回到第一帧
+function handleGoToFirstFrameB() {
+  currentFrameIndexB.value = 0
   if (videoBRef.value) {
     videoBRef.value.currentTime = 0
     videoBRef.value.pause()
   }
 }
 
-// 跳转到指定帧
-function handleJumpToFrame(frameStr: string) {
+// 视频B跳转到指定帧
+function handleJumpToFrameB(frameStr: string) {
   const frame = parseInt(frameStr, 10)
-  const total = Math.min(
-    recordA.value?.result?.total_frames || 0,
-    recordB.value?.result?.total_frames || 0
-  )
+  const total = recordB.value?.result?.total_frames || 0
 
   if (!isNaN(frame) && frame >= 1 && frame <= total) {
-    currentFrameIndex.value = frame - 1
-    const fps = getVideoFps()
-    if (videoARef.value) {
-      videoARef.value.currentTime = currentFrameIndex.value / fps
-      videoARef.value.pause()
-    }
+    currentFrameIndexB.value = frame - 1
+    const fps = getVideoFpsB()
     if (videoBRef.value) {
-      videoBRef.value.currentTime = currentFrameIndex.value / fps
+      videoBRef.value.currentTime = currentFrameIndexB.value / fps
       videoBRef.value.pause()
     }
   }
 }
 
+// ==================== 计算属性 ====================
+
 // 计算属性：当前帧号（从1开始显示）
-const currentFrameNumber = computed(() => currentFrameIndex.value + 1)
+const currentFrameNumberA = computed(() => currentFrameIndexA.value + 1)
+const currentFrameNumberB = computed(() => currentFrameIndexB.value + 1)
 
 // 计算属性：总帧数
-const totalFrames = computed(() =>
-  Math.min(
-    recordA.value?.result?.total_frames || 0,
-    recordB.value?.result?.total_frames || 0
-  )
-)
+const totalFramesA = computed(() => recordA.value?.result?.total_frames || 0)
+const totalFramesB = computed(() => recordB.value?.result?.total_frames || 0)
 
 // 处理返回对比页面
 function handleBackToCompare() {
@@ -208,6 +246,73 @@ function handleVideoError() {
                 </div>
               </div>
             </div>
+
+            <!-- 视频A的帧控制栏 -->
+            <div class="video-controls">
+              <button class="btn-control" @click="handleGoToFirstFrameA">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                  ></path>
+                </svg>
+                第一帧
+              </button>
+              <button class="btn-control" @click="handlePrevFrameA">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  ></path>
+                </svg>
+                上一帧
+              </button>
+              <div class="frame-counter">
+                <input
+                  type="number"
+                  :value="currentFrameNumberA"
+                  :min="1"
+                  :max="totalFramesA"
+                  @input="handleJumpToFrameA(($event.target as HTMLInputElement).value)"
+                  @blur="handleJumpToFrameA(($event.target as HTMLInputElement).value)"
+                  @keyup.enter="handleJumpToFrameA(($event.target as HTMLInputElement).value)"
+                  class="frame-input"
+                />
+                <span class="frame-separator">/</span>
+                <span class="frame-total">{{ totalFramesA }}</span>
+                <span class="frame-label">帧</span>
+              </div>
+              <button class="btn-control" @click="handleNextFrameA">
+                下一帧
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <!-- 中间分隔线 -->
@@ -246,74 +351,74 @@ function handleVideoError() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- 帧控制栏 -->
-        <div class="video-controls">
-          <button class="btn-control" @click="handleGoToFirstFrame">
-            <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-              ></path>
-            </svg>
-            第一帧
-          </button>
-          <button class="btn-control" @click="handlePrevFrame">
-            <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 19l-7-7 7-7"
-              ></path>
-            </svg>
-            上一帧
-          </button>
-          <div class="frame-counter">
-            <input
-              type="number"
-              :value="currentFrameNumber"
-              :min="1"
-              :max="totalFrames"
-              @input="handleJumpToFrame(($event.target as HTMLInputElement).value)"
-              @blur="handleJumpToFrame(($event.target as HTMLInputElement).value)"
-              @keyup.enter="handleJumpToFrame(($event.target as HTMLInputElement).value)"
-              class="frame-input"
-            />
-            <span class="frame-separator">/</span>
-            <span class="frame-total">{{ totalFrames }}</span>
-            <span class="frame-label">帧</span>
+            <!-- 视频B的帧控制栏 -->
+            <div class="video-controls">
+              <button class="btn-control" @click="handleGoToFirstFrameB">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                  ></path>
+                </svg>
+                第一帧
+              </button>
+              <button class="btn-control" @click="handlePrevFrameB">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  ></path>
+                </svg>
+                上一帧
+              </button>
+              <div class="frame-counter">
+                <input
+                  type="number"
+                  :value="currentFrameNumberB"
+                  :min="1"
+                  :max="totalFramesB"
+                  @input="handleJumpToFrameB(($event.target as HTMLInputElement).value)"
+                  @blur="handleJumpToFrameB(($event.target as HTMLInputElement).value)"
+                  @keyup.enter="handleJumpToFrameB(($event.target as HTMLInputElement).value)"
+                  class="frame-input"
+                />
+                <span class="frame-separator">/</span>
+                <span class="frame-total">{{ totalFramesB }}</span>
+                <span class="frame-label">帧</span>
+              </div>
+              <button class="btn-control" @click="handleNextFrameB">
+                下一帧
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </button>
+            </div>
           </div>
-          <button class="btn-control" @click="handleNextFrame">
-            下一帧
-            <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              ></path>
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -422,7 +527,7 @@ function handleVideoError() {
 }
 
 .btn-back:hover {
-  background: var(--border-color);
+  background: var(--bg-hover);
   border-color: var(--text-muted);
 }
 
@@ -483,13 +588,14 @@ function handleVideoError() {
 .video-panel {
   display: flex;
   flex-direction: column;
+  gap: 1rem;
 }
 
 .video-panel h3 {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 0.75rem 0;
+  margin: 0;
   transition: color 0.3s;
 }
 
@@ -611,7 +717,7 @@ function handleVideoError() {
 }
 
 .btn-control:hover {
-  background: var(--border-color);
+  background: var(--bg-hover);
   border-color: var(--text-muted);
 }
 

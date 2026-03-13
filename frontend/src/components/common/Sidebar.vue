@@ -234,6 +234,10 @@ function handleCompare() {
   }
 }
 
+function handleExport() {
+  showToast('备用功能开发中...', 'info')
+}
+
 function handleLogout() {
   userStore.logout()
   router.push('/login')
@@ -379,18 +383,24 @@ const displayRecords = computed(() => {
         </button>
       </div>
       <template v-if="!isCollapsed">
-        <button class="btn-new-analysis" @click="handleNewAnalysis">
-          <span class="icon">+</span>
-          新建分析
-        </button>
-        <button class="btn-upload-model" @click="handleModelUpload">
-          <span class="icon">⚙</span>
-          管理模型
-        </button>
-        <button class="btn-compare" @click="handleCompare">
-          <span class="icon">⚖</span>
-          对比分析
-        </button>
+        <div class="action-buttons-grid">
+          <button class="btn-new-analysis" @click="handleNewAnalysis">
+            <span class="icon">+</span>
+            新建分析
+          </button>
+          <button class="btn-upload-model" @click="handleModelUpload">
+            <span class="icon">⚙</span>
+            管理模型
+          </button>
+          <button class="btn-compare" @click="handleCompare">
+            <span class="icon">⚖</span>
+            对比分析
+          </button>
+          <button class="btn-export" @click="handleExport">
+            <span class="icon">↓</span>
+            备用按钮
+          </button>
+        </div>
       </template>
     </div>
 
@@ -747,20 +757,28 @@ const displayRecords = computed(() => {
   height: 20px;
 }
 
+/* 按钮网格容器 */
+.action-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
 .btn-new-analysis {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.5rem;
   background: var(--accent-info);
   color: var(--text-primary);
   border: var(--border-color) 1px solid;
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   transition: background 0.2s;
 }
 
@@ -769,26 +787,25 @@ const displayRecords = computed(() => {
 }
 
 .btn-new-analysis .icon {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 300;
 }
 
 .btn-upload-model {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.5rem;
   background: var(--btn-upload);
   color: var(--text-primary);
   border: var(--border-color) 1px solid;
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   transition: background 0.2s;
-  margin-top: 0.75rem;
 }
 
 .btn-upload-model:hover {
@@ -796,26 +813,25 @@ const displayRecords = computed(() => {
 }
 
 .btn-upload-model .icon {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 300;
 }
 
 .btn-compare {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.5rem;
   background: var(--accent-purple);
   color: var(--text-primary);
   border: var(--border-color) 1px solid;
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   transition: background 0.2s;
-  margin-top: 0.75rem;
 }
 
 .btn-compare:hover {
@@ -823,7 +839,33 @@ const displayRecords = computed(() => {
 }
 
 .btn-compare .icon {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 300;
+}
+
+.btn-export {
+  width: 100%;
+  padding: 0.75rem 0.5rem;
+  background: var(--accent-green);
+  color: var(--text-primary);
+  border: var(--border-color) 1px solid;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background 0.2s;
+}
+
+.btn-export:hover {
+  background: var(--accent-green-hover);
+}
+
+.btn-export .icon {
+  font-size: 1.1rem;
   font-weight: 300;
 }
 

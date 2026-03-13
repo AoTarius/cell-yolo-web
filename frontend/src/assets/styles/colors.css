@@ -44,6 +44,8 @@
   --accent-purple-hover: #7c3aed; /* 紫色hover（按钮hover、链接hover） */
   --accent-info: #007acc;      /* 信息色（信息按钮、信息图标） */
   --accent-info-hover: #005a9e; /* 信息色hover */
+  --accent-green: #10b981;     /* 绿色强调（数据导出按钮） */
+  --accent-green-hover: #059669; /* 绿色hover（按钮hover） */
 
   /* ========== 深色模式 - 状态色 ========== */
   --success: #238636;          /* 成功色（成功按钮、成功图标） */
@@ -133,6 +135,8 @@
   --accent-purple: #8b5cf6;   /* 紫色强调（对比分析、特殊功能） */
   --accent-purple-hover: #7c3aed; /* 紫色hover（按钮hover、链接hover） */
   --accent-info: #2196f3;      /* 信息色（信息按钮、信息图标） */
+  --accent-green: #10b981;     /* 绿色强调（数据导出按钮） */
+  --accent-green-hover: #059669; /* 绿色hover（按钮hover） */
 
   /* ========== 浅色模式 - 状态色 ========== */
   --success: #4caf50;          /* 成功色（成功按钮、成功图标） */
