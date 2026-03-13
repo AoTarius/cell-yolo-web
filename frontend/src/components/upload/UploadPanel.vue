@@ -827,7 +827,7 @@ h2 {
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--bg-input);
+  background: var(--text-secondary);
   border-radius: 3px;
   outline: none;
   cursor: pointer;

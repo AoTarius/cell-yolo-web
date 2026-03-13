@@ -395,6 +395,11 @@ export const useAnalysisStore = defineStore('analysis', () => {
             // 更新结果数据
             const record = records.value.find((r) => r.task_id === task.task_id)
             if (record) {
+              // 更新原始视频路径（如果后端返回了）
+              if (result.original_video_path) {
+                record.video_path = result.original_video_path
+              }
+              // 更新结果数据
               record.result = {
                 output_video_path: result.annotated_video_path || '',
                 cell_count: result.cell_count || 0,

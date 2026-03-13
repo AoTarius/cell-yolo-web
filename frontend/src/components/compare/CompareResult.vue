@@ -893,7 +893,7 @@ function handleVideoError() {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 1rem;
-  min-height: 300px;
+  min-height: 500px;
 }
 
 .chart-panel {
@@ -926,10 +926,14 @@ function handleVideoError() {
 
 .chart-placeholder {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-card);
   border: 2px dashed var(--border-color);
   border-radius: 8px;
-  padding: 4rem 2rem;
+  padding: 2rem;
   text-align: center;
   color: var(--text-muted);
   transition: background 0.3s, border-color 0.3s;
@@ -961,7 +965,7 @@ function handleVideoError() {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 1rem;
-  min-height: 300px;
+  min-height: 500px;
 }
 
 .cell-detail-panel {
@@ -994,10 +998,14 @@ function handleVideoError() {
 
 .cell-detail-placeholder {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-card);
   border: 2px dashed var(--border-color);
   border-radius: 8px;
-  padding: 4rem 2rem;
+  padding: 2rem;
   text-align: center;
   color: var(--text-muted);
   transition: background 0.3s, border-color 0.3s;

@@ -683,7 +683,7 @@ const displayRecords = computed(() => {
 }
 
 .sidebar-header {
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid var(--border-secondary);
   display: flex;
   flex-direction: column;
