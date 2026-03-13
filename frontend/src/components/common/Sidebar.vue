@@ -7,8 +7,17 @@ import { useToast } from '@/composables/useToast'
 import { authApi } from '@/api/authApi'
 import ConfirmDialog from './ConfirmDialog.vue'
 import SettingsDialog from './SettingsDialog.vue'
+import HistoryFilter, { type FilterCondition } from './HistoryFilter.vue'
 import axios from 'axios'
 import '@/assets/styles/colors.css'
+
+const props = defineProps<{
+  compareMode?: boolean
+}>()
+
+const emit = defineEmits<{
+  selectRecord: [record: AnalysisRecord]
+}>()
 
 const store = useAnalysisStore()
 const userStore = useUserStore()
@@ -76,6 +85,9 @@ const taskToDelete = ref<string | null>(null)
 const showSettingsDialog = ref(false)
 const modelPath = ref('')
 const outputPath = ref('')
+const showFilterDialog = ref(false)
+const isFiltering = ref(false)
+const filteredRecords = ref<AnalysisRecord[]>([])
 
 // 主题切换
 const isDark = ref(true)
@@ -137,6 +149,12 @@ function formatDate(date: Date) {
 }
 
 function handleRecordClick(record: AnalysisRecord) {
+  // 如果在对比模式，触发 select-record 事件
+  if (props.compareMode) {
+    emit('selectRecord', record)
+    return
+  }
+
   // 如果不在主页，先跳转回主页
   if (route.path !== '/') {
     router.push('/').then(() => {
@@ -202,6 +220,10 @@ function handleModelUpload() {
   router.push('/model-upload')
 }
 
+function handleCompare() {
+  router.push('/compare')
+}
+
 function handleLogout() {
   userStore.logout()
   router.push('/login')
@@ -254,6 +276,82 @@ function handleBrowseOutput() {
   // TODO: 实现文件夹选择功能
   showToast('文件夹选择功能待实现', 'info')
 }
+
+// 打开筛选器
+function openFilter() {
+  showFilterDialog.value = true
+}
+
+// 应用筛选
+function handleFilter(conditions: FilterCondition[]) {
+  if (conditions.length === 0) {
+    isFiltering.value = false
+    filteredRecords.value = []
+    return
+  }
+
+  isFiltering.value = true
+  filteredRecords.value = store.records.filter(record => {
+    return conditions.every(condition => {
+      const fieldValue = getFieldValue(record, condition.field)
+
+      switch (condition.operator) {
+        case 'equals':
+          return fieldValue === condition.value
+        case 'notEquals':
+          return fieldValue !== condition.value
+        case 'contains':
+          return String(fieldValue).toLowerCase().includes(String(condition.value).toLowerCase())
+        case 'notContains':
+          return !String(fieldValue).toLowerCase().includes(String(condition.value).toLowerCase())
+        case 'greaterThan':
+          return Number(fieldValue) > Number(condition.value)
+        case 'lessThan':
+          return Number(fieldValue) < Number(condition.value)
+        case 'greaterThanOrEqual':
+          return Number(fieldValue) >= Number(condition.value)
+        case 'lessThanOrEqual':
+          return Number(fieldValue) <= Number(condition.value)
+        case 'between':
+          if (Array.isArray(condition.value) && condition.value.length === 2) {
+            const numValue = Number(fieldValue)
+            return numValue >= Number(condition.value[0]) && numValue <= Number(condition.value[1])
+          }
+          return false
+        default:
+          return true
+      }
+    })
+  })
+
+  showToast(`已筛选出 ${filteredRecords.value.length} 条记录`, 'success')
+}
+
+// 获取记录字段的值
+function getFieldValue(record: AnalysisRecord, field: string): string | number {
+  switch (field) {
+    case 'status':
+      return record.status
+    case 'createTime':
+      return new Date(record.start_time).getTime()
+    case 'modelType':
+      return record.result?.model_name || ''
+    case 'fileName':
+      return record.video_name
+    case 'cellCount':
+      return record.result?.cell_count || 0
+    default:
+      return ''
+  }
+}
+
+// 计算显示的记录列表（应用筛选）
+const displayRecords = computed(() => {
+  if (isFiltering.value) {
+    return filteredRecords.value
+  }
+  return store.records
+})
 </script>
 
 <template>
@@ -279,14 +377,36 @@ function handleBrowseOutput() {
           <span class="icon">⚙</span>
           管理模型
         </button>
+        <button class="btn-compare" @click="handleCompare">
+          <span class="icon">⚖</span>
+          对比分析
+        </button>
       </template>
     </div>
 
     <div v-if="!isCollapsed" class="sidebar-content">
-      <h2 class="section-title">历史记录</h2>
+      <div class="section-header">
+        <h2 class="section-title">历史记录</h2>
+        <button class="btn-filter" @click="openFilter" title="筛选历史记录">
+          <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+              class="filter-icon"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+              ></path>
+            </svg>
+        </button>
+      </div>
       <div class="records-list">
         <div
-          v-for="record in store.records"
+          v-for="record in displayRecords"
           :key="record.task_id"
           class="record-item"
           :class="{ active: store.selectedId === record.task_id }"
@@ -374,6 +494,12 @@ function handleBrowseOutput() {
       @save="handleSettingsSave"
       @browse-model="handleBrowseModel"
       @browse-output="handleBrowseOutput"
+    />
+
+    <!-- 历史记录筛选器 -->
+    <HistoryFilter
+      v-model:visible="showFilterDialog"
+      @filter="handleFilter"
     />
 
     <!-- 底部状态栏 -->
@@ -664,6 +790,33 @@ function handleBrowseOutput() {
   font-weight: 300;
 }
 
+.btn-compare {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--accent-purple);
+  color: var(--text-primary);
+  border: var(--border-color) 1px solid;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+  margin-top: 0.75rem;
+}
+
+.btn-compare:hover {
+  background: var(--accent-purple-hover);
+}
+
+.btn-compare .icon {
+  font-size: 1.25rem;
+  font-weight: 300;
+}
+
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
@@ -675,8 +828,47 @@ function handleBrowseOutput() {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-primary);
-  margin: 0 0 0.75rem 0.5rem;
+  margin: 0;
   font-weight: 600;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding: 0 0.5rem;
+}
+
+.btn-filter {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-filter:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+
+.btn-filter:active {
+  transform: scale(0.95);
+}
+
+.btn-filter .filter-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .records-list {

@@ -18,6 +18,7 @@
   --bg-card: #161b22;          /* 卡片背景（stat-card, settings-content等） */
   --bg-input: #21262d;         /* 输入框背景（model-select, setting-select, frame-input等） */
   --bg-hover: #30363d;         /* 通用hover背景（可排序列表头hover、按钮hover等） */
+  --bg-disabled: #1a1a1a;      /* 禁用状态背景（禁用按钮等） */
   --bg-toast: #1c1917;         /* Toast背景（toast-item） */
   --bg-video: #000;            /* 视频背景（video-container） */
   --bg-overlay: rgba(0, 0, 0, 0.5);  /* 遮罩层背景（dialog-overlay） */
@@ -39,6 +40,8 @@
   --accent-blue: #58a6ff;      /* 蓝色强调（主要按钮、链接、图标） */
   --accent-blue-hover: #1f6feb;/* 蓝色hover（按钮hover、链接hover） */
   --accent-blue-active: #388bfd; /* 蓝色激活（按下状态） */
+  --accent-purple: #8b5cf6;   /* 紫色强调（对比分析、特殊功能） */
+  --accent-purple-hover: #7c3aed; /* 紫色hover（按钮hover、链接hover） */
   --accent-info: #007acc;      /* 信息色（信息按钮、信息图标） */
   --accent-info-hover: #005a9e; /* 信息色hover */
 
@@ -104,6 +107,7 @@
   --bg-card: #fff;             /* 卡片背景（stat-card, settings-content等） */
   --bg-input: #fff;            /* 输入框背景（model-select, setting-select, frame-input等） */
   --bg-hover: #e8e8e8;         /* 通用hover背景（可排序列表头hover、按钮hover等） */
+  --bg-disabled: #d0d0d0;      /* 禁用状态背景（禁用按钮等） */
   --bg-toast: #ffffff;         /* Toast背景（toast-item） */
   --bg-video: #000;            /* 视频背景（video-container） */
   --bg-overlay: rgba(0, 0, 0, 0.5);  /* 遮罩层背景（dialog-overlay） */
@@ -126,6 +130,8 @@
   --accent-blue: #2196f3;      /* 蓝色强调（主要按钮、链接、图标） */
   --accent-blue-hover: #1976d2;/* 蓝色hover（按钮hover、链接hover） */
   --accent-blue-active: #1976d2; /* 蓝色激活（按下状态） */
+  --accent-purple: #8b5cf6;   /* 紫色强调（对比分析、特殊功能） */
+  --accent-purple-hover: #7c3aed; /* 紫色hover（按钮hover、链接hover） */
   --accent-info: #2196f3;      /* 信息色（信息按钮、信息图标） */
 
   /* ========== 浅色模式 - 状态色 ========== */

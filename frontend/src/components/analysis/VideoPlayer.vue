@@ -34,7 +34,7 @@ function getVideoFps(): number {
   if (duration > 0 && totalFrames > 0) {
     return totalFrames / duration
   }
-  return 30 // 默认帧率
+  return 10 // 默认帧率
 }
 
 // 视频布局模式：'side-by-side' (并排) 或 'stacked' (上下)

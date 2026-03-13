@@ -3,6 +3,7 @@ import { useUserStore } from '@/stores/userStore'
 import CellTrackingView from '../views/CellTrackingView.vue'
 import ProgressView from '../views/ProgressView.vue'
 import ModelUploadView from '../views/ModelUploadView.vue'
+import CompareView from '../views/CompareView.vue'
 import LoginView from '../views/LoginView.vue'
 
 const router = createRouter({
@@ -35,6 +36,11 @@ const router = createRouter({
       path: '/model-upload',
       name: 'modelUpload',
       component: ModelUploadView,
+    },
+    {
+      path: '/compare',
+      name: 'compare',
+      component: CompareView,
     },
   ],
 })
