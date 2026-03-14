@@ -99,24 +99,44 @@ class Annotator:
             self.im = np.asarray(self.im).copy()
         if len(masks) == 0:
             self.im[:] = im_gpu.permute(1, 2, 0).contiguous().cpu().numpy() * 255
-        colors = torch.tensor(colors, device=im_gpu.device, dtype=torch.float32) / 255.0
-        colors = colors[:, None, None]  # shape(n,1,1,3)
-        masks = masks.unsqueeze(3)  # shape(n,h,w,1)
-        masks_color = masks * (colors * alpha)  # shape(n,h,w,3)
-
-        inv_alph_masks = (1 - masks * alpha).cumprod(0)  # shape(n,h,w,1)
-        mcs = (masks_color * inv_alph_masks).sum(0) * 2  # mask color summand shape(n,h,w,3)
-
-        im_gpu = im_gpu.flip(dims=[0])  # flip channel
-        im_gpu = im_gpu.permute(1, 2, 0).contiguous()  # shape(h,w,3)
-        im_gpu = im_gpu * inv_alph_masks[-1] + mcs
+            return
+        
+        # === 显存优化：分批处理大量掩模 ===
+        n_masks = len(masks)
+        batch_size = 10  # 每批处理50个掩模
+        
+        if n_masks <= batch_size:
+            # 数量少，直接处理
+            colors_t = torch.tensor(colors, device=im_gpu.device, dtype=torch.float32) / 255.0
+            colors_t = colors_t[:, None, None]
+            masks = masks.unsqueeze(3)
+            masks_color = masks * (colors_t * alpha)
+            inv_alph_masks = (1 - masks * alpha).cumprod(0)
+            mcs = (masks_color * inv_alph_masks).sum(0) * 2
+            im_gpu = im_gpu.flip(dims=[0]).permute(1, 2, 0).contiguous()
+            im_gpu = im_gpu * inv_alph_masks[-1] + mcs
+        else:
+            # 数量多，分批处理
+            im_gpu = im_gpu.flip(dims=[0]).permute(1, 2, 0).contiguous()
+            for i in range(0, n_masks, batch_size):
+                end_idx = min(i + batch_size, n_masks)
+                batch_masks = masks[i:end_idx]
+                batch_colors = colors[i:end_idx]
+                colors_t = torch.tensor(batch_colors, device=im_gpu.device, dtype=torch.float32) / 255.0
+                colors_t = colors_t[:, None, None]
+                batch_masks = batch_masks.unsqueeze(3)
+                masks_color = batch_masks * (colors_t * alpha)
+                inv_alph_masks = (1 - batch_masks * alpha).cumprod(0)
+                mcs = (masks_color * inv_alph_masks).sum(0) * 2
+                im_gpu = im_gpu * inv_alph_masks[-1] + mcs
+                del batch_masks, colors_t, masks_color, inv_alph_masks, mcs
+                torch.cuda.empty_cache()
+        
         im_mask = (im_gpu * 255)
         im_mask_np = im_mask.byte().cpu().numpy()
         self.im[:] = im_mask_np if retina_masks else scale_image(im_gpu.shape, im_mask_np, self.im.shape)
         if self.pil:
-            # convert im back to PIL and update draw
             self.fromarray(self.im)
-
     def rectangle(self, xy, fill=None, outline=None, width=1):
         # Add rectangle to image (PIL-only)
         self.draw.rectangle(xy, fill, outline, width)

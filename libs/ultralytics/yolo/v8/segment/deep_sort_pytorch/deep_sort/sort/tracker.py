@@ -71,6 +71,18 @@ class Tracker:
             track.features = []
         self.metric.partial_fit(
             np.asarray(features), np.asarray(targets), active_targets)
+        
+        # === 内存优化：只保留最近活跃的轨迹特征 ===
+        # 清理samples中不在active_targets的旧数据
+        if hasattr(self.metric, 'samples'):
+            self.metric.samples = {k: v for k, v in self.metric.samples.items() 
+                                   if k in active_targets}
+        
+        # === 内存优化：只保留最近活跃的轨迹特征 ===
+        # 清理samples中不在active_targets的旧数据
+        if hasattr(self.metric, 'samples'):
+            self.metric.samples = {k: v for k, v in self.metric.samples.items() 
+                                   if k in active_targets}
 
     def _match(self, detections):
         if self.use_reid:
