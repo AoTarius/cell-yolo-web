@@ -77,23 +77,6 @@ defineExpose({
                   </svg>
                   {{ record.result?.model_name || 'N/A' }}
                 </span>
-                <span class="detail-item">
-                  <svg
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="detail-icon"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                    ></path>
-                  </svg>
-                  细胞数: {{ record.result?.cell_count || 0 }}
-                </span>
               </div>
             </div>
             <button class="btn-remove" @click="removeRecordFromCompare(index)" title="取消选中">

@@ -121,6 +121,9 @@ python scripts/init_db.py
 - `task_name`: 任务名（VARCHAR(255), NOT NULL）
 - `status`: 任务状态（VARCHAR(20), NOT NULL, 枚举值: 'pending', 'processing', 'completed', 'failed'）
 - `progress`: 进度（INTEGER, NOT NULL, 默认0, 范围0-100）
+- `stage`: 当前处理阶段（VARCHAR(50), 可选），值: 'extracting', 'processing', 'packaging'
+- `current_frame`: 当前处理帧号（INTEGER, 默认0）
+- `total_frames`: 总帧数（INTEGER, 默认0）
 - `conf`: 置信度阈值（FLOAT, 默认0.3, 范围0-1）
 - `imgsz`: 图像尺寸（INTEGER, 默认1024）
 - `fps`: 帧率（INTEGER, 默认10）

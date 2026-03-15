@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 
-from .services.video_processor import get_video_processor
+from .services.video_processor import VideoProcessor
 
 
 # 数据库连接配置
@@ -71,76 +71,15 @@ class UploadVideoView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # 生成任务ID
-            task_id = str(uuid.uuid4())
-
-            # 创建任务目录
-            media_root = Path(settings.MEDIA_ROOT)
-            task_dir = media_root / 'tasks' / task_id
-            task_dir.mkdir(parents=True, exist_ok=True)
-
-            # 保存视频文件
-            video_path = task_dir / 'original' / video_file.name
-            video_path.parent.mkdir(parents=True, exist_ok=True)
-
-            with open(video_path, 'wb') as f:
-                for chunk in video_file.chunks():
-                    f.write(chunk)
-
-            # 初始化任务状态
-            with task_lock:
-                task_status[task_id] = {
-                    'task_id': task_id,
-                    'video_name': video_file.name,
-                    'video_path': str(video_path),
-                    'status': 'uploaded',
-                    'progress': 0,
-                    'created_at': datetime.now().isoformat(),
-                    'error': None
-                }
-
-            return Response({
-                'task_id': task_id,
-                'video_name': video_file.name,
-                'status': 'uploaded',
-                'message': '视频上传成功'
-            }, status=status.HTTP_201_CREATED)
-
-        except Exception as e:
-            return Response(
-                {'error': f'上传失败: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
-class ProcessTaskView(APIView):
-    """启动处理任务接口"""
-
-    def post(self, request):
-        try:
-            data = json.loads(request.body)
-            task_id = data.get('task_id')
-
-            if not task_id:
-                return Response(
-                    {'error': '缺少 task_id'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # 获取参数
-            conf = data.get('conf', 0.3)
-            imgsz = data.get('imgsz', 1024)
-            fps = data.get('fps', 10)
-            model_name = data.get('model_name', 'best_split.pt')
-            username = data.get('username', '')
-
+            # 获取用户名
+            username = request.data.get('username', '')
             if not username:
                 return Response(
                     {'error': '未提供用户名'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # 查询用户和模型信息，获取完整路径
+            # 连接数据库
             try:
                 connection = pymysql.connect(
                     host=os.getenv('DB_HOST', 'localhost'),
@@ -159,7 +98,7 @@ class ProcessTaskView(APIView):
             try:
                 with connection.cursor() as cursor:
                     # 查询用户信息
-                    user_sql = "SELECT id, model_base_path FROM users WHERE username = %s AND is_deleted = FALSE"
+                    user_sql = "SELECT id, output_base_path FROM users WHERE username = %s AND is_deleted = FALSE"
                     cursor.execute(user_sql, (username,))
                     user = cursor.fetchone()
 
@@ -170,11 +109,180 @@ class ProcessTaskView(APIView):
                         )
 
                     user_id = user['id']
-                    model_base_path = user['model_base_path']
+                    output_base_path = Path(user['output_base_path'])
+
+                    # 检查视频是否已存在（同一用户下视频名称唯一）
+                    check_sql = "SELECT id, video_path FROM videos WHERE user_id = %s AND video_name = %s AND is_deleted = FALSE"
+                    cursor.execute(check_sql, (user_id, video_file.name))
+                    existing_video = cursor.fetchone()
+
+                    if existing_video:
+                        # 视频已存在，直接返回现有视频信息
+                        video_id = existing_video['id']
+                        task_id = str(uuid.uuid4())
+                        return Response({
+                            'task_id': task_id,
+                            'video_id': video_id,
+                            'video_name': video_file.name,
+                            'status': 'existing',
+                            'message': '视频已存在，将使用现有视频'
+                        }, status=status.HTTP_200_OK)
+
+                    # 创建 videos 记录
+                    insert_sql = """
+                    INSERT INTO videos (user_id, video_name, video_path, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                    """
+                    cursor.execute(insert_sql, (user_id, video_file.name, ''))
+                    connection.commit()
+                    video_id = cursor.lastrowid
+
+                    # 生成视频路径：videos/{video_id}/{video_name}
+                    video_path_relative = f"videos/{video_id}/{video_file.name}"
+                    video_path_full = output_base_path / video_path_relative
+
+                    # 更新视频路径
+                    update_sql = "UPDATE videos SET video_path = %s WHERE id = %s"
+                    cursor.execute(update_sql, (video_path_relative, video_id))
+                    connection.commit()
+
+                    # 创建视频目录并保存文件
+                    video_path_full.parent.mkdir(parents=True, exist_ok=True)
+                    with open(video_path_full, 'wb') as f:
+                        for chunk in video_file.chunks():
+                            f.write(chunk)
+
+                    # 获取视频元数据
+                    import cv2
+                    cap = cv2.VideoCapture(str(video_path_full))
+                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    video_fps = cap.get(cv2.CAP_PROP_FPS)
+                    video_duration = total_frames / video_fps if video_fps > 0 else 0
+                    file_size = video_path_full.stat().st_size
+                    cap.release()
+
+                    # 更新视频元数据
+                    update_meta_sql = """
+                    UPDATE videos
+                    SET total_frames = %s, video_duration = %s, file_size = %s
+                    WHERE id = %s
+                    """
+                    cursor.execute(update_meta_sql, (total_frames, video_duration, file_size, video_id))
+                    connection.commit()
+
+                    # 生成任务ID
+                    task_id = str(uuid.uuid4())
+
+                    return Response({
+                        'task_id': task_id,
+                        'video_id': video_id,
+                        'video_name': video_file.name,
+                        'status': 'uploaded',
+                        'message': '视频上传成功'
+                    }, status=status.HTTP_201_CREATED)
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return Response(
+                {'error': f'上传失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class ProcessTaskView(APIView):
+    """启动处理任务接口"""
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            task_id = data.get('task_id')
+            video_id = data.get('video_id')
+
+            if not task_id:
+                return Response(
+                    {'error': '缺少 task_id'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not video_id:
+                return Response(
+                    {'error': '缺少 video_id'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 获取参数
+            conf = data.get('conf', 0.3)
+            imgsz = data.get('imgsz', 1024)
+            fps = data.get('fps', 10)
+            model_name = data.get('model_name', 'best_split.pt')
+            username = data.get('username', '')
+
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 连接数据库
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 查询用户信息
+                    user_sql = "SELECT id, model_base_path, output_base_path FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(user_sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    user_id = user['id']
+                    model_base_path = Path(user['model_base_path'])
+                    output_base_path = Path(user['output_base_path'])
+
+                    # 查询视频信息
+                    video_sql = "SELECT video_name, video_path FROM videos WHERE id = %s AND user_id = %s AND is_deleted = FALSE"
+                    cursor.execute(video_sql, (video_id, user_id))
+                    video_record = cursor.fetchone()
+
+                    if not video_record:
+                        return Response(
+                            {'error': f'视频不存在或无权访问'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    video_name = video_record['video_name']
+                    video_path_relative = video_record['video_path']
+                    video_path_full = output_base_path / video_path_relative
+
+                    # 验证视频文件是否存在
+                    if not video_path_full.exists():
+                        return Response(
+                            {'error': f'视频文件不存在: {video_path_full}'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
 
                     # 查询模型信息
                     model_sql = """
-                    SELECT model_path
+                    SELECT id, model_path
                     FROM models
                     WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
                     """
@@ -187,49 +295,38 @@ class ProcessTaskView(APIView):
                             status=status.HTTP_404_NOT_FOUND
                         )
 
-                    # 拼接完整路径（绝对路径）
-                    models_dir = Path(model_base_path)
-                    full_model_path = str(models_dir / model_record['model_path'])
+                    model_id = model_record['id']
+                    model_path_relative = model_record['model_path']
+                    model_path_full = model_base_path / model_path_relative
 
                     # 验证模型文件是否存在
-                    if not Path(full_model_path).exists():
+                    if not model_path_full.exists():
                         return Response(
-                            {'error': f'模型文件不存在: {full_model_path}'},
+                            {'error': f'模型文件不存在: {model_path_full}'},
                             status=status.HTTP_404_NOT_FOUND
                         )
+
+                    # 创建 tasks 记录
+                    task_name = video_name
+                    annotated_video_name = "tracking_result.mp4"
+                    insert_sql = """
+                    INSERT INTO tasks (user_id, video_id, model_id, task_id, task_name, status, progress, conf, imgsz, fps, annotated_video_name, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, %s, %s, %s, %s, 'pending', 0, %s, %s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                    """
+                    cursor.execute(insert_sql, (user_id, video_id, model_id, task_id, task_name, conf, imgsz, fps, annotated_video_name))
+                    connection.commit()
+
+                    # 创建任务目录
+                    task_dir = output_base_path / 'tasks' / task_id
+                    task_dir.mkdir(parents=True, exist_ok=True)
+
             finally:
                 connection.close()
-
-            # 检查任务是否存在
-            with task_lock:
-                if task_id not in task_status:
-                    return Response(
-                        {'error': '任务不存在'},
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-
-                # 检查任务状态
-                if task_status[task_id]['status'] == 'processing':
-                    return Response(
-                        {'error': '任务正在处理中'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                # 更新任务状态
-                task_status[task_id]['status'] = 'processing'
-                task_status[task_id]['progress'] = 0
-                task_status[task_id]['params'] = {
-                    'conf': conf,
-                    'imgsz': imgsz,
-                    'fps': fps,
-                    'model_name': model_name,
-                    'model_path': full_model_path
-                }
 
             # 在后台线程中处理视频
             thread = threading.Thread(
                 target=self._process_video,
-                args=(task_id, conf, imgsz, fps, full_model_path),
+                args=(task_id, str(video_path_full), str(model_path_full), str(output_base_path), conf, imgsz, fps),
                 daemon=True
             )
             thread.start()
@@ -246,29 +343,48 @@ class ProcessTaskView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def _process_video(self, task_id: str, conf: float, imgsz: int, fps: int, model_path: str):
+    def _process_video(self, task_id: str, video_path: str, model_path: str, output_base_path: str, conf: float, imgsz: int, fps: int):
         """后台处理视频"""
         print(f"{get_thread_prefix(task_id)} 开始处理任务")
         try:
-            # 获取任务信息
-            with task_lock:
-                task_info = task_status[task_id]
-                video_path = task_info['video_path']
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+
+            # 更新任务状态为 processing
+            with connection.cursor() as cursor:
+                update_sql = "UPDATE tasks SET status = 'processing', updated_at = NOW() WHERE task_id = %s"
+                cursor.execute(update_sql, (task_id,))
+                connection.commit()
 
             print(f"{get_thread_prefix(task_id)} 获取视频处理器")
 
-            # 获取视频处理器
-            processor = get_video_processor()
+            # 创建视频处理器实例
+            processor = VideoProcessor(str(model_path), str(output_base_path))
 
             # 进度回调函数
             def progress_callback(stage: str, progress: int, data: dict):
-                with task_lock:
-                    if task_id in task_status:
-                        task_status[task_id]['progress'] = progress
-                        task_status[task_id]['stage'] = stage
-                        task_status[task_id]['message'] = data.get('message', '')
-                        task_status[task_id]['current_frame'] = data.get('current_frame')
-                        task_status[task_id]['total_frames'] = data.get('total_frames')
+                with connection.cursor() as cursor:
+                    # 更新任务进度
+                    update_sql = """
+                    UPDATE tasks
+                    SET progress = %s, stage = %s, current_frame = %s, total_frames = %s, updated_at = NOW()
+                    WHERE task_id = %s
+                    """
+                    cursor.execute(update_sql, (
+                        progress,
+                        stage,
+                        data.get('current_frame', 0),
+                        data.get('total_frames', 0),
+                        task_id
+                    ))
+                    connection.commit()
 
             print(f"{get_thread_prefix(task_id)} 开始处理视频，参数: conf={conf}, imgsz={imgsz}, fps={fps}, model_path={model_path}")
 
@@ -285,118 +401,270 @@ class ProcessTaskView(APIView):
 
             print(f"{get_thread_prefix(task_id)} 视频处理完成")
 
-            # 更新任务状态
-            with task_lock:
-                if task_id in task_status:
-                    task_status[task_id]['status'] = 'completed'
-                    task_status[task_id]['progress'] = 100
-                    task_status[task_id]['result'] = result
-                    task_status[task_id]['completed_at'] = datetime.now().isoformat()
+            # 更新任务状态为 completed
+            with connection.cursor() as cursor:
+                update_sql = "UPDATE tasks SET status = 'completed', progress = 100, updated_at = NOW() WHERE task_id = %s"
+                cursor.execute(update_sql, (task_id,))
+                connection.commit()
 
         except Exception as e:
             # 更新任务状态为失败
             print(f"{get_thread_prefix(task_id)} 处理失败: {str(e)}")
-            with task_lock:
-                if task_id in task_status:
-                    task_status[task_id]['status'] = 'failed'
-                    task_status[task_id]['error'] = str(e)
-                    task_status[task_id]['failed_at'] = datetime.now().isoformat()
+            try:
+                with connection.cursor() as cursor:
+                    update_sql = """
+                    UPDATE tasks
+                    SET status = 'failed', error_message = %s, updated_at = NOW()
+                    WHERE task_id = %s
+                    """
+                    cursor.execute(update_sql, (str(e), task_id))
+                    connection.commit()
+            except Exception as db_error:
+                print(f"{get_thread_prefix(task_id)} 更新失败状态时出错: {str(db_error)}")
+            finally:
+                if 'connection' in locals():
+                    connection.close()
 
 
 class TaskStatusView(APIView):
     """查询任务状态接口"""
 
     def get(self, request, task_id):
-        with task_lock:
-            if task_id not in task_status:
-                return Response(
-                    {'error': '任务不存在'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+        try:
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-            task_info = task_status[task_id].copy()
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务信息
+                task_sql = """
+                SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status, t.progress,
+                       t.stage, t.current_frame, t.total_frames,
+                       t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
+                       t.created_at, t.updated_at, u.output_base_path, v.video_name
+                FROM tasks t
+                JOIN users u ON t.user_id = u.id
+                JOIN videos v ON t.video_id = v.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
+                """
+                cursor.execute(task_sql, (task_id,))
+                task_info = cursor.fetchone()
 
-            # 如果任务完成，读取 JSON 结果
-            if task_info['status'] == 'completed' and 'result' not in task_info:
-                try:
-                    media_root = Path(settings.MEDIA_ROOT)
-                    json_path = media_root / 'tasks' / task_id / 'result.json'
-                    if json_path.exists():
-                        with open(json_path, 'r', encoding='utf-8') as f:
-                            task_info['result'] = json.load(f)
-                except Exception as e:
-                    task_info['error'] = f'读取结果失败: {str(e)}'
+                if not task_info:
+                    return Response(
+                        {'error': '任务不存在'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
 
-            return Response(task_info, status=status.HTTP_200_OK)
+                # 如果任务完成，读取 JSON 结果
+                if task_info['status'] == 'completed':
+                    try:
+                        output_base_path = Path(task_info['output_base_path'])
+                        json_path = output_base_path / 'tasks' / task_id / 'result.json'
+                        if json_path.exists():
+                            with open(json_path, 'r', encoding='utf-8') as f:
+                                task_info['result'] = json.load(f)
+                    except Exception as e:
+                        task_info['error'] = f'读取结果失败: {str(e)}'
+
+                return Response(task_info, status=status.HTTP_200_OK)
+
+        finally:
+            connection.close()
 
 
 class TaskResultView(APIView):
     """获取处理结果接口"""
 
     def get(self, request, task_id):
-        media_root = Path(settings.MEDIA_ROOT)
-        json_path = media_root / 'tasks' / task_id / 'result.json'
-
-        if not json_path.exists():
+        try:
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
             return Response(
-                {'error': '结果不存在'},
-                status=status.HTTP_404_NOT_FOUND
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        with open(json_path, 'r', encoding='utf-8') as f:
-            result = json.load(f)
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务信息和用户的 output_base_path
+                task_sql = """
+                SELECT u.output_base_path, t.status
+                FROM tasks t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                """
+                cursor.execute(task_sql, (task_id,))
+                task_info = cursor.fetchone()
 
-        return Response(result, status=status.HTTP_200_OK)
+                if not task_info:
+                    return Response(
+                        {'error': '任务不存在'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                if task_info['status'] != 'completed':
+                    return Response(
+                        {'error': '任务尚未完成'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                output_base_path = Path(task_info['output_base_path'])
+                json_path = output_base_path / 'tasks' / task_id / 'result.json'
+
+                if not json_path.exists():
+                    return Response(
+                        {'error': '结果不存在'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    result = json.load(f)
+
+                return Response(result, status=status.HTTP_200_OK)
+
+        finally:
+            connection.close()
 
 
 class AnnotatedVideoView(APIView):
     """获取标注视频接口"""
 
     def get(self, request, task_id):
-        media_root = Path(settings.MEDIA_ROOT)
-        video_path = media_root / 'tasks' / task_id / 'output' / 'tracking_result.mp4'
+        try:
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        if not video_path.exists():
-            return HttpResponseNotFound('视频不存在')
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务信息和用户的 output_base_path
+                task_sql = """
+                SELECT t.annotated_video_name, u.output_base_path
+                FROM tasks t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                """
+                cursor.execute(task_sql, (task_id,))
+                task_info = cursor.fetchone()
 
-        # 获取文件名
-        filename = f"{task_id}_annotated.mp4"
+                if not task_info:
+                    return HttpResponseNotFound('任务不存在')
 
-        # 返回视频文件
-        return FileResponse(
-            open(video_path, 'rb'),
-            content_type='video/mp4',
-            as_attachment=True,
-            filename=filename
-        )
+                annotated_video_name = task_info['annotated_video_name']
+                output_base_path = Path(task_info['output_base_path'])
+
+                # 拼接完整路径
+                video_path = output_base_path / 'tasks' / task_id / 'output' / annotated_video_name
+
+                if not video_path.exists():
+                    return HttpResponseNotFound('视频不存在')
+
+                # 获取文件名
+                filename = annotated_video_name
+
+                # 返回视频文件
+                return FileResponse(
+                    open(video_path, 'rb'),
+                    content_type='video/mp4',
+                    as_attachment=True,
+                    filename=filename
+                )
+
+        finally:
+            connection.close()
 
 
 class OriginalVideoView(APIView):
     """获取原始视频接口"""
 
     def get(self, request, task_id):
-        media_root = Path(settings.MEDIA_ROOT)
-        original_dir = media_root / 'tasks' / task_id / 'original'
+        try:
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        # 查找original目录下的视频文件
-        video_files = list(original_dir.glob('*.mp4')) + list(original_dir.glob('*.avi')) + list(original_dir.glob('*.mov'))
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务信息和视频路径
+                task_sql = """
+                SELECT v.video_name, v.video_path, u.output_base_path
+                FROM tasks t
+                JOIN videos v ON t.video_id = v.id
+                JOIN users u ON t.user_id = u.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND v.is_deleted = FALSE AND u.is_deleted = FALSE
+                """
+                cursor.execute(task_sql, (task_id,))
+                task_info = cursor.fetchone()
 
-        if not video_files:
-            return HttpResponseNotFound('原始视频不存在')
+                if not task_info:
+                    return HttpResponseNotFound('任务不存在或视频不存在')
 
-        # 取第一个找到的视频文件
-        video_path = video_files[0]
+                video_name = task_info['video_name']
+                video_path_relative = task_info['video_path']
+                output_base_path = Path(task_info['output_base_path'])
 
-        # 获取文件名
-        filename = video_path.name
+                # 拼接完整路径
+                video_path = output_base_path / video_path_relative
 
-        # 返回视频文件
-        return FileResponse(
-            open(video_path, 'rb'),
-            content_type='video/mp4',
-            as_attachment=True,
-            filename=filename
-        )
+                if not video_path.exists():
+                    return HttpResponseNotFound('视频文件不存在')
+
+                # 获取文件名
+                filename = video_name
+
+                # 返回视频文件
+                return FileResponse(
+                    open(video_path, 'rb'),
+                    content_type='video/mp4',
+                    as_attachment=True,
+                    filename=filename
+                )
+
+        finally:
+            connection.close()
 
 
 class TaskListView(APIView):
@@ -404,77 +672,82 @@ class TaskListView(APIView):
 
     def get(self, request):
         """获取所有任务（包括已完成和处理中）的列表"""
-        media_root = Path(settings.MEDIA_ROOT)
-        tasks_dir = media_root / 'tasks'
+        username = request.GET.get('username')
 
-        if not tasks_dir.exists():
-            return Response({'tasks': [], 'count': 0}, status=status.HTTP_200_OK)
+        try:
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        tasks = []
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务列表
+                if username:
+                    task_sql = """
+                    SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status, t.progress,
+                           t.stage, t.current_frame, t.total_frames,
+                           t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
+                           t.created_at, t.updated_at, v.video_name, u.username, m.model_name as model_display_name
+                    FROM tasks t
+                    JOIN videos v ON t.video_id = v.id
+                    JOIN users u ON t.user_id = u.id
+                    LEFT JOIN models m ON t.model_id = m.id AND m.is_deleted = FALSE
+                    WHERE u.username = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
+                    ORDER BY t.created_at DESC
+                    """
+                    cursor.execute(task_sql, (username,))
+                else:
+                    task_sql = """
+                    SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status, t.progress,
+                           t.stage, t.current_frame, t.total_frames,
+                           t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
+                           t.created_at, t.updated_at, v.video_name, u.username, m.model_name as model_display_name
+                    FROM tasks t
+                    JOIN videos v ON t.video_id = v.id
+                    JOIN users u ON t.user_id = u.id
+                    LEFT JOIN models m ON t.model_id = m.id AND m.is_deleted = FALSE
+                    WHERE t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
+                    ORDER BY t.created_at DESC
+                    """
+                    cursor.execute(task_sql)
 
-        # 遍历所有任务目录
-        for task_dir in tasks_dir.iterdir():
-            if not task_dir.is_dir():
-                continue
+                tasks = cursor.fetchall()
 
-            task_id = task_dir.name
+                # 如果任务完成，读取 JSON 结果
+                for task in tasks:
+                    if task['status'] == 'completed':
+                        try:
+                            output_base_sql = "SELECT output_base_path FROM users WHERE id = %s AND is_deleted = FALSE"
+                            cursor.execute(output_base_sql, (task['user_id'],))
+                            user_info = cursor.fetchone()
 
-            # 优先读取 result.json（已完成任务）
-            json_path = task_dir / 'result.json'
-            if json_path.exists():
-                try:
-                    with open(json_path, 'r', encoding='utf-8') as f:
-                        result = json.load(f)
-                        # 确保包含 task_id
-                        result['task_id'] = task_id
-                        # 如果任务在 task_status 中且不是 completed，更新状态
-                        with task_lock:
-                            if task_id in task_status and task_status[task_id]['status'] != 'completed':
-                                # 修正状态
-                                task_status[task_id]['status'] = 'completed'
-                        tasks.append(result)
-                except Exception as e:
-                    print(f"{get_thread_prefix()} 读取任务 {task_id} 结果失败: {e}")
-                    continue
-            else:
-                # 检查任务是否真的在处理中
-                with task_lock:
-                    if task_id in task_status:
-                        task_info = task_status[task_id]
-                        if task_info['status'] == 'processing':
-                            # 真正在处理中
-                            tasks.append({
-                                'task_id': task_id,
-                                'original_video_path': task_info.get('video_path', ''),
-                                'video_name': task_info.get('video_name', 'Unknown'),
-                                'status': 'processing',
-                                'progress': task_info.get('progress', 0),
-                                'created_at': task_info.get('created_at', datetime.now().isoformat()),
-                            })
-                        elif task_info['status'] == 'failed':
-                            # 任务失败，但不返回（或者可以标记为失败）
-                            pass
-                    else:
-                        # 任务不在 task_status 中，说明是遗留任务
-                        # 查找原始视频文件
-                        original_dir = task_dir / 'original'
-                        if original_dir.exists():
-                            video_files = list(original_dir.glob('*.mp4')) + \
-                                          list(original_dir.glob('*.avi')) + \
-                                          list(original_dir.glob('*.mov'))
+                            if user_info:
+                                output_base_path = Path(user_info['output_base_path'])
+                                json_path = output_base_path / 'tasks' / task['task_id'] / 'result.json'
+                                if json_path.exists():
+                                    with open(json_path, 'r', encoding='utf-8') as f:
+                                        task['result'] = json.load(f)
+                        except Exception as e:
+                            task['error'] = f'读取结果失败: {str(e)}'
 
-                            if video_files:
-                                # 这是遗留任务，视为失败，不返回
-                                # 或者可以返回一个标记为 failed 的任务
-                                pass
+                return Response({
+                    'tasks': tasks,
+                    'count': len(tasks)
+                }, status=status.HTTP_200_OK)
 
-        # 按创建时间排序（最新的在前）
-        tasks.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-
-        return Response({
-            'tasks': tasks,
-            'count': len(tasks)
-        }, status=status.HTTP_200_OK)
+        finally:
+            connection.close()
 
 
 class ModelListView(APIView):
@@ -799,41 +1072,69 @@ class DeleteTaskView(APIView):
         try:
             import shutil
 
-            media_root = Path(settings.MEDIA_ROOT)
-            task_dir = media_root / 'tasks' / task_id
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-            # 检查任务是否存在
-            if not task_dir.exists():
-                return Response(
-                    {'error': '任务不存在'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务信息
+                task_sql = """
+                SELECT t.id, t.status, u.output_base_path
+                FROM tasks t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                """
+                cursor.execute(task_sql, (task_id,))
+                task_info = cursor.fetchone()
 
-            # 检查任务是否正在处理中
-            with task_lock:
-                if task_id in task_status and task_status[task_id]['status'] == 'processing':
+                if not task_info:
+                    return Response(
+                        {'error': '任务不存在'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                # 检查任务是否正在处理中
+                if task_info['status'] == 'processing':
                     return Response(
                         {'error': '任务正在处理中，无法删除'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
-                # 从内存中移除任务状态
-                if task_id in task_status:
-                    del task_status[task_id]
+                # 软删除任务
+                update_sql = """
+                UPDATE tasks
+                SET is_deleted = TRUE, deleted_at = NOW()
+                WHERE task_id = %s
+                """
+                cursor.execute(update_sql, (task_id,))
+                connection.commit()
 
-            # 删除任务目录及其所有内容
-            shutil.rmtree(task_dir)
+                # 删除任务目录
+                output_base_path = Path(task_info['output_base_path'])
+                task_dir = output_base_path / 'tasks' / task_id
 
-            return Response({
-                'message': '任务已成功删除',
-                'task_id': task_id
-            }, status=status.HTTP_200_OK)
+                if task_dir.exists():
+                    shutil.rmtree(task_dir)
 
-        except Exception as e:
-            return Response(
-                {'error': f'删除任务失败: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+                return Response({
+                    'message': '任务已成功删除',
+                    'task_id': task_id
+                }, status=status.HTTP_200_OK)
+
+        finally:
+            connection.close()
 
 
 class ExportDataView(APIView):
@@ -859,18 +1160,53 @@ class ExportDataView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # 读取 JSON 结果
-            media_root = Path(settings.MEDIA_ROOT)
-            json_path = media_root / 'tasks' / task_id / 'result.json'
-            print(f"{get_thread_prefix(task_id)} JSON path: {json_path}")
-            print(f"{get_thread_prefix(task_id)} JSON exists: {json_path.exists()}")
+            # 从数据库查询任务信息和用户的 output_base_path
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
 
-            if not json_path.exists():
-                print(f"{get_thread_prefix(task_id)} JSON file not found at: {json_path}")
-                return Response(
-                    {'error': '结果不存在'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+            try:
+                with connection.cursor() as cursor:
+                    # 查询任务信息和用户的 output_base_path
+                    task_sql = """
+                    SELECT u.output_base_path, t.status
+                    FROM tasks t
+                    JOIN users u ON t.user_id = u.id
+                    WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                    """
+                    cursor.execute(task_sql, (task_id,))
+                    task_info = cursor.fetchone()
+
+                    if not task_info:
+                        return Response(
+                            {'error': '任务不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    if task_info['status'] != 'completed':
+                        return Response(
+                            {'error': '任务尚未完成'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    output_base_path = Path(task_info['output_base_path'])
+                    json_path = output_base_path / 'tasks' / task_id / 'result.json'
+                    print(f"{get_thread_prefix(task_id)} JSON path: {json_path}")
+                    print(f"{get_thread_prefix(task_id)} JSON exists: {json_path.exists()}")
+
+                    if not json_path.exists():
+                        print(f"{get_thread_prefix(task_id)} JSON file not found at: {json_path}")
+                        return Response(
+                            {'error': '结果不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+            finally:
+                connection.close()
 
             with open(json_path, 'r', encoding='utf-8') as f:
                 result = json.load(f)

@@ -67,6 +67,7 @@ export interface AnalysisRecord {
   start_time: Date // 开始时间
   end_time?: Date // 结束时间
   result?: ProcessResult // 处理结果
+  model_name?: string // 模型名称（来自数据库，不是result.json）
   // 进度详情字段
   stage?: string // 当前阶段
   message?: string // 详细消息
@@ -162,37 +163,42 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
       // 转换后端数据为前端格式
       const convertedRecords: AnalysisRecord[] = historyTasks.map((task: any) => {
+        // 从数据库获取的模型名（最新）
+        const modelNameFromDB = task.model_display_name || ''
+
         // 根据任务状态决定转换方式
         if (task.status === 'processing') {
           // 处理中的任务
           return {
             task_id: task.task_id,
-            video_name: task.video_name || task.original_video_path?.split('/').pop() || 'Unknown',
+            video_name: task.video_name || 'Unknown',
             video_path: task.original_video_path || '',
             status: 'processing' as AnalysisStatus,
             progress: task.progress || 0,
             start_time: new Date(task.created_at),
+            model_name: modelNameFromDB,
           }
         } else {
           // 已完成的任务
           const result: ProcessResult = {
-            output_video_path: task.annotated_video_path || '',
-            cell_count: task.cell_count || 0,
-            total_frames: task.total_frames || 0,
-            video_duration: task.video_duration || 0,
-            model_name: task.model_name || 'best_split.pt',
-            cells: task.cells || [],
+            output_video_path: task.result?.annotated_video_path || '',
+            cell_count: task.result?.cell_count || 0,
+            total_frames: task.result?.total_frames || 0,
+            video_duration: task.result?.video_duration || 0,
+            model_name: task.result?.model_name || 'best_split.pt',
+            cells: task.result?.cells || [],
           }
 
           return {
             task_id: task.task_id,
-            video_name: task.original_video_path?.split('/').pop() || 'Unknown',
-            video_path: task.original_video_path,
+            video_name: task.video_name || 'Unknown',
+            video_path: task.result?.original_video_path || '',
             status: 'completed' as AnalysisStatus,
             progress: 100,
             start_time: new Date(task.created_at),
             end_time: new Date(),
             result,
+            model_name: modelNameFromDB,
           }
         }
       })

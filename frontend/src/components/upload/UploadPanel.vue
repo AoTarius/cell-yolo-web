@@ -14,6 +14,7 @@ const { showToast } = useToast()
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
 const showAdvancedSettings = ref(false)
+const currentOutputPath = ref('')
 
 // 模型相关
 const models = ref<Array<{ name: string; size_mb: number; path: string }>>([])
@@ -64,6 +65,13 @@ async function loadModels() {
 // 组件挂载时加载模型列表
 onMounted(() => {
   loadModels()
+
+  // 获取用户的output_base_path
+  const currentUser = localStorage.getItem('currentUser')
+  if (currentUser) {
+    const userData = JSON.parse(currentUser)
+    currentOutputPath.value = userData.output_base_path || 'data/output/tasks'
+  }
 })
 
 function handleFileSelect(event: Event) {
@@ -105,9 +113,19 @@ async function submitUpload() {
     uploadProgress.value = 0
     uploadError.value = null
 
+    // 获取当前用户名
+    const currentUser = localStorage.getItem('currentUser')
+    const username = currentUser ? JSON.parse(currentUser).username : ''
+
+    if (!username) {
+      showToast('请先登录', 'error')
+      return
+    }
+
     // 1. 上传视频
     const formData = new FormData()
     formData.append('video', selectedFile.value)
+    formData.append('username', username)
 
     const uploadResponse = await axios.post('/api/upload/', formData, {
       headers: {
@@ -121,15 +139,13 @@ async function submitUpload() {
     })
 
     taskId.value = uploadResponse.data.task_id
+    const videoId = uploadResponse.data.video_id
     uploadStatus.value = 'processing'
 
     // 2. 启动处理任务
-    // 获取当前用户名
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
-
     await axios.post('/api/process/', {
       task_id: taskId.value!,
+      video_id: videoId,
       conf: modelParams.value.conf,
       imgsz: modelParams.value.imgsz,
       fps: modelParams.value.fps,
@@ -190,6 +206,28 @@ function getStageLabel(stage: string): string {
     <div class="upload-container">
       <h2>上传视频文件</h2>
       <p class="upload-description">上传细胞显微镜视频进行分析</p>
+
+      <!-- 路径提示框 -->
+      <div class="path-info-box">
+        <svg
+          class="path-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          ></path>
+        </svg>
+        <div class="path-content">
+          <p class="path-label">当前任务存储路径：</p>
+          <p class="path-value">{{ currentOutputPath || '未设置' }}</p>
+        </div>
+      </div>
 
       <div
         class="upload-area"
@@ -426,7 +464,7 @@ function getStageLabel(stage: string): string {
 }
 
 .upload-container {
-  max-width: 600px;
+  max-width: 800px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -449,8 +487,65 @@ h2 {
 .upload-description {
   text-align: center;
   color: var(--text-muted);
-  margin: 0 0 2rem 0;
+  margin: 0 0 1.5rem 0;
   transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .upload-description {
+  color: var(--text-muted-light);
+}
+
+.path-info-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--alpha-badge);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s;
+}
+
+:global(:root:not(.dark)) .path-info-box {
+  background: var(--alpha-badge-light);
+  border-color: var(--border-color-light);
+}
+
+.path-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--accent-blue);
+}
+
+.path-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.path-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0 0 0.25rem 0;
+}
+
+:global(:root:not(.dark)) .path-label {
+  color: var(--text-muted-light);
+}
+
+.path-value {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin: 0;
+  font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(:root:not(.dark)) .path-value {
+  color: var(--text-primary-light);
 }
 
 :global(:root:not(.dark)) .upload-description {
@@ -464,6 +559,7 @@ h2 {
   background: var(--bg-card);
   transition: all 0.3s;
   position: relative;
+  margin-top: 0;
 }
 
 :global(:root:not(.dark)) .upload-area {

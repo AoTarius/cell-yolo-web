@@ -117,7 +117,7 @@ class VideoProcessor:
         # 如果没有提供 model_path，使用默认路径
         if model_path is None:
             model_path = str(MODEL_DIR / MODEL_NAME)
-        task_dir = self.output_base_dir / task_id
+        task_dir = self.output_base_dir / 'tasks' / task_id
         task_dir.mkdir(parents=True, exist_ok=True)
 
         # 阶段1: 分解视频为帧
@@ -403,7 +403,7 @@ class VideoProcessor:
         }
 
         # 保存 JSON 文件
-        json_path = self.output_base_dir / task_id / 'result.json'
+        json_path = self.output_base_dir / 'tasks' / task_id / 'result.json'
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
@@ -505,10 +505,3 @@ class VideoProcessor:
             frame_labels[frame_name] = labels
 
         return frame_labels
-
-
-def get_video_processor():
-    """获取视频处理器实例"""
-    model_path = str(MODEL_DIR / MODEL_NAME)
-    output_base_dir = Path(__file__).parent.parent.parent / 'media' / 'tasks'
-    return VideoProcessor(model_path, str(output_base_dir))

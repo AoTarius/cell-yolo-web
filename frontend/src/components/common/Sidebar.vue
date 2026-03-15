@@ -349,7 +349,7 @@ function getFieldValue(record: AnalysisRecord, field: string): string | number {
     case 'createTime':
       return new Date(record.start_time).getTime()
     case 'modelType':
-      return record.result?.model_name || ''
+      return record.model_name || record.result?.model_name || ''
     case 'fileName':
       return record.video_name
     case 'cellCount':
@@ -467,7 +467,7 @@ const displayRecords = computed(() => {
                   d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
                 ></path>
               </svg>
-              {{ record.result?.model_name || 'N/A' }}
+              {{ record.model_name || record.result?.model_name || 'N/A' }}
             </span>
             <button
               class="btn-delete"
