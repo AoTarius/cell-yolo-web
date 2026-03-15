@@ -121,8 +121,6 @@ python scripts/init_db.py
 - `task_name`: 任务名（VARCHAR(255), NOT NULL）
 - `status`: 任务状态（VARCHAR(20), NOT NULL, 枚举值: 'pending', 'processing', 'completed', 'failed'）
 - `progress`: 进度（INTEGER, NOT NULL, 默认0, 范围0-100）
-- `stage`: 当前处理阶段（VARCHAR(50), 可选），值: 'extracting', 'processing', 'packaging'
-- `current_frame`: 当前处理帧号（INTEGER, 默认0）
 - `total_frames`: 总帧数（INTEGER, 默认0）
 - `conf`: 置信度阈值（FLOAT, 默认0.3, 范围0-1）
 - `imgsz`: 图像尺寸（INTEGER, 默认1024）
@@ -140,13 +138,17 @@ python scripts/init_db.py
 - `task_id`: 关联的任务ID（INTEGER, NOT NULL）
 - `frame`: 帧号（INTEGER, NOT NULL），表示该检测记录出现在视频的第几帧
 - `track_id`: 轨迹ID（INTEGER, NOT NULL），用于追踪同一个细胞在不同帧中的位置（DeepSORT分配的唯一标识）
-- `bb_left`: 边界框左上角X坐标（FLOAT, NOT NULL）
-- `bb_top`: 边界框左上角Y坐标（FLOAT, NOT NULL）
-- `bb_width`: 边界框宽度（FLOAT, NOT NULL）
-- `bb_height`: 边界框高度（FLOAT, NOT NULL）
-- `conf`: 置信度（FLOAT, NOT NULL, 范围0-1），模型检测该细胞的置信度分数
-- `class_id`: 类别（INTEGER, NOT NULL, 默认0），检测到的细胞类别（0表示细胞）
-- `visibility`: 可见性（FLOAT, 范围0-1），细胞的可见程度
+- `area`: 面积（FLOAT, NOT NULL），常用筛选字段，保留结构化
+- `speed`: 速度（FLOAT, NOT NULL），常用筛选字段，保留结构化
+- `tracking_persistence`: 持续追踪度（FLOAT, NOT NULL），常用筛选字段，保留结构化
+- `metrics_json`: 聚合后的指标 JSON（JSON, NOT NULL），包含以下字段：
+  - `bbox`: 边界框信息，包含 `left`（左上角 x 坐标）、`top`（左上角 y 坐标）、`width`（宽度）、`height`（高度）
+  - `center`: 中心点信息，包含 `cx`（中心点 x 坐标）、`cy`（中心点 y 坐标）
+  - `shape`: 形状信息，包含 `perimeter`（周长）、`circularity`（圆度）、`circularity_increment`（圆度增量）、`aspect_ratio`（长宽比）、`shape_change_rate`（形态变化速率）、`spreading_index`（铺展指数）、`protrusion_activity_index`（膜突起活动指数）
+  - `motion`: 运动信息，包含 `vx`（x 方向速度）、`vy`（y 方向速度）、`distance`（位移距离）、`migration_speed`（迁移速度）、`mean_square_displacement`（平均平方位移）、`turning_angle`（转向角）、`persistence_index`（方向持久性）
+  - `visibility`: 可见性（FLOAT）
+  - `class`: 类别（INTEGER）
+  - `confidence`: 置信度（FLOAT）
 - `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
 - `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
 - `deleted_at`: 删除时间（DATETIME, 可为NULL）
@@ -190,6 +192,9 @@ python scripts/init_db.py
 - INDEX: `idx_task_frame_track` (task_id, frame, track_id) - 核心查询：按任务、帧、轨迹查询
 - INDEX: `idx_task_track` (task_id, track_id) - 查询特定细胞轨迹
 - INDEX: `idx_task_frame` (task_id, frame) - 按帧加载数据
+- INDEX: `idx_task_area` (task_id, area) - 按任务和面积筛选
+- INDEX: `idx_task_speed` (task_id, speed) - 按任务和速度筛选
+- INDEX: `idx_task_tracking_persistence` (task_id, tracking_persistence) - 按任务和持续追踪度筛选
 - INDEX: `idx_task_deleted` (task_id, is_deleted)
 
 ### 软删除策略
