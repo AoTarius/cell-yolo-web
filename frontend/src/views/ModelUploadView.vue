@@ -6,9 +6,11 @@ import axios from 'axios'
 import Sidebar from '@/components/common/Sidebar.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { useToast } from '@/composables/useToast'
+import { useAnalysisStore } from '@/stores/analysisStore'
 
 const router = useRouter()
 const { showToast } = useToast()
+const analysisStore = useAnalysisStore()
 
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
@@ -205,6 +207,8 @@ async function handleRenameConfirm() {
     showToast('模型名称修改成功', 'success')
     // 重新加载模型列表
     await loadModels()
+    // 刷新任务列表（更新 Sidebar 中的模型名显示）
+    await analysisStore.loadHistoryTasks()
   } catch (error: any) {
     console.error('修改模型名称失败:', error)
     showToast(error.response?.data?.error || '修改模型名称失败', 'error')
@@ -1346,7 +1350,7 @@ onMounted(() => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  border: none;
+  border: 1px solid var(--border-color);
 }
 
 .btn-cancel-rename {
@@ -1373,7 +1377,7 @@ onMounted(() => {
 }
 
 .btn-confirm-rename:hover:not(:disabled) {
-  background: var(--btn-upload-hover);
+  background: var(--accent-blue-hover);
 }
 
 .btn-cancel-rename:disabled,

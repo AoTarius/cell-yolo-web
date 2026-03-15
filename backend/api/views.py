@@ -1007,7 +1007,7 @@ class RenameModelView(APIView):
 
                     # 查询原模型是否存在
                     check_old_sql = """
-                    SELECT id FROM models
+                    SELECT id, model_path FROM models
                     WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
                     """
                     cursor.execute(check_old_sql, (user_id, old_model_name))
@@ -1019,19 +1019,27 @@ class RenameModelView(APIView):
                             status=status.HTTP_404_NOT_FOUND
                         )
 
-                    # 检查新名称是否已被其他模型使用
+                    # 检查新名称是否已被其他模型使用（包括软删除的）
                     check_new_sql = """
-                    SELECT id FROM models
-                    WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    SELECT id, model_path, is_deleted FROM models
+                    WHERE user_id = %s AND model_name = %s
                     """
                     cursor.execute(check_new_sql, (user_id, new_model_name))
-                    existing_model = cursor.fetchone()
+                    existing_models = cursor.fetchall()
 
-                    if existing_model:
-                        return Response(
-                            {'error': f'模型名称 {new_model_name} 已存在'},
-                            status=status.HTTP_400_BAD_REQUEST
-                        )
+                    for existing in existing_models:
+                        # 如果新名称已被未删除的模型使用，不允许改名
+                        if not existing['is_deleted']:
+                            return Response(
+                                {'error': f'模型名称 {new_model_name} 已存在'},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
+                        # 如果新名称已被软删除的模型使用，且路径相同，不允许改名（避免路径重复）
+                        if existing['model_path'] == old_model['model_path']:
+                            return Response(
+                                {'error': f'无法改名为已删除的模型名称（路径冲突）'},
+                                status=status.HTTP_400_BAD_REQUEST
+                            )
 
                     # 更新模型名称
                     update_sql = """
