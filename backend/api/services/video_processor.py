@@ -117,7 +117,7 @@ class VideoProcessor:
         # 如果没有提供 model_path，使用默认路径
         if model_path is None:
             model_path = str(MODEL_DIR / MODEL_NAME)
-        task_dir = self.output_base_dir / 'tasks' / task_id
+        task_dir = self.output_base_dir / task_id
         task_dir.mkdir(parents=True, exist_ok=True)
 
         # 阶段1: 分解视频为帧
@@ -270,116 +270,6 @@ class VideoProcessor:
         labels_dir = output_dir / 'labels'
         frame_labels = self._parse_labels(labels_dir)
 
-        # 统计信息
-        # 细胞总数应该是唯一 track_id 的数量
-        track_ids = set(row['track_id'] for row in tracking_data) if tracking_data else set()
-        cell_count = len(track_ids)
-
-        # 生成 cells 数据（从 tracking_data 中提取每个细胞的统计信息）
-        cells = []
-        if tracking_data:
-            # 按 track_id 分组
-            from collections import defaultdict
-            track_data = defaultdict(list)
-            for row in tracking_data:
-                track_data[row['track_id']].append(row)
-
-            # 为每个 track_id 生成统计信息
-            for track_id in sorted(track_data.keys()):
-                frames = track_data[track_id]
-                frames.sort(key=lambda x: x['frame'])  # 按帧号排序
-
-                # 计算统计信息
-                total_frames_count = len(frames)
-                first_frame = frames[0]['frame']
-                last_frame = frames[-1]['frame']
-
-                # 计算平均尺寸
-                avg_width = sum(f['bb_width'] for f in frames) / total_frames_count
-                avg_height = sum(f['bb_height'] for f in frames) / total_frames_count
-
-                # 计算平均置信度
-                avg_conf = sum(f['conf'] for f in frames) / total_frames_count
-
-                # 计算平均速度（需要计算相邻帧之间的距离）
-                velocities = []
-                for i in range(1, len(frames)):
-                    prev_frame = frames[i - 1]
-                    curr_frame = frames[i]
-
-                    # 计算中心点
-                    prev_center_x = prev_frame['bb_left'] + prev_frame['bb_width'] / 2
-                    prev_center_y = prev_frame['bb_top'] + prev_frame['bb_height'] / 2
-                    curr_center_x = curr_frame['bb_left'] + curr_frame['bb_width'] / 2
-                    curr_center_y = curr_frame['bb_top'] + curr_frame['bb_height'] / 2
-
-                    # 计算距离（像素）
-                    distance = ((curr_center_x - prev_center_x) ** 2 + (curr_center_y - prev_center_y) ** 2) ** 0.5
-
-                    # 计算速度（像素/帧）
-                    velocity = distance / (curr_frame['frame'] - prev_frame['frame'])
-                    velocities.append(velocity)
-
-                avg_velocity = sum(velocities) / len(velocities) if velocities else 0
-
-                # 生成帧数据列表（符合前端 CellFrameData 结构）
-                frame_list = []
-                for i, frame in enumerate(frames):
-                    # 计算中心点、面积、速度等信息
-                    center_x = frame['bb_left'] + frame['bb_width'] / 2
-                    center_y = frame['bb_top'] + frame['bb_height'] / 2
-                    area = frame['bb_width'] * frame['bb_height']
-
-                    # 计算速度（相对于前一帧）
-                    vx = 0.0
-                    vy = 0.0
-                    speed = 0.0
-
-                    if i > 0:
-                        prev_frame = frame_list[-1]
-                        prev_center_x = prev_frame['position']['x']
-                        prev_center_y = prev_frame['position']['y']
-                        prev_frame_num = prev_frame['frame_number']
-                        curr_frame_num = frame['frame']
-                        frame_diff = curr_frame_num - prev_frame_num
-
-                        if frame_diff > 0:
-                            vx = (center_x - prev_center_x) / frame_diff
-                            vy = (center_y - prev_center_y) / frame_diff
-                            speed = ((vx ** 2 + vy ** 2) ** 0.5)
-
-                    frame_list.append({
-                        'frame_number': frame['frame'],
-                        'position': {
-                            'x': center_x,
-                            'y': center_y
-                        },
-                        'area': area,
-                        'velocity': {
-                            'vx': vx,
-                            'vy': vy,
-                            'speed': speed
-                        },
-                        'bounding_box': {
-                            'x': frame['bb_left'],
-                            'y': frame['bb_top'],
-                            'width': frame['bb_width'],
-                            'height': frame['bb_height']
-                        }
-                    })
-
-                cells.append({
-                    'cell_id': str(track_id),  # 转换为字符串类型
-                    'first_frame': first_frame,
-                    'last_frame': last_frame,
-                    'frame_count': total_frames_count,
-                    'avg_width': round(avg_width, 2),
-                    'avg_height': round(avg_height, 2),
-                    'avg_conf': round(avg_conf, 2),
-                    'avg_velocity': round(avg_velocity, 2),
-                    'frames': frame_list
-                })
-
         # 获取标注视频路径
         annotated_video_path = output_dir / 'tracking_result.mp4'
         annotated_video_url = f"/api/video/{task_id}"
@@ -389,7 +279,6 @@ class VideoProcessor:
             'status': 'completed',
             'progress': 100,
             'total_frames': actual_total_frames,
-            'cell_count': cell_count,
             'video_duration': round(video_duration, 2),
             'model_name': model_name,
             'annotated_video_path': str(annotated_video_path),
@@ -398,12 +287,11 @@ class VideoProcessor:
             'created_at': datetime.now().isoformat(),
             'summary': summary,
             'tracking_data': tracking_data,
-            'frame_labels': frame_labels,
-            'cells': cells
+            'frame_labels': frame_labels
         }
 
         # 保存 JSON 文件
-        json_path = self.output_base_dir / 'tasks' / task_id / 'result.json'
+        json_path = self.output_base_dir / task_id / 'result.json'
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
@@ -505,3 +393,10 @@ class VideoProcessor:
             frame_labels[frame_name] = labels
 
         return frame_labels
+
+
+def get_video_processor():
+    """获取视频处理器实例"""
+    model_path = str(MODEL_DIR / MODEL_NAME)
+    output_base_dir = Path(__file__).parent.parent.parent / 'media' / 'tasks'
+    return VideoProcessor(model_path, str(output_base_dir))
