@@ -164,7 +164,7 @@ class VideoProcessor:
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
             cwd=str(YOLO_SOURCE_DIR)
         )

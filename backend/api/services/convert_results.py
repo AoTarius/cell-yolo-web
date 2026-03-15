@@ -194,7 +194,8 @@ def run_tracking_with_colored_masks(
     id_remap = {}               # {原始 track_id: 新连续 id}
     next_remap_id = 1
 
-    for frame_idx, img_file in enumerate(tqdm(image_files, desc="处理图像"), start=1):
+    # 禁用 tqdm 终端输出，避免干扰进度解析
+    for frame_idx, img_file in enumerate(tqdm(image_files, desc="处理图像", file=open(os.devnull, 'w')), start=1):
         # 输出进度信息（用于 video_processor 解析）
         progress_pct = int((frame_idx - 1) / len(image_files) * 100)
         print(f"PROGRESS: {frame_idx}/{len(image_files)}|{progress_pct}", flush=True)
