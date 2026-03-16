@@ -8,7 +8,7 @@
 
 用于初始化 MySQL 数据库的脚本，会自动创建：
 - 数据库（如果不存在）
-- 表结构（users, videos, models, tasks, cells）
+- 表结构（users, videos, models, tasks, cells, task_status）
 - 初始数据（可选）
 
 ### 使用方法
@@ -72,6 +72,8 @@ python scripts/init_db.py
 
 ### 表结构说明
 
+数据库包含6个核心表：users、videos、models、tasks、cells、task_status
+
 #### users 表
 记录用户信息的表
 - `id`: 用户 ID（主键，INTEGER, 自增）
@@ -112,7 +114,7 @@ python scripts/init_db.py
 - `deleted_at`: 删除时间（DATETIME, 可为NULL）
 
 #### tasks 表
-记录所有任务信息的表
+记录所有任务信息的表，存储任务的静态配置和最终结果
 - `id`: 任务 ID（主键，INTEGER, 自增）
 - `user_id`: 提出任务的用户ID（INTEGER, NOT NULL）
 - `video_id`: 使用的原始视频ID（INTEGER, NOT NULL）
@@ -120,13 +122,28 @@ python scripts/init_db.py
 - `task_id`: 任务唯一标识（VARCHAR(36), NOT NULL, UNIQUE），是创建tasks内文件夹的标识
 - `task_name`: 任务名（VARCHAR(255), NOT NULL）
 - `status`: 任务状态（VARCHAR(20), NOT NULL, 枚举值: 'pending', 'processing', 'completed', 'failed'）
-- `progress`: 进度（INTEGER, NOT NULL, 默认0, 范围0-100）
 - `total_frames`: 总帧数（INTEGER, 默认0）
 - `conf`: 置信度阈值（FLOAT, 默认0.3, 范围0-1）
 - `imgsz`: 图像尺寸（INTEGER, 默认1024）
 - `fps`: 帧率（INTEGER, 默认10）
 - `annotated_video_name`: 处理后视频文件名（VARCHAR(255), 存储在任务文件夹内）
 - `error_message`: 错误信息（TEXT）
+- `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
+- `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
+- `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
+- `deleted_at`: 删除时间（DATETIME, 可为NULL）
+
+#### task_status 表
+记录任务实时处理状态的表，存储动态状态和实时进度信息
+- `id`: 状态记录 ID（主键，INTEGER, 自增）
+- `task_id`: 关联任务ID（VARCHAR(36), NOT NULL, UNIQUE），关联tasks表的task_id字段
+- `status`: 任务状态（VARCHAR(20), 默认'pending', 枚举值: 'pending', 'processing', 'completed', 'failed'）
+- `progress`: 进度（INTEGER, 默认0, 范围0-100）
+- `stage`: 当前处理阶段（VARCHAR(50), 可为NULL）
+- `current_frame`: 当前处理帧数（INTEGER, 默认0）
+- `total_frames`: 总帧数（INTEGER, 默认0）
+- `error_message`: 错误信息（TEXT, 可为NULL）
+- `estimated_remaining_time`: 预计剩余时间（INTEGER, 可为NULL, 单位：秒）
 - `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
 - `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
 - `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
@@ -186,6 +203,12 @@ python scripts/init_db.py
 - INDEX: `idx_created_at` (created_at)
 - 复合索引：`idx_user_status_deleted` (user_id, status, is_deleted)
 
+#### task_status表索引
+- PRIMARY KEY: `id`
+- UNIQUE INDEX: `idx_task_id` (task_id) - 关联tasks表的task_id
+- INDEX: `idx_task_status` (task_id, status)
+- INDEX: `idx_status` (status)
+
 #### cells表索引
 - PRIMARY KEY: `id`
 - INDEX: `idx_task_id` (task_id)
@@ -202,6 +225,8 @@ python scripts/init_db.py
 所有表统一使用软删除策略：
 - `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
 - `deleted_at`: 删除时间（DATETIME, 可为NULL）
+
+**支持软删除的表**：users、videos、models、tasks、cells、task_status
 
 **删除操作流程：**
 1. 将记录的 `is_deleted` 设为 `true`
@@ -260,13 +285,13 @@ python scripts/init_db.py
 #### 删除用户
 1. 将 `users` 表中对应记录的 `is_deleted` 设为 `true`，`deleted_at` 设为当前时间
 2. **代码级联**：将该用户的所有 `videos`、`models`、`tasks` 的 `is_deleted` 设为 `true`
-3. **代码级联**：将所有关联的 `tasks` 对应的 `cells` 的 `is_deleted` 设为 `true`
+3. **代码级联**：将所有关联的 `tasks` 对应的 `cells` 和 `task_status` 的 `is_deleted` 设为 `true`
 4. 清理文件系统中的用户文件夹
 
 #### 删除视频
 1. 将 `videos` 表中对应记录的 `is_deleted` 设为 `true`，`deleted_at` 设为当前时间
 2. **代码级联**：将使用该视频的所有 `tasks` 的 `is_deleted` 设为 `true`
-3. **代码级联**：将所有关联的 `cells` 的 `is_deleted` 设为 `true`
+3. **代码级联**：将所有关联的 `cells` 和 `task_status` 的 `is_deleted` 设为 `true`
 4. 清理文件系统中的视频文件
 
 #### 删除模型
@@ -277,7 +302,8 @@ python scripts/init_db.py
 #### 删除任务
 1. 将 `tasks` 表中对应记录的 `is_deleted` 设为 `true`，`deleted_at` 设为当前时间
 2. **代码级联**：将所有关联的 `cells` 的 `is_deleted` 设为 `true`
-3. 清理文件系统中的任务文件夹（保留视频文件，因为可能在 `videos` 表中）
+3. **代码级联**：将关联的 `task_status` 的 `is_deleted` 设为 `true`
+4. 清理文件系统中的任务文件夹（保留视频文件，因为可能在 `videos` 表中）
 
 ## 注意事项
 
@@ -288,10 +314,16 @@ python scripts/init_db.py
 5. 帧图像存储在文件系统，不存储在数据库BLOB字段中
 6. 删除用户/任务/模型时，需要同步清理文件系统
 7. **所有查询默认需要过滤 `is_deleted = true` 的记录**
-8. **代码层面需要实现以下约束**：
+8. **task_status表设计说明**：
+   - task_status表的task_id字段直接关联tasks表的task_id（VARCHAR UUID）
+   - 创建任务时需要同时创建tasks和task_status记录
+   - 任务处理过程中只更新task_status表，不更新tasks表
+   - 任务完成/失败时同时更新tasks和task_status表
+   - 查询任务状态时JOIN task_status表获取实时进度信息
+9. **代码层面需要实现以下约束**：
    - 唯一性检查：创建 `users` 时检查 `username` 的唯一性（排除已删除记录）
    - 唯一性检查：创建 `videos` 时检查 `user_id + video_name` 的唯一性（排除已删除记录）
    - 唯一性检查：创建 `models` 时检查 `user_id + model_name` 的唯一性（排除已删除记录）
    - 引用完整性：创建记录时验证关联的 `id` 存在且 `is_deleted = false`
-   - 级联删除：实现上述软删除的级联逻辑
+   - 级联删除：实现上述软删除的级联逻辑（包括task_status表）
    - 数据恢复：支持将 `is_deleted` 改回 `false` 进行数据恢复
