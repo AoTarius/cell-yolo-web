@@ -135,9 +135,6 @@ class Task(BaseModel):
     task_id = models.CharField(max_length=36, unique=True, verbose_name='任务ID')
     task_name = models.CharField(max_length=255, verbose_name='任务名称')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
-    progress = models.IntegerField(default=0, verbose_name='进度（0-100）')
-    stage = models.CharField(max_length=50, null=True, blank=True, verbose_name='阶段')
-    current_frame = models.IntegerField(default=0, verbose_name='当前帧')
     total_frames = models.IntegerField(default=0, verbose_name='总帧数')
     conf = models.FloatField(default=0.3, verbose_name='置信度阈值')
     imgsz = models.IntegerField(default=1024, verbose_name='图像尺寸')
@@ -192,3 +189,35 @@ class Cell(BaseModel):
 
     def __str__(self):
         return f"Task {self.task.task_id} - Frame {self.frame} - Track {self.track_id}"
+
+class TaskStatus(BaseModel):
+    """任务实时状态表"""
+
+    STATUS_CHOICES = [
+        ('pending', '待处理'),
+        ('processing', '处理中'),
+        ('completed', '已完成'),
+        ('failed', '失败'),
+    ]
+
+    task = models.OneToOneField(Task, on_delete=models.CASCADE, db_column='task_id', to_field='task_id', verbose_name='关联任务')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
+    progress = models.IntegerField(default=0, verbose_name='进度（0-100）')
+    stage = models.CharField(max_length=50, null=True, blank=True, verbose_name='当前阶段')
+    current_frame = models.IntegerField(default=0, verbose_name='当前处理帧数')
+    total_frames = models.IntegerField(default=0, verbose_name='总帧数')
+    error_message = models.TextField(null=True, blank=True, verbose_name='错误信息')
+    estimated_remaining_time = models.IntegerField(null=True, blank=True, verbose_name='预计剩余时间（秒）')
+
+    class Meta:
+        db_table = 'task_status'
+        verbose_name = '任务状态'
+        verbose_name_plural = '任务状态'
+        indexes = [
+            models.Index(fields=['task']),
+            models.Index(fields=['task', 'status']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"Task {self.task.task_id} - {self.status} - Frame {self.current_frame}/{self.total_frames}"

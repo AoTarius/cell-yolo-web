@@ -72,9 +72,6 @@ def check_and_fix_table_structure():
                 "task_id": "VARCHAR(36) NOT NULL",
                 "task_name": "VARCHAR(255) NOT NULL",
                 "status": "VARCHAR(20) DEFAULT 'pending'",
-                "progress": "INT DEFAULT 0",
-                "stage": "VARCHAR(50)",
-                "current_frame": "INT DEFAULT 0",
                 "total_frames": "INT DEFAULT 0",
                 "conf": "DOUBLE DEFAULT 0.3",
                 "imgsz": "INT DEFAULT 1024",
@@ -91,6 +88,16 @@ def check_and_fix_table_structure():
                 "conf": "FLOAT NOT NULL",
                 "class_id": "INT DEFAULT 0",
                 "visibility": "FLOAT",
+            },
+            "task_status": {
+                "task_id": "VARCHAR(36) NOT NULL",
+                "status": "VARCHAR(20) DEFAULT 'pending'",
+                "progress": "INT DEFAULT 0",
+                "stage": "VARCHAR(50)",
+                "current_frame": "INT DEFAULT 0",
+                "total_frames": "INT DEFAULT 0",
+                "error_message": "TEXT",
+                "estimated_remaining_time": "INT",
             },
         }
 
@@ -207,7 +214,8 @@ def init_root_user() -> bool:
 def main():
     """主函数"""
     check_and_fix_table_structure()
-    sys.exit(0)
+    success = init_root_user()
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

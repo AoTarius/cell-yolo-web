@@ -310,10 +310,18 @@ class ProcessTaskView(APIView):
                     task_name = video_name
                     annotated_video_name = "tracking_result.mp4"
                     insert_sql = """
-                    INSERT INTO tasks (user_id, video_id, model_id, task_id, task_name, status, progress, conf, imgsz, fps, annotated_video_name, created_at, updated_at, is_deleted, deleted_at)
-                    VALUES (%s, %s, %s, %s, %s, 'pending', 0, %s, %s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                    INSERT INTO tasks (user_id, video_id, model_id, task_id, task_name, status, conf, imgsz, fps, annotated_video_name, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, %s, %s, %s, %s, 'pending', %s, %s, %s, %s, NOW(), NOW(), FALSE, NULL)
                     """
                     cursor.execute(insert_sql, (user_id, video_id, model_id, task_id, task_name, conf, imgsz, fps, annotated_video_name))
+                    connection.commit()
+
+                    # 创建 task_status 记录
+                    status_insert_sql = """
+                    INSERT INTO task_status (task_id, status, progress, stage, current_frame, total_frames, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, 'pending', 0, NULL, 0, 0, NOW(), NOW(), FALSE, NULL)
+                    """
+                    cursor.execute(status_insert_sql, (task_id,))
                     connection.commit()
 
                     # 创建任务目录
@@ -371,18 +379,21 @@ class ProcessTaskView(APIView):
             # 进度回调函数
             def progress_callback(stage: str, progress: int, data: dict):
                 with connection.cursor() as cursor:
-                    # 更新任务进度
-                    update_sql = """
-                    UPDATE tasks
-                    SET progress = %s, stage = %s, current_frame = %s, total_frames = %s, updated_at = NOW()
-                    WHERE task_id = %s
+                    # 先确保task_status记录存在
+                    insert_sql = """
+                    INSERT INTO task_status (task_id, status, progress, stage, current_frame, total_frames, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, 'processing', %s, %s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                    ON DUPLICATE KEY UPDATE
+                        status = 'processing',
+                        progress = %s,
+                        stage = %s,
+                        current_frame = %s,
+                        total_frames = %s,
+                        updated_at = NOW()
                     """
-                    cursor.execute(update_sql, (
-                        progress,
-                        stage,
-                        data.get('current_frame', 0),
-                        data.get('total_frames', 0),
-                        task_id
+                    cursor.execute(insert_sql, (
+                        task_id, progress, stage, data.get('current_frame', 0), data.get('total_frames', 0),
+                        progress, stage, data.get('current_frame', 0), data.get('total_frames', 0)
                     ))
                     connection.commit()
 
@@ -403,8 +414,13 @@ class ProcessTaskView(APIView):
 
             # 更新任务状态为 completed
             with connection.cursor() as cursor:
-                update_sql = "UPDATE tasks SET status = 'completed', progress = 100, updated_at = NOW() WHERE task_id = %s"
+                update_sql = "UPDATE tasks SET status = 'completed', updated_at = NOW() WHERE task_id = %s"
                 cursor.execute(update_sql, (task_id,))
+
+                # 同时更新task_status表
+                status_update_sql = "UPDATE task_status SET status = 'completed', progress = 100, updated_at = NOW() WHERE task_id = %s"
+                cursor.execute(status_update_sql, (task_id,))
+
                 connection.commit()
 
         except Exception as e:
@@ -418,6 +434,11 @@ class ProcessTaskView(APIView):
                     WHERE task_id = %s
                     """
                     cursor.execute(update_sql, (str(e), task_id))
+
+                    # 同时更新task_status表
+                    status_update_sql = "UPDATE task_status SET status = 'failed', error_message = %s, updated_at = NOW() WHERE task_id = %s"
+                    cursor.execute(status_update_sql, (str(e), task_id))
+
                     connection.commit()
             except Exception as db_error:
                 print(f"{get_thread_prefix(task_id)} 更新失败状态时出错: {str(db_error)}")
@@ -450,13 +471,14 @@ class TaskStatusView(APIView):
             with connection.cursor() as cursor:
                 # 查询任务信息
                 task_sql = """
-                SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status, t.progress,
-                       t.stage, t.current_frame, t.total_frames,
+                SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status,
+                       ts.progress, ts.stage, ts.current_frame, ts.total_frames,
                        t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
                        t.created_at, t.updated_at, u.output_base_path, v.video_name
                 FROM tasks t
                 JOIN users u ON t.user_id = u.id
                 JOIN videos v ON t.video_id = v.id
+                LEFT JOIN task_status ts ON t.task_id = ts.task_id
                 WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
                 """
                 cursor.execute(task_sql, (task_id,))
@@ -695,28 +717,30 @@ class TaskListView(APIView):
                 # 查询任务列表
                 if username:
                     task_sql = """
-                    SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status, t.progress,
-                           t.stage, t.current_frame, t.total_frames,
+                    SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status,
+                           ts.progress, ts.stage, ts.current_frame, ts.total_frames,
                            t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
                            t.created_at, t.updated_at, v.video_name, u.username, m.model_name as model_display_name
                     FROM tasks t
                     JOIN videos v ON t.video_id = v.id
                     JOIN users u ON t.user_id = u.id
                     LEFT JOIN models m ON t.model_id = m.id AND m.is_deleted = FALSE
+                    LEFT JOIN task_status ts ON t.task_id = ts.task_id
                     WHERE u.username = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
                     ORDER BY t.created_at DESC
                     """
                     cursor.execute(task_sql, (username,))
                 else:
                     task_sql = """
-                    SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status, t.progress,
-                           t.stage, t.current_frame, t.total_frames,
+                    SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status,
+                           ts.progress, ts.stage, ts.current_frame, ts.total_frames,
                            t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
                            t.created_at, t.updated_at, v.video_name, u.username, m.model_name as model_display_name
                     FROM tasks t
                     JOIN videos v ON t.video_id = v.id
                     JOIN users u ON t.user_id = u.id
                     LEFT JOIN models m ON t.model_id = m.id AND m.is_deleted = FALSE
+                    LEFT JOIN task_status ts ON t.task_id = ts.task_id
                     WHERE t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
                     ORDER BY t.created_at DESC
                     """
