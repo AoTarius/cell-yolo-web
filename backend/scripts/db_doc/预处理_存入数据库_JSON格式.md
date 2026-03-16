@@ -57,3 +57,4 @@
 | `task_name`  | STRING    | 任务名称。                             |
 | `error_message` | STRING | 任务错误信息。                         |
 | `imgsz`      | INT       | 图像尺寸。                             |
+| `conf`       | FLOAT     | 任务置信度                             |
