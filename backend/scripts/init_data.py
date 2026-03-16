@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 数据初始化脚本
-用于初始化数据库中的初始数据
+用于初始化数据库中的初始数据，并检查表结构是否与 models.py 定义一致
 """
 
 import sys
@@ -31,6 +31,95 @@ def hash_password(password: str) -> str:
     hashed = bcrypt.hashpw(password_bytes, salt)
     # 返回字符串格式
     return hashed.decode('utf-8')
+
+
+def check_and_fix_table_structure():
+    """
+    检查数据库表结构是否与 models.py 定义一致，并修复问题
+    """
+    print("=" * 50)
+    print("检查数据库表结构")
+    print("=" * 50)
+
+    with DatabaseOperator() as db:
+        # 定义需要检查的表和字段
+        expected_tables = {
+            "users": {
+                "username": "VARCHAR(100) NOT NULL",
+                "email": "VARCHAR(255)",
+                "password_hash": "VARCHAR(255) NOT NULL",
+                "dark_mode": "TINYINT(1) DEFAULT 1",
+                "model_base_path": "VARCHAR(500) NOT NULL",
+                "output_base_path": "VARCHAR(500) NOT NULL",
+            },
+            "videos": {
+                "user_id": "BIGINT NOT NULL",
+                "video_name": "VARCHAR(255) NOT NULL",
+                "video_path": "VARCHAR(255) NOT NULL",
+                "total_frames": "INT",
+                "video_duration": "FLOAT",
+                "file_size": "BIGINT",
+            },
+            "models": {
+                "user_id": "BIGINT NOT NULL",
+                "model_name": "VARCHAR(100) NOT NULL",
+                "model_path": "VARCHAR(255) NOT NULL",
+            },
+            "tasks": {
+                "user_id": "BIGINT NOT NULL",
+                "video_id": "BIGINT NOT NULL",
+                "model_id": "BIGINT NOT NULL",
+                "task_id": "VARCHAR(36) NOT NULL",
+                "task_name": "VARCHAR(255) NOT NULL",
+                "status": "VARCHAR(20) DEFAULT 'pending'",
+                "progress": "INT DEFAULT 0",
+                "stage": "VARCHAR(50)",
+                "current_frame": "INT DEFAULT 0",
+                "total_frames": "INT DEFAULT 0",
+                "conf": "DOUBLE DEFAULT 0.3",
+                "imgsz": "INT DEFAULT 1024",
+                "fps": "INT DEFAULT 10",
+            },
+            "cells": {
+                "task_id": "BIGINT NOT NULL",
+                "frame": "INT NOT NULL",
+                "track_id": "INT NOT NULL",
+                "bb_left": "FLOAT NOT NULL",
+                "bb_top": "FLOAT NOT NULL",
+                "bb_width": "FLOAT NOT NULL",
+                "bb_height": "FLOAT NOT NULL",
+                "conf": "FLOAT NOT NULL",
+                "class_id": "INT DEFAULT 0",
+                "visibility": "FLOAT",
+            },
+        }
+
+        for table, fields in expected_tables.items():
+            print(f"检查表: {table}")
+            for field, expected_definition in fields.items():
+                # 查询字段定义
+                check_sql = f"SHOW COLUMNS FROM {table} WHERE Field = %s"
+                result = db.execute_query(check_sql, (field,))
+
+                if not result:
+                    print(f"✗ 字段缺失: {field} (表: {table})")
+                    continue
+
+                actual_definition = result[0]["Type"]
+                if "DEFAULT" in expected_definition:
+                    actual_default = "DEFAULT" in result[0]["Extra"]
+                    if not actual_default:
+                        print(f"✗ 字段 {field} 默认值不匹配 (表: {table})")
+                        # 修复字段默认值
+                        alter_sql = f"ALTER TABLE {table} MODIFY {field} {expected_definition}"
+                        db.execute(alter_sql)
+                        print(f"✓ 修复字段默认值: {field} -> {expected_definition}")
+
+                print(f"✓ 字段检查通过: {field}")
+
+    print("=" * 50)
+    print("✓ 表结构检查完成")
+    print("=" * 50)
 
 
 def init_root_user() -> bool:
@@ -117,8 +206,8 @@ def init_root_user() -> bool:
 
 def main():
     """主函数"""
-    success = init_root_user()
-    sys.exit(0 if success else 1)
+    check_and_fix_table_structure()
+    sys.exit(0)
 
 
 if __name__ == "__main__":

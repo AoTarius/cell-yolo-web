@@ -55,8 +55,8 @@ class User(BaseModel):
     email = models.CharField(max_length=255, null=True, blank=True, verbose_name='邮箱')
     password_hash = models.CharField(max_length=255, verbose_name='密码哈希')
     dark_mode = models.BooleanField(default=True, verbose_name='深色模式')
-    model_base_path = models.CharField(max_length=500, default='models', verbose_name='模型基础路径')
-    output_base_path = models.CharField(max_length=500, default='output', verbose_name='输出基础路径')
+    model_base_path = models.CharField(max_length=500, verbose_name='模型基础路径')
+    output_base_path = models.CharField(max_length=500, verbose_name='输出基础路径')
 
     class Meta:
         db_table = 'users'
@@ -136,6 +136,9 @@ class Task(BaseModel):
     task_name = models.CharField(max_length=255, verbose_name='任务名称')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
     progress = models.IntegerField(default=0, verbose_name='进度（0-100）')
+    stage = models.CharField(max_length=50, null=True, blank=True, verbose_name='阶段')
+    current_frame = models.IntegerField(default=0, verbose_name='当前帧')
+    total_frames = models.IntegerField(default=0, verbose_name='总帧数')
     conf = models.FloatField(default=0.3, verbose_name='置信度阈值')
     imgsz = models.IntegerField(default=1024, verbose_name='图像尺寸')
     fps = models.IntegerField(default=10, verbose_name='帧率')

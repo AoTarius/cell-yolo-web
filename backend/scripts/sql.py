@@ -150,7 +150,7 @@ class DatabaseOperator:
             print(f"✗ 执行删除失败: {e}")
             return False
 
-    def execute_raw(self, sql: str, params: Optional[Tuple] = None) -> bool:
+    def execute(self, sql: str, params: Optional[Tuple] = None) -> bool:
         """
         执行任意 SQL 语句
 
