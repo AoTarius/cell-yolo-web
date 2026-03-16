@@ -164,7 +164,7 @@ python scripts/init_db.py
   - `shape`: 形状信息，包含 `perimeter`（周长）、`circularity`（圆度）、`circularity_increment`（圆度增量）、`aspect_ratio`（长宽比）、`shape_change_rate`（形态变化速率）、`spreading_index`（铺展指数）、`protrusion_activity_index`（膜突起活动指数）
   - `motion`: 运动信息，包含 `vx`（x 方向速度）、`vy`（y 方向速度）、`distance`（位移距离）、`migration_speed`（迁移速度）、`mean_square_displacement`（平均平方位移）、`turning_angle`（转向角）、`persistence_index`（方向持久性）
   - `visibility`: 可见性（FLOAT）
-  - `class`: 类别（INTEGER）
+  - `cell- `: 类别（INTEGER）
   - `confidence`: 置信度（FLOAT）
 - `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
 - `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
