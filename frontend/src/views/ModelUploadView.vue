@@ -7,10 +7,12 @@ import Sidebar from '@/components/common/Sidebar.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { useToast } from '@/composables/useToast'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import { useUserStore } from '@/stores/userStore'
 
 const router = useRouter()
 const { showToast } = useToast()
 const analysisStore = useAnalysisStore()
+const userStore = useUserStore()
 
 const selectedFile = ref<File | null>(null)
 const isDragging = ref(false)
@@ -54,15 +56,13 @@ async function handleUpload() {
   errorMessage.value = ''
 
   try {
-    // 获取当前用户名
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
-
-    if (!username) {
+    if (!userStore.currentUser?.username) {
       errorMessage.value = '请先登录后再上传模型'
       isUploading.value = false
       return
     }
+
+    const username = userStore.currentUser.username
 
     const formData = new FormData()
     formData.append('model', selectedFile.value)
@@ -95,32 +95,53 @@ function handleCancel() {
 }
 
 // 加载模型列表
-async function loadModels() {
-  try {
-    isLoadingModels.value = true
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
 
-    if (!username) {
+async function loadModels() {
+
+  try {
+
+    isLoadingModels.value = true
+
+
+
+    if (!userStore.currentUser?.username) {
+
       models.value = []
+
       currentModelPath.value = ''
+
       return
+
     }
+
+
+
+    const username = userStore.currentUser.username
+
+
 
     // 获取用户的model_base_path
-    if (currentUser) {
-      const userData = JSON.parse(currentUser)
-      currentModelPath.value = userData.model_base_path || 'models'
-    }
+
+    currentModelPath.value = userStore.currentUser.model_base_path || 'models'
+
+
 
     const response = await axios.get('/api/models/', { params: { username } })
+
     models.value = response.data.models
+
   } catch (error) {
+
     console.error('加载模型列表失败:', error)
+
     models.value = []
+
   } finally {
+
     isLoadingModels.value = false
+
   }
+
 }
 
 // 显示删除确认对话框
@@ -135,13 +156,12 @@ async function handleDeleteConfirm() {
 
   isDeleting.value = true
   try {
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
-
-    if (!username) {
+    if (!userStore.currentUser?.username) {
       showToast('请先登录', 'error')
       return
     }
+
+    const username = userStore.currentUser.username
 
     await axios.delete('/api/models/delete/', {
       params: { username, model_name: modelToDelete.value }
@@ -178,13 +198,12 @@ async function handleRenameConfirm() {
 
   isRenaming.value = true
   try {
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
-
-    if (!username) {
+    if (!userStore.currentUser?.username) {
       showToast('请先登录', 'error')
       return
     }
+
+    const username = userStore.currentUser.username
 
     // 验证新名称
     if (!newModelName.value.trim()) {

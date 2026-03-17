@@ -2,12 +2,14 @@
 import '@/assets/styles/colors.css'
 import { ref, computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import { useUserStore } from '@/stores/userStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
 import { useToast } from '@/composables/useToast'
 import { analysisApi } from '@/api/analysisApi'
 import axios from 'axios'
 
 const store = useAnalysisStore()
+const userStore = useUserStore()
 const api = useAnalysisApi()
 const { showToast } = useToast()
 
@@ -46,9 +48,14 @@ const totalFrames = ref<number | null>(null)
 async function loadModels() {
   try {
     isLoadingModels.value = true
-    // 获取当前用户名
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
+
+    if (!userStore.currentUser?.username) {
+      models.value = []
+      selectedModel.value = ''
+      return
+    }
+
+    const username = userStore.currentUser.username
     const data = await analysisApi.getModels(username)
     models.value = data.models
     // 始终默认为空，让用户手动选择
@@ -67,10 +74,8 @@ onMounted(() => {
   loadModels()
 
   // 获取用户的output_base_path
-  const currentUser = localStorage.getItem('currentUser')
-  if (currentUser) {
-    const userData = JSON.parse(currentUser)
-    currentOutputPath.value = userData.output_base_path || 'data/output/tasks'
+  if (userStore.currentUser) {
+    currentOutputPath.value = userStore.currentUser.output_base_path || 'data/output/tasks'
   }
 })
 
@@ -113,14 +118,12 @@ async function submitUpload() {
     uploadProgress.value = 0
     uploadError.value = null
 
-    // 获取当前用户名
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
-
-    if (!username) {
+    if (!userStore.currentUser?.username) {
       showToast('请先登录', 'error')
       return
     }
+
+    const username = userStore.currentUser.username
 
     // 1. 上传视频
     const formData = new FormData()

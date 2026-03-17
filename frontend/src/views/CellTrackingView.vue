@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import { useUserStore } from '@/stores/userStore'
 import Sidebar from '@/components/common/Sidebar.vue'
 import UploadPanel from '@/components/upload/UploadPanel.vue'
 import ProgressView from '@/views/ProgressView.vue'
@@ -8,10 +9,14 @@ import AnalysisResult from '@/components/analysis/AnalysisResult.vue'
 import '@/assets/styles/colors.css'
 
 const store = useAnalysisStore()
+const userStore = useUserStore()
 
 // 组件挂载时加载历史任务
 onMounted(async () => {
-  await store.loadHistoryTasks()
+  // 只有已登录用户才加载任务列表
+  if (userStore.currentUser) {
+    await store.loadHistoryTasks()
+  }
 })
 
 // 当前显示的主面板

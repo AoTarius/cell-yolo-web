@@ -56,7 +56,10 @@ const avatarInitials = computed(() => {
 
 // 组件挂载时加载历史记录
 onMounted(async () => {
-  await store.loadHistoryTasks()
+  // 只有已登录用户才加载任务列表
+  if (userStore.currentUser) {
+    await store.loadHistoryTasks()
+  }
 
   // 如果已登录，根据用户的 dark_mode 设置主题；否则从 localStorage 读取
   if (userStore.currentUser && userStore.currentUser.dark_mode !== undefined) {
@@ -224,13 +227,12 @@ async function handleRenameConfirm() {
 
   isRenaming.value = true
   try {
-    const currentUser = localStorage.getItem('currentUser')
-    const username = currentUser ? JSON.parse(currentUser).username : ''
-
-    if (!username) {
+    if (!userStore.currentUser?.username) {
       showToast('请先登录', 'error')
       return
     }
+
+    const username = userStore.currentUser.username
 
     // 验证新名称
     if (!newTaskName.value.trim()) {

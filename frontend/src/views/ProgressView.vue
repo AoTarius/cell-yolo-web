@@ -3,6 +3,7 @@ import '@/assets/styles/colors.css'
 import { computed, onMounted, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import { useUserStore } from '@/stores/userStore'
 import Sidebar from '@/components/common/Sidebar.vue'
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const props = defineProps<{
 const route = useRoute()
 const router = useRouter()
 const store = useAnalysisStore()
+const userStore = useUserStore()
 
 // 从路由或 props 获取 taskId
 const currentTaskId = computed(() => props.taskId || (route.params.taskId as string))
@@ -43,8 +45,11 @@ function getStageIndex(stage: string): number {
 onMounted(async () => {
   // 只在独立页面模式下执行加载逻辑
   if (!props.embedded) {
-    // 加载历史任务（现在后端支持返回处理中的任务）
-    await store.loadHistoryTasks()
+    // 只有已登录用户才加载任务列表
+    if (userStore.currentUser) {
+      // 加载历史任务（现在后端支持返回处理中的任务）
+      await store.loadHistoryTasks()
+    }
 
     // 标记加载完成
     isLoading.value = false
