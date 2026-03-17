@@ -32,7 +32,7 @@ function toggleViewMode() {
 <template>
   <div class="result-header">
     <div>
-      <h2>{{ record.video_name }}</h2>
+      <h2>{{ record.task_name || record.video_name }}</h2>
       <div class="header-info">
         <p class="header-subtitle">任务ID: {{ record.task_id }}</p>
         <span class="model-badge">
@@ -50,7 +50,7 @@ function toggleViewMode() {
               d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
             ></path>
           </svg>
-          {{ record.result?.model_name || 'N/A' }}
+          {{ record.model_name || record.result?.model_name || 'N/A' }}
         </span>
       </div>
     </div>

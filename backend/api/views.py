@@ -1517,27 +1517,38 @@ class ModelUploadView(APIView):
                 # 插入或更新数据库记录
                 with connection.cursor() as cursor:
                     model_name = model_file.name.rsplit('.', 1)[0]  # 去掉后缀名
-                    
-                    # 检查模型是否已存在
+
+                    # 检查模型是否已存在（包括软删除的记录）
                     check_sql = """
-                    SELECT id, is_deleted FROM models
-                    WHERE user_id = %s AND model_name = %s
+                    SELECT id, is_deleted, model_path FROM models
+                    WHERE user_id = %s
                     """
-                    cursor.execute(check_sql, (user_id, model_name))
+                    cursor.execute(check_sql, (user_id,))
                     existing_model = cursor.fetchone()
 
                     if existing_model:
                         # 模型已存在
                         if existing_model['is_deleted']:
-                            # 已软删除，恢复记录
-                            update_sql = """
-                            UPDATE models
-                            SET model_path = %s, is_deleted = FALSE, updated_at = NOW()
-                            WHERE id = %s
-                            """
-                            cursor.execute(update_sql, (model_file.name, existing_model['id']))
-                            connection.commit()
-                            message = '模型已恢复'
+                            # 已软删除，检查路径是否相同
+                            if existing_model['model_path'] == model_file.name:
+                                # 路径相同，恢复记录
+                                update_sql = """
+                                UPDATE models
+                                SET is_deleted = FALSE, updated_at = NOW(), model_name = %s
+                                WHERE id = %s
+                                """
+                                cursor.execute(update_sql, (model_file.name, existing_model['id']))
+                                connection.commit()
+                                message = '模型已恢复'
+                            else:
+                                # 路径不同，创建新记录
+                                insert_sql = """
+                                INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted)
+                                VALUES (%s, %s, %s, NOW(), NOW(), FALSE)
+                                """
+                                cursor.execute(insert_sql, (user_id, model_file.name, model_file.name))
+                                connection.commit()
+                                message = '模型上传成功'
                         else:
                             # 未删除，返回错误
                             return Response(
@@ -1550,7 +1561,7 @@ class ModelUploadView(APIView):
                         INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted)
                         VALUES (%s, %s, %s, NOW(), NOW(), FALSE)
                         """
-                        cursor.execute(insert_sql, (user_id, model_name, model_file.name))
+                        cursor.execute(insert_sql, (user_id, model_file.name, model_file.name))
                         connection.commit()
                         message = '模型上传成功'
 

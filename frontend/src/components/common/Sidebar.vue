@@ -477,7 +477,7 @@ const displayRecords = computed(() => {
     <div v-if="!isCollapsed" class="sidebar-content">
       <div class="section-header">
         <h2 class="section-title">历史记录</h2>
-        <button class="btn-filter" @click="openFilter" title="筛选历史记录">
+        <button class="btn-filter" :class="{ active: isFiltering }" @click="openFilter" title="筛选历史记录">
           <svg
               fill="none"
               stroke="currentColor"
@@ -1068,6 +1068,18 @@ const displayRecords = computed(() => {
 
 .btn-filter:active {
   transform: scale(0.95);
+}
+
+.btn-filter.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.btn-filter.active:hover {
+  background: var(--accent-blue-hover);
+  border-color: var(--accent-blue-hover);
+  color: white;
 }
 
 .btn-filter .filter-icon {
