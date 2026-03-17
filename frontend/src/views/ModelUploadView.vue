@@ -770,7 +770,6 @@ onMounted(() => {
 }
 
 .btn-delete-model:hover:not(:disabled) {
-  background: var(--danger-bg);
   color: var(--danger-light);
 }
 
@@ -811,8 +810,7 @@ onMounted(() => {
 }
 
 .btn-rename-model:hover:not(:disabled) {
-  background: var(--accent-blue);
-  color: white;
+  color: var(--accent-blue);
 }
 
 .btn-rename-model:disabled {
@@ -848,7 +846,7 @@ onMounted(() => {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   background: var(--alpha-badge);
-  border: 1px solid var(--border-color);
+  border: 2px dashed var(--border-color);
   border-radius: 6px;
   margin-bottom: 1.5rem;
   transition: all 0.2s;
@@ -1088,7 +1086,7 @@ onMounted(() => {
   padding: 0.75rem 2rem;
   background: var(--btn-upload);
   color: white;
-  border: none;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 1rem;
   font-weight: 500;

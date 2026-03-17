@@ -90,7 +90,7 @@ const getToastClass = (type: 'success' | 'error' | 'info' | 'warning') => {
 
 .toast-success {
   border-color: var(--success);
-  background: linear-gradient(135deg, rgba(35, 134, 54, 0.1) 0%, var(--bg-toast) 100%);
+  background: color-mix(in srgb, var(--success-bg) 50%, transparent);
 }
 
 :global(:root:not(.dark)) .toast-success {
@@ -100,7 +100,7 @@ const getToastClass = (type: 'success' | 'error' | 'info' | 'warning') => {
 
 .toast-error {
   border-color: var(--danger);
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, var(--bg-toast) 100%);
+  background: color-mix(in srgb, var(--danger-bg) 50%, transparent);
 }
 
 :global(:root:not(.dark)) .toast-error {
@@ -110,7 +110,7 @@ const getToastClass = (type: 'success' | 'error' | 'info' | 'warning') => {
 
 .toast-warning {
   border-color: var(--warning);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, var(--bg-toast) 100%);
+  background: color-mix(in srgb, var(--warning-bg) 50%, transparent);
 }
 
 :global(:root:not(.dark)) .toast-warning {

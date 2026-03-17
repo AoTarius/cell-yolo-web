@@ -1096,6 +1096,119 @@ class RenameModelView(APIView):
             )
 
 
+class RenameTaskView(APIView):
+    """修改任务名称接口"""
+
+    def post(self, request):
+        """修改任务的名称（只修改数据库中的task_name）"""
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            task_id = data.get('task_id')
+            new_task_name = data.get('new_task_name')
+
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not task_id:
+                return Response(
+                    {'error': '未提供任务ID'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if not new_task_name:
+                return Response(
+                    {'error': '未提供新任务名称'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 验证新名称不为空
+            if not new_task_name.strip():
+                return Response(
+                    {'error': '新任务名称不能为空'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 连接数据库
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 查询用户信息
+                    user_sql = "SELECT id FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(user_sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    user_id = user['id']
+
+                    # 查询原任务是否存在
+                    check_old_sql = """
+                    SELECT id, task_name FROM tasks
+                    WHERE user_id = %s AND task_id = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(check_old_sql, (user_id, task_id))
+                    old_task = cursor.fetchone()
+
+                    if not old_task:
+                        return Response(
+                            {'error': f'任务 {task_id} 不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    # 更新任务名称
+                    update_sql = """
+                    UPDATE tasks
+                    SET task_name = %s, updated_at = NOW()
+                    WHERE user_id = %s AND task_id = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(update_sql, (new_task_name, user_id, task_id))
+                    connection.commit()
+
+                return Response({
+                    'status': 'success',
+                    'message': '任务名称修改成功',
+                    'task_id': task_id,
+                    'old_task_name': old_task['task_name'],
+                    'new_task_name': new_task_name
+                }, status=status.HTTP_200_OK)
+
+            finally:
+                connection.close()
+
+        except json.JSONDecodeError:
+            return Response(
+                {'error': '无效的 JSON 格式'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'修改任务名称失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 class DeleteTaskView(APIView):
     """删除任务接口"""
 
@@ -1113,60 +1226,62 @@ class DeleteTaskView(APIView):
                 database=os.getenv('DB_NAME', 'cell_tracking'),
                 cursorclass=pymysql.cursors.DictCursor
             )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 查询任务信息
+                    task_sql = """
+                    SELECT t.id, t.status, u.output_base_path
+                    FROM tasks t
+                    JOIN users u ON t.user_id = u.id
+                    WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                    """
+                    cursor.execute(task_sql, (task_id,))
+                    task_info = cursor.fetchone()
+
+                    if not task_info:
+                        return Response(
+                            {'error': '任务不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    # 检查任务是否正在处理中
+                    if task_info['status'] == 'processing':
+                        return Response(
+                            {'error': '任务正在处理中，无法删除'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    # 软删除任务
+                    update_sql = """
+                    UPDATE tasks
+                    SET is_deleted = TRUE, deleted_at = NOW()
+                    WHERE task_id = %s
+                    """
+                    cursor.execute(update_sql, (task_id,))
+                    connection.commit()
+
+                    # 删除任务目录
+                    output_base_path = Path(task_info['output_base_path'])
+                    task_dir = output_base_path / 'tasks' / task_id
+
+                    if task_dir.exists():
+                        shutil.rmtree(task_dir)
+
+                return Response({
+                    'status': 'success',
+                    'message': '任务已删除',
+                    'task_id': task_id
+                }, status=status.HTTP_200_OK)
+
+            finally:
+                connection.close()
+
         except pymysql.Error as e:
             return Response(
                 {'error': f'数据库连接失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-        try:
-            with connection.cursor() as cursor:
-                # 查询任务信息
-                task_sql = """
-                SELECT t.id, t.status, u.output_base_path
-                FROM tasks t
-                JOIN users u ON t.user_id = u.id
-                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
-                """
-                cursor.execute(task_sql, (task_id,))
-                task_info = cursor.fetchone()
-
-                if not task_info:
-                    return Response(
-                        {'error': '任务不存在'},
-                        status=status.HTTP_404_NOT_FOUND
-                    )
-
-                # 检查任务是否正在处理中
-                if task_info['status'] == 'processing':
-                    return Response(
-                        {'error': '任务正在处理中，无法删除'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                # 软删除任务
-                update_sql = """
-                UPDATE tasks
-                SET is_deleted = TRUE, deleted_at = NOW()
-                WHERE task_id = %s
-                """
-                cursor.execute(update_sql, (task_id,))
-                connection.commit()
-
-                # 删除任务目录
-                output_base_path = Path(task_info['output_base_path'])
-                task_dir = output_base_path / 'tasks' / task_id
-
-                if task_dir.exists():
-                    shutil.rmtree(task_dir)
-
-                return Response({
-                    'message': '任务已成功删除',
-                    'task_id': task_id
-                }, status=status.HTTP_200_OK)
-
-        finally:
-            connection.close()
 
 
 class ExportDataView(APIView):

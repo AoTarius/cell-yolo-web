@@ -19,6 +19,7 @@ urlpatterns = [
 
     # 任务列表接口
     path('tasks/', views.TaskListView.as_view(), name='task_list'),
+    path('tasks/rename/', views.RenameTaskView.as_view(), name='rename_task'),
 
     # 模型列表接口
     path('models/', views.ModelListView.as_view(), name='model_list'),

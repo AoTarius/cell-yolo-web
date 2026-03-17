@@ -60,6 +60,7 @@ export interface ProcessResult {
 // 分析记录（符合需求文档 6.3.2）
 export interface AnalysisRecord {
   task_id: string // 任务ID
+  task_name?: string // 任务名称（用户自定义）
   video_name: string // 视频文件名
   video_path: string // 原始视频路径
   status: AnalysisStatus // 任务状态
@@ -165,12 +166,15 @@ export const useAnalysisStore = defineStore('analysis', () => {
       const convertedRecords: AnalysisRecord[] = historyTasks.map((task: any) => {
         // 从数据库获取的模型名（最新）
         const modelNameFromDB = task.model_display_name || ''
+        // 获取任务名称（用户自定义的名称）
+        const taskNameFromDB = task.task_name || null
 
         // 根据任务状态决定转换方式
         if (task.status === 'processing') {
           // 处理中的任务
           return {
             task_id: task.task_id,
+            task_name: taskNameFromDB,
             video_name: task.video_name || 'Unknown',
             video_path: task.original_video_path || '',
             status: 'processing' as AnalysisStatus,
@@ -191,6 +195,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
           return {
             task_id: task.task_id,
+            task_name: taskNameFromDB,
             video_name: task.video_name || 'Unknown',
             video_path: task.result?.original_video_path || '',
             status: 'completed' as AnalysisStatus,

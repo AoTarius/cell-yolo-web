@@ -82,6 +82,10 @@ onUnmounted(() => {
 
 const showDeleteDialog = ref(false)
 const taskToDelete = ref<string | null>(null)
+const showRenameDialog = ref(false)
+const taskToRename = ref<string | null>(null)
+const newTaskName = ref('')
+const isRenaming = ref(false)
 const showSettingsDialog = ref(false)
 const modelPath = ref('')
 const outputPath = ref('')
@@ -203,6 +207,72 @@ async function handleDeleteConfirm() {
 
 function handleDeleteCancel() {
   taskToDelete.value = null
+}
+
+// 显示重命名对话框
+function showRenameInputDialog(taskId: string, event: Event) {
+  event.stopPropagation() // 阻止触发记录选择
+  taskToRename.value = taskId
+  const record = store.records.find(r => r.task_id === taskId)
+  newTaskName.value = record?.task_name || record?.video_name || taskId
+  showRenameDialog.value = true
+}
+
+// 确认重命名
+async function handleRenameConfirm() {
+  if (!taskToRename.value || !newTaskName.value) return
+
+  isRenaming.value = true
+  try {
+    const currentUser = localStorage.getItem('currentUser')
+    const username = currentUser ? JSON.parse(currentUser).username : ''
+
+    if (!username) {
+      showToast('请先登录', 'error')
+      return
+    }
+
+    // 验证新名称
+    if (!newTaskName.value.trim()) {
+      showToast('新任务名称不能为空', 'error')
+      return
+    }
+
+    const record = store.records.find(r => r.task_id === taskToRename.value)
+    if (newTaskName.value === (record?.task_name || record?.video_name)) {
+      showToast('新名称与原名称相同', 'warning')
+      showRenameDialog.value = false
+      return
+    }
+
+    await axios.post('/api/tasks/rename/', {
+      username,
+      task_id: taskToRename.value,
+      new_task_name: newTaskName.value
+    })
+
+    showToast('任务名称修改成功', 'success')
+    // 重新加载任务列表以更新显示
+    await store.loadHistoryTasks()
+    // 重置筛选状态以显示所有记录
+    isFiltering.value = false
+    filteredRecords.value = []
+  } catch (error: any) {
+    console.error('修改任务名称失败:', error)
+    showToast(error.response?.data?.error || '修改任务名称失败', 'error')
+  } finally {
+    isRenaming.value = false
+    taskToRename.value = null
+    newTaskName.value = ''
+    showRenameDialog.value = false
+  }
+}
+
+// 取消重命名
+function handleRenameCancel() {
+  taskToRename.value = null
+  newTaskName.value = ''
+  showRenameDialog.value = false
 }
 
 function handleNewAnalysis() {
@@ -433,7 +503,7 @@ const displayRecords = computed(() => {
           @click="handleRecordClick(record)"
         >
           <div class="record-header">
-            <span class="record-name">{{ record.video_name }}</span>
+            <span class="record-name">{{ record.task_name || record.video_name }}</span>
             <div class="status-indicator">
               <span class="status-dot" :class="`dot-${record.status}`"></span>
               <span class="record-status" :class="`status-${record.status}`">
@@ -469,26 +539,48 @@ const displayRecords = computed(() => {
               </svg>
               {{ record.model_name || record.result?.model_name || 'N/A' }}
             </span>
-            <button
-              class="btn-delete"
-              @click="showDeleteConfirm(record.task_id, $event)"
-              title="删除记录"
-              :disabled="record.status === 'processing'"
-            >
-              <svg
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+            <div class="task-actions">
+              <button
+                class="btn-rename"
+                @click="showRenameInputDialog(record.task_id, $event)"
+                title="重命名任务"
+                :disabled="record.status === 'processing' || isRenaming"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                ></path>
-              </svg>
-            </button>
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  ></path>
+                </svg>
+              </button>
+              <button
+                class="btn-delete"
+                @click="showDeleteConfirm(record.task_id, $event)"
+                title="删除记录"
+                :disabled="record.status === 'processing'"
+              >
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -505,6 +597,66 @@ const displayRecords = computed(() => {
       @confirm="handleDeleteConfirm"
       @cancel="handleDeleteCancel"
     />
+
+    <!-- 重命名对话框 -->
+    <div v-if="showRenameDialog" class="rename-dialog-overlay" @click="handleRenameCancel">
+      <div class="rename-dialog" @click.stop>
+        <div class="rename-dialog-header">
+          <h3>重命名任务</h3>
+          <button class="btn-close-rename" @click="handleRenameCancel">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="rename-dialog-body">
+          <div class="rename-field">
+            <label class="rename-label">任务ID</label>
+            <input
+              type="text"
+              class="rename-input"
+              :value="taskToRename"
+              disabled
+            />
+          </div>
+          <div class="rename-field">
+            <label class="rename-label">原名称</label>
+            <input
+              type="text"
+              class="rename-input"
+              :value="store.records.find(r => r.task_id === taskToRename)?.task_name || store.records.find(r => r.task_id === taskToRename)?.video_name"
+              disabled
+            />
+          </div>
+          <div class="rename-field">
+            <label class="rename-label">新名称</label>
+            <input
+              type="text"
+              class="rename-input"
+              v-model="newTaskName"
+              placeholder="请输入新的任务名称"
+              :disabled="isRenaming"
+            />
+          </div>
+        </div>
+        <div class="rename-dialog-footer">
+          <button
+            class="btn-cancel-rename"
+            @click="handleRenameCancel"
+            :disabled="isRenaming"
+          >
+            取消
+          </button>
+          <button
+            class="btn-confirm-rename"
+            @click="handleRenameConfirm"
+            :disabled="isRenaming || !newTaskName.trim()"
+          >
+            {{ isRenaming ? '修改中...' : '确认修改' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- 设置对话框 -->
     <SettingsDialog
@@ -1115,6 +1267,271 @@ const displayRecords = computed(() => {
 .btn-delete svg {
   width: 16px;
   height: 16px;
+}
+
+/* 任务操作按钮组 */
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* 重命名按钮 */
+.btn-rename {
+  background: transparent;
+  border: none;
+  color: var(--text-disabled);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.record-item:hover .btn-rename {
+  opacity: 1;
+}
+
+.btn-rename:hover:not(:disabled) {
+  color: var(--accent-blue);
+}
+
+.btn-rename:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-rename svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 重命名对话框样式 */
+.rename-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rename-dialog {
+  background: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  min-width: 400px;
+  max-width: 500px;
+  animation: slideUp 0.3s ease;
+}
+
+:global(:root:not(.dark)) .rename-dialog {
+  background: var(--bg-card-light);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.rename-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+:global(:root:not(.dark)) .rename-dialog-header {
+  border-color: var(--border-color-light);
+}
+
+.rename-dialog-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+:global(:root:not(.dark)) .rename-dialog-header h3 {
+  color: var(--text-primary-light);
+}
+
+.btn-close-rename {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:global(:root:not(.dark)) .btn-close-rename {
+  color: var(--text-muted-light);
+}
+
+.btn-close-rename:hover {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+:global(:root:not(.dark)) .btn-close-rename:hover {
+  background: var(--bg-input-light);
+  color: var(--text-primary-light);
+}
+
+.btn-close-rename svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rename-dialog-body {
+  padding: 1.5rem;
+}
+
+.rename-field {
+  margin-bottom: 1rem;
+}
+
+.rename-field:last-child {
+  margin-bottom: 0;
+}
+
+.rename-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+:global(:root:not(.dark)) .rename-label {
+  color: var(--text-primary-light);
+}
+
+.rename-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  outline: none;
+}
+
+:global(:root:not(.dark)) .rename-input {
+  background: var(--bg-input-light);
+  border-color: var(--border-color-light);
+  color: var(--text-primary-light);
+}
+
+.rename-input:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+
+:global(:root:not(.dark)) .rename-input:hover:not(:disabled) {
+  border-color: var(--text-disabled-light);
+}
+
+.rename-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.rename-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--bg-main);
+}
+
+:global(:root:not(.dark)) .rename-input:disabled {
+  background: var(--bg-main-light);
+}
+
+.rename-dialog-footer {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
+}
+
+:global(:root:not(.dark)) .rename-dialog-footer {
+  border-color: var(--border-color-light);
+}
+
+.btn-cancel-rename,
+.btn-confirm-rename {
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border-color);
+}
+
+.btn-cancel-rename {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+:global(:root:not(.dark)) .btn-cancel-rename {
+  background: var(--bg-input-light);
+  color: var(--text-primary-light);
+}
+
+.btn-cancel-rename:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+:global(:root:not(.dark)) .btn-cancel-rename:hover:not(:disabled) {
+  background: var(--border-color-light);
+}
+
+.btn-confirm-rename {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.btn-confirm-rename:hover:not(:disabled) {
+  background: var(--accent-blue-hover);
+}
+
+.btn-cancel-rename:disabled,
+.btn-confirm-rename:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 滚动条样式 */
