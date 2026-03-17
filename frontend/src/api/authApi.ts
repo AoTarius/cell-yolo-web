@@ -72,6 +72,38 @@ export const authApi = {
   },
 
   /**
+   * 用户注册
+   * POST /api/register/
+   * @param username 用户名
+   * @param password 密码
+   * @param modelBasePath 模型基础路径
+   * @param outputBasePath 输出基础路径
+   * @returns 注册结果（包含用户信息）
+   */
+  async register(
+    username: string,
+    password: string,
+    modelBasePath: string,
+    outputBasePath: string
+  ): Promise<{
+    status: string
+    message: string
+    user: User
+  }> {
+    const { data } = await api.post<{
+      status: string
+      message: string
+      user: User
+    }>('/register/', {
+      username,
+      password,
+      model_base_path: modelBasePath,
+      output_base_path: outputBasePath,
+    })
+    return data
+  },
+
+  /**
    * 更新用户颜色模式
    * POST /api/update-user/
    * @param username 用户名

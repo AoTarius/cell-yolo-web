@@ -6,6 +6,7 @@ import ModelUploadView from '../views/ModelUploadView.vue'
 import CompareView from '../views/CompareView.vue'
 import CompareResult from '../components/compare/CompareResult.vue'
 import LoginView from '../views/LoginView.vue'
+import RegisterView from '../views/RegisterView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,6 +15,11 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
     },
     {
       path: '/',
@@ -65,14 +71,17 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  // 如果用户未登录且不是登录页，重定向到登录页
-  if (!userStore.currentUser && to.path !== '/login') {
+  // 允许未登录用户访问登录页和注册页
+  const publicRoutes = ['/login', '/register']
+
+  // 如果用户未登录且不是公开页面，重定向到登录页
+  if (!userStore.currentUser && !publicRoutes.includes(to.path)) {
     next('/login')
     return
   }
 
-  // 如果用户已登录且访问登录页，重定向到主页
-  if (userStore.currentUser && to.path === '/login') {
+  // 如果用户已登录且访问登录页或注册页，重定向到主页
+  if (userStore.currentUser && publicRoutes.includes(to.path)) {
     next('/cellTracking')
     return
   }

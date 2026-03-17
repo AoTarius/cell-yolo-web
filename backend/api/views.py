@@ -1789,3 +1789,105 @@ class UpdateUserPathsView(APIView):
                 {'error': f'更新路径配置失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class RegisterView(APIView):
+    """用户注册接口"""
+
+    def post(self, request):
+        """创建新用户"""
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            password = data.get('password')
+            model_base_path = data.get('model_base_path')
+            output_base_path = data.get('output_base_path')
+
+            # 验证必填字段
+            if not username or not password or not model_base_path or not output_base_path:
+                return Response(
+                    {'error': '用户名、密码、模型存储路径和任务存储路径不能为空'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 验证密码长度
+            if len(password) < 6:
+                return Response(
+                    {'error': '密码长度至少为6位'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 连接数据库
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    # 检查用户名是否已存在
+                    check_sql = "SELECT id FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(check_sql, (username,))
+                    existing_user = cursor.fetchone()
+
+                    if existing_user:
+                        return Response(
+                            {'error': '用户名已存在'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                    # 使用 bcrypt 哈希密码
+                    password_bytes = password.encode('utf-8')
+                    salt = bcrypt.gensalt()
+                    hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+
+                    # 创建新用户
+                    insert_sql = """
+                    INSERT INTO users (username, password_hash, model_base_path, output_base_path, dark_mode, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, %s, %s, %s, TRUE, NOW(), NOW(), FALSE, NULL)
+                    """
+                    cursor.execute(insert_sql, (username, hashed_password, model_base_path, output_base_path))
+                    connection.commit()
+
+                    # 获取新创建的用户信息
+                    user_id = cursor.lastrowid
+                    select_sql = "SELECT * FROM users WHERE id = %s"
+                    cursor.execute(select_sql, (user_id,))
+                    new_user = cursor.fetchone()
+
+                    return Response({
+                        'status': 'success',
+                        'message': '注册成功',
+                        'user': {
+                            'id': new_user['id'],
+                            'username': new_user['username'],
+                            'email': new_user['email'],
+                            'dark_mode': new_user['dark_mode'],
+                            'model_base_path': new_user['model_base_path'],
+                            'output_base_path': new_user['output_base_path']
+                        }
+                    }, status=status.HTTP_201_CREATED)
+
+            finally:
+                connection.close()
+
+        except json.JSONDecodeError:
+            return Response(
+                {'error': '无效的 JSON 格式'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'注册失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

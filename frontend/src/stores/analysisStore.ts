@@ -159,7 +159,21 @@ export const useAnalysisStore = defineStore('analysis', () => {
   // 加载历史任务
   async function loadHistoryTasks() {
     try {
-      const response = await axios.get('/api/tasks/')
+      // 从 userStore 获取当前登录用户
+      const { useUserStore } = await import('./userStore')
+      const userStore = useUserStore()
+
+      if (!userStore.currentUser?.username) {
+        console.error('未登录用户，无法加载任务列表')
+        records.value = []
+        return
+      }
+
+      const response = await axios.get('/api/tasks/', {
+        params: {
+          username: userStore.currentUser.username
+        }
+      })
       const historyTasks = response.data.tasks || []
 
       // 转换后端数据为前端格式

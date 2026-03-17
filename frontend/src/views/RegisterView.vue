@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/userStore'
 import { authApi, type User } from '@/api/authApi'
 
 const router = useRouter()
-const userStore = useUserStore()
 
 // 表单数据
 const username = ref('')
 const password = ref('')
+const confirmPassword = ref('')
+const modelBasePath = ref('')
+const outputBasePath = ref('')
 
 // 加载状态
 const isLoading = ref(false)
@@ -47,31 +48,44 @@ async function handleSubmit(event: Event) {
   errorMessage.value = ''
 
   // 验证输入
-  if (!username.value.trim() || !password.value) {
-    errorMessage.value = '用户名和密码不能为空'
+  if (!username.value.trim() || !password.value || !modelBasePath.value.trim() || !outputBasePath.value.trim()) {
+    errorMessage.value = '所有字段都不能为空'
+    return
+  }
+
+  // 验证密码长度
+  if (password.value.length < 6) {
+    errorMessage.value = '密码长度至少为6位'
+    return
+  }
+
+  // 验证密码确认
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = '两次输入的密码不一致'
     return
   }
 
   isLoading.value = true
 
   try {
-    // 调用后端登录 API
-    const response = await authApi.login(username.value.trim(), password.value)
+    // 调用后端注册 API
+    const response = await authApi.register(
+      username.value.trim(),
+      password.value,
+      modelBasePath.value.trim(),
+      outputBasePath.value.trim()
+    )
 
     if (response.status === 'success' && response.user) {
-      // 登录成功，保存用户信息到 store
-      userStore.login(response.user.username, response.user)
-
-      // 根据用户的 dark_mode 设置主题
-      isDark.value = response.user.dark_mode
-      applyTheme()
-
-      router.push('/cellTracking')
+      // 注册成功，跳转到登录页面
+      errorMessage.value = ''
+      alert('注册成功！请登录')
+      router.push('/login')
     } else {
-      errorMessage.value = '登录失败，请重试'
+      errorMessage.value = '注册失败，请重试'
     }
   } catch (error: any) {
-    console.error('Login error:', error)
+    console.error('Register error:', error)
 
     // 处理错误响应
     if (error.response?.data?.error) {
@@ -79,16 +93,21 @@ async function handleSubmit(event: Event) {
     } else if (error.message) {
       errorMessage.value = error.message
     } else {
-      errorMessage.value = '登录失败，请检查网络连接'
+      errorMessage.value = '注册失败，请检查网络连接'
     }
   } finally {
     isLoading.value = false
   }
 }
+
+// 返回登录页面
+function goToLogin() {
+  router.push('/login')
+}
 </script>
 
 <template>
-  <div class="login-container">
+  <div class="register-container">
     <!-- 主题切换按钮 -->
     <button class="theme-toggle" title="切换主题" @click="toggleTheme">
       <svg
@@ -117,9 +136,9 @@ async function handleSubmit(event: Event) {
       </svg>
     </button>
 
-    <div class="login-card">
+    <div class="register-card">
       <form @submit="handleSubmit">
-        <h2>细胞跟踪分析</h2>
+        <h2>用户注册</h2>
 
         <!-- 错误消息 -->
         <div v-if="errorMessage" class="error-message">
@@ -131,17 +150,37 @@ async function handleSubmit(event: Event) {
           <span>用户名</span>
           <i></i>
         </div>
+
         <div class="input-box">
           <input type="password" v-model="password" required :disabled="isLoading">
-          <span>密码</span>
+          <span>密码（至少6位）</span>
           <i></i>
         </div>
-        <div class="links">
-          <a href="#">忘记密码</a>
-          <a href="/register" @click.prevent="router.push('/register')">注册账号</a>
-        </div>
+
         <div class="input-box">
-          <input type="submit" :value="isLoading ? '登录中...' : '登录'" :disabled="isLoading">
+          <input type="password" v-model="confirmPassword" required :disabled="isLoading">
+          <span>确认密码</span>
+          <i></i>
+        </div>
+
+        <div class="input-box">
+          <input type="text" v-model="modelBasePath" required :disabled="isLoading">
+          <span>模型存储路径(如: /path/to/models)</span>
+          <i></i>
+        </div>
+
+        <div class="input-box">
+          <input type="text" v-model="outputBasePath" required :disabled="isLoading">
+          <span>任务存储路径(如: /path/to/outputs)</span>
+          <i></i>
+        </div>
+
+        <div class="links">
+          <a href="#" @click.prevent="goToLogin">返回登录</a>
+        </div>
+
+        <div class="input-box">
+          <input type="submit" :value="isLoading ? '注册中...' : '注册'" :disabled="isLoading">
         </div>
       </form>
     </div>
@@ -149,13 +188,14 @@ async function handleSubmit(event: Event) {
 </template>
 
 <style scoped>
-.login-container {
+.register-container {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   background: linear-gradient(45deg, var(--login-bg-gradient-start), var(--login-bg-gradient-end));
   position: relative;
+  padding: 20px;
 }
 
 /* 主题切换按钮 */
@@ -193,15 +233,17 @@ async function handleSubmit(event: Event) {
   transition: all 0.3s ease;
 }
 
-/* 登录卡片 */
-.login-card {
+/* 注册卡片 */
+.register-card {
   position: relative;
   padding: 50px;
   background: var(--login-card-bg);
   box-shadow: var(--login-card-shadow);
+  max-width: 500px;
+  width: 100%;
 }
 
-.login-card::before {
+.register-card::before {
   content: "";
   position: absolute;
   left: -20px;
@@ -213,7 +255,7 @@ async function handleSubmit(event: Event) {
   transform-origin: bottom right;
 }
 
-.login-card::after {
+.register-card::after {
   content: "";
   position: absolute;
   top: -20px;
@@ -226,7 +268,7 @@ async function handleSubmit(event: Event) {
 }
 
 /* 表单样式 */
-.login-card form {
+.register-card form {
   width: 100%;
   display: flex;
   justify-content: center;
@@ -234,7 +276,7 @@ async function handleSubmit(event: Event) {
   flex-direction: column;
 }
 
-.login-card h2 {
+.register-card h2 {
   color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -263,13 +305,13 @@ async function handleSubmit(event: Event) {
 }
 
 /* 输入框 */
-.login-card .input-box {
+.register-card .input-box {
   position: relative;
-  width: 300px;
-  margin-top: 40px;
+  width: 100%;
+  margin-top: 30px;
 }
 
-.login-card .input-box input {
+.register-card .input-box input {
   position: relative;
   padding: 8px 10px;
   border: none;
@@ -282,7 +324,7 @@ async function handleSubmit(event: Event) {
   z-index: 2;
 }
 
-.login-card .input-box span {
+.register-card .input-box span {
   position: absolute;
   left: 0;
   padding: 10px 0;
@@ -294,14 +336,14 @@ async function handleSubmit(event: Event) {
   text-transform: uppercase;
 }
 
-.login-card .input-box input:valid ~ span,
-.login-card .input-box input:focus ~ span {
+.register-card .input-box input:valid ~ span,
+.register-card .input-box input:focus ~ span {
   color: var(--text-primary);
   font-size: 0.85em;
   transform: translateY(-32px);
 }
 
-.login-card .input-box i {
+.register-card .input-box i {
   position: absolute;
   left: 0;
   bottom: 0;
@@ -313,27 +355,27 @@ async function handleSubmit(event: Event) {
   z-index: 1;
 }
 
-.login-card .input-box input:valid ~ i,
-.login-card .input-box input:focus ~ i {
+.register-card .input-box input:valid ~ i,
+.register-card .input-box input:focus ~ i {
   height: 100%;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.25);
 }
 
-.login-card .input-box input:disabled {
+.register-card .input-box input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* 链接 */
-.login-card .links {
+.register-card .links {
   position: relative;
   width: 100%;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   margin-top: 20px;
 }
 
-.login-card .links a {
+.register-card .links a {
   text-decoration: none;
   color: var(--login-link-primary);
   text-transform: uppercase;
@@ -343,36 +385,39 @@ async function handleSubmit(event: Event) {
   transition: color 0.2s;
 }
 
-.login-card .links a:hover {
+.register-card .links a:hover {
   color: var(--login-link-secondary);
 }
 
-.login-card .links a:nth-child(2) {
-  color: var(--login-link-secondary);
-}
-
-.login-card .links a:nth-child(2):hover {
-  color: var(--login-link-primary);
-}
-
-/* 登录按钮 */
-.login-card .input-box input[type="submit"] {
+/* 注册按钮 */
+.register-card .input-box input[type="submit"] {
   background: var(--accent-blue);
   cursor: pointer;
   font-weight: 600;
   transition: background 0.2s;
 }
 
-.login-card .input-box input[type="submit"]:hover {
+.register-card .input-box input[type="submit"]:hover {
   background: var(--accent-blue-hover);
 }
 
-.login-card .input-box input[type="submit"]:active {
+.register-card .input-box input[type="submit"]:active {
   background: var(--accent-blue);
 }
 
-.login-card .input-box input[type="submit"]:disabled {
+.register-card .input-box input[type="submit"]:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 响应式设计 */
+@media (max-width: 600px) {
+  .register-card {
+    padding: 30px;
+  }
+
+  .register-card .input-box {
+    width: 100%;
+  }
 }
 </style>
