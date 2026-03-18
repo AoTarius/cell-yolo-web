@@ -710,7 +710,8 @@ class TaskListView(APIView):
         field_mapping = {
             'createdAt': 't.created_at',
             'updatedAt': 't.updated_at',
-            'taskName': 't.task_name'
+            'taskName': 't.task_name',
+            'modelName': 'm.model_name'
         }
 
         # 构建 ORDER BY 子句

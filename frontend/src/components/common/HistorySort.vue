@@ -8,7 +8,7 @@ export interface SortCondition {
   direction: SortDirection
 }
 
-export type SortField = 'createdAt' | 'updatedAt' | 'taskName'
+export type SortField = 'createdAt' | 'updatedAt' | 'taskName' | 'modelName'
 export type SortDirection = 'asc' | 'desc'
 
 interface Props {
@@ -53,6 +53,11 @@ const fieldDefinitions = {
     label: '任务名称',
     icon: 'fa-tag',
     dbField: 'task_name'
+  },
+  modelName: {
+    label: '模型名称',
+    icon: 'fa-microchip',
+    dbField: 'model_name'
   }
 }
 
@@ -205,11 +210,19 @@ function resetSort() {
                   stroke-width="2"
                   d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
                 ></path>
+                <path
+                  v-else-if="condition.field === 'modelName'"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                ></path>
               </svg>
               <select v-model="condition.field" class="field-select">
                 <option value="createdAt">创建时间</option>
                 <option value="updatedAt">更新时间</option>
                 <option value="taskName">任务名称</option>
+                <option value="modelName">模型名称</option>
               </select>
             </div>
 

@@ -447,7 +447,7 @@ function getFieldValue(record: AnalysisRecord, field: string): string | number {
     case 'modelType':
       return record.model_name || record.result?.model_name || ''
     case 'fileName':
-      return record.video_name
+      return record.task_name || record.video_name
     case 'cellCount':
       return record.result?.cell_count || 0
     default:
@@ -461,6 +461,21 @@ const displayRecords = computed(() => {
     return filteredRecords.value
   }
   return store.records
+})
+
+// 判断是否应用了有效排序（非默认排序）
+const isSorting = computed(() => {
+  // 默认排序是单个条件：created_at desc
+  const defaultSort = [{ field: 'createdAt', direction: 'desc' }]
+
+  // 如果排序条件数量不是1，或者是多个条件，肯定是有效排序
+  if (sortConditions.value.length !== 1) {
+    return sortConditions.value.length > 0
+  }
+
+  // 如果是单个条件，检查是否与默认排序不同
+  const current = sortConditions.value[0]!
+  return current.field !== 'createdAt' || current.direction !== 'desc'
 })
 </script>
 
@@ -504,7 +519,7 @@ const displayRecords = computed(() => {
       <div class="section-header">
         <h2 class="section-title">历史记录</h2>
         <div class="section-actions">
-          <button class="btn-sort" @click="openSort" title="排序历史记录">
+          <button class="btn-sort" :class="{ active: isSorting }" @click="openSort" title="排序历史记录">
             <svg
                 fill="none"
                 stroke="currentColor"
@@ -1168,6 +1183,18 @@ const displayRecords = computed(() => {
 
 .btn-sort:active {
   transform: scale(0.95);
+}
+
+.btn-sort.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.btn-sort.active:hover {
+  background: var(--accent-blue-hover);
+  border-color: var(--accent-blue-hover);
+  color: white;
 }
 
 .btn-sort .sort-icon {
