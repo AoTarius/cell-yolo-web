@@ -255,6 +255,8 @@ class VideoProcessor:
         Returns:
             JSON 结果字典
         """
+        ensure_temp_files_directory()  # 确保 temp_files 文件夹存在
+
         # 读取 tracking_summary.txt
         summary_path = output_dir / 'tracking_summary.txt'
         summary = self._parse_summary(summary_path)
@@ -402,9 +404,14 @@ class VideoProcessor:
             'cells': cells
         }
 
-        # 保存 JSON 文件
+        # 保存 JSON 文件到任务目录
         json_path = self.output_base_dir / 'tasks' / task_id / 'result.json'
         with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        # 额外保存一份 JSON 文件到临时文件夹
+        temp_json_path = Path(__file__).parent / 'temp_files' / 'result.json'
+        with open(temp_json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
         if progress_callback:
@@ -505,3 +512,10 @@ class VideoProcessor:
             frame_labels[frame_name] = labels
 
         return frame_labels
+
+
+def ensure_temp_files_directory():
+    """检查并创建 temp_files 文件夹"""
+    temp_files_path = Path(__file__).parent / 'temp_files'
+    if not temp_files_path.exists():
+        temp_files_path.mkdir()
