@@ -122,19 +122,15 @@ def parse_json_data(json_path):
 
     return task_info, processed_cells
 
-def save_to_database(task_info, cells):
+def save_to_database(cells):
     """
-    将解析后的数据存入数据库。
+    将解析后的数据存入 Cells 表。
     """
     try:
-        # 获取任务对象
-        task = Task.objects.get(task_id=task_info['task_id'])
-
         # 批量插入 Cell 数据
         db_cells = []
         for cell in cells:
             db_cells.append(Cell(
-                task=task,
                 frame=cell['frame'],
                 track_id=cell['track_id'],
                 bb_left=cell['bb_left'],
@@ -149,10 +145,10 @@ def save_to_database(task_info, cells):
         with transaction.atomic():
             Cell.objects.bulk_create(db_cells)
 
-        print(f"任务 {task_info['task_id']} 的数据已成功存入数据库！")
+        print(f"成功存入 {len(db_cells)} 条 Cell 数据！")
 
-    except Task.DoesNotExist:
-        print(f"任务 {task_info['task_id']} 不存在，无法存入数据库！")
+    except Exception as e:
+        print(f"存入 Cells 表时发生错误: {e}")
 
 def clear_temp_files():
     """清空 temp_files 文件夹中的内容"""
@@ -165,10 +161,12 @@ def clear_temp_files():
 
 def process_and_save(json_path):
     """
-    主函数：解析 JSON 文件并存入数据库。
+    主函数：解析 JSON 文件并存入 Cells 表。
     """
-    json_file_path = Path(__file__).parent / 'temp_files' / 'result.json'
-    process_and_save(json_file_path)
+    task_info, cells = parse_json_data(json_path)
+    save_to_database(cells)
+
+    # 清空 temp_files 目录
     clear_temp_files()
 
 if __name__ == "__main__":
