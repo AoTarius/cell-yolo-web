@@ -120,7 +120,11 @@ class ModelFile(BaseModel):
 
 
 class Task(BaseModel):
-    """任务表"""
+    """任务表
+
+    annotated_video_name 字段说明：
+    存储路径为 {user.output_base_path}/tasks/{task_id}/output/{annotated_video_name}
+    """
 
     STATUS_CHOICES = [
         ('pending', '待处理'),
@@ -147,14 +151,14 @@ class Task(BaseModel):
         verbose_name = '任务'
         verbose_name_plural = '任务'
         indexes = [
-            models.Index(fields=['task_id']),
-            models.Index(fields=['user']),
-            models.Index(fields=['user', 'status']),
-            models.Index(fields=['user', 'is_deleted']),
-            models.Index(fields=['video']),
-            models.Index(fields=['model']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['user', 'status', 'is_deleted']),
+            models.Index(fields=['task_id'], name='idx_task_id'),
+            models.Index(fields=['user'], name='idx_user_id'),
+            models.Index(fields=['user', 'status'], name='idx_user_status'),
+            models.Index(fields=['user', 'is_deleted'], name='idx_user_deleted'),
+            models.Index(fields=['video'], name='idx_video_id'),
+            models.Index(fields=['model'], name='idx_model_id'),
+            models.Index(fields=['created_at'], name='idx_created_at'),
+            models.Index(fields=['user', 'status', 'is_deleted'], name='idx_user_status_deleted'),
         ]
 
     def __str__(self):
@@ -162,7 +166,43 @@ class Task(BaseModel):
 
 
 class Cell(BaseModel):
-    """细胞表"""
+    """细胞表
+
+    metrics_json 字段结构说明：
+    {
+        "bbox": {"left": float, "top": float, "width": float, "height": float},
+        "center": {"cx": float, "cy": float},
+        "shape": {
+            "perimeter": float, "circularity": float, "circularity_increment": float,
+            "aspect_ratio": float, "shape_change_rate": float, "spreading_index": float,
+            "protrusion_activity_index": float
+        },
+        "motion": {
+            "vx": float, "vy": float, "distance": float, "migration_speed": float,
+            "mean_square_displacement": float, "turning_angle": float, "persistence_index": float
+        },
+        "visibility": float,
+        "cell_class": int,
+        "confidence": float
+    }
+    """
+
+    DEFAULT_METRICS_JSON = {
+        "bbox": {"left": 0.0, "top": 0.0, "width": 0.0, "height": 0.0},
+        "center": {"cx": 0.0, "cy": 0.0},
+        "shape": {
+            "perimeter": 0.0, "circularity": 0.0, "circularity_increment": 0.0,
+            "aspect_ratio": 0.0, "shape_change_rate": 0.0, "spreading_index": 0.0,
+            "protrusion_activity_index": 0.0
+        },
+        "motion": {
+            "vx": 0.0, "vy": 0.0, "distance": 0.0, "migration_speed": 0.0,
+            "mean_square_displacement": 0.0, "turning_angle": 0.0, "persistence_index": 0.0
+        },
+        "visibility": 1.0,
+        "cell_class": 0,
+        "confidence": 1.0
+    }
 
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, db_column='task_id', verbose_name='所属任务')
     frame = models.IntegerField(verbose_name='帧号')
@@ -174,6 +214,13 @@ class Cell(BaseModel):
     conf = models.FloatField(verbose_name='置信度')
     class_id = models.IntegerField(default=0, verbose_name='类别')
     visibility = models.FloatField(null=True, blank=True, verbose_name='可见性')
+    area = models.FloatField(default=0.0, verbose_name='面积')
+    speed = models.FloatField(default=0.0, verbose_name='速度')
+    tracking_persistence = models.FloatField(default=0.0, verbose_name='持续追踪度')
+    metrics_json = models.JSONField(
+        default=DEFAULT_METRICS_JSON,
+        verbose_name='聚合后的指标 JSON'
+    )
 
     class Meta:
         db_table = 'cells'
@@ -191,7 +238,11 @@ class Cell(BaseModel):
         return f"Task {self.task.task_id} - Frame {self.frame} - Track {self.track_id}"
 
 class TaskStatus(BaseModel):
-    """任务实时状态表"""
+    """任务实时状态表
+
+    estimated_remaining_time 字段说明：
+    表示任务预计剩余时间（秒），由后台动态计算并更新。
+    """
 
     STATUS_CHOICES = [
         ('pending', '待处理'),
@@ -214,9 +265,9 @@ class TaskStatus(BaseModel):
         verbose_name = '任务状态'
         verbose_name_plural = '任务状态'
         indexes = [
-            models.Index(fields=['task']),
-            models.Index(fields=['task', 'status']),
-            models.Index(fields=['status']),
+            models.Index(fields=['task'], name='idx_task_status_id'),
+            models.Index(fields=['task', 'status'], name='idx_task_status'),
+            models.Index(fields=['status'], name='idx_status'),
         ]
 
     def __str__(self):

@@ -76,6 +76,7 @@ def check_and_fix_table_structure():
                 "conf": "DOUBLE DEFAULT 0.3",
                 "imgsz": "INT DEFAULT 1024",
                 "fps": "INT DEFAULT 10",
+                "annotated_video_name": "VARCHAR(255)",
             },
             "cells": {
                 "task_id": "BIGINT NOT NULL",
@@ -88,6 +89,10 @@ def check_and_fix_table_structure():
                 "conf": "FLOAT NOT NULL",
                 "class_id": "INT DEFAULT 0",
                 "visibility": "FLOAT",
+                "area": "FLOAT DEFAULT 0.0",
+                "speed": "FLOAT DEFAULT 0.0",
+                "tracking_persistence": "FLOAT DEFAULT 0.0",
+                "metrics_json": "JSON DEFAULT '{\"bbox\": {\"left\": 0.0, \"top\": 0.0, \"width\": 0.0, \"height\": 0.0}, \"center\": {\"cx\": 0.0, \"cy\": 0.0}, \"shape\": {\"perimeter\": 0.0, \"circularity\": 0.0, \"circularity_increment\": 0.0, \"aspect_ratio\": 0.0, \"shape_change_rate\": 0.0, \"spreading_index\": 0.0, \"protrusion_activity_index\": 0.0}, \"motion\": {\"vx\": 0.0, \"vy\": 0.0, \"distance\": 0.0, \"migration_speed\": 0.0, \"mean_square_displacement\": 0.0, \"turning_angle\": 0.0, \"persistence_index\": 0.0}, \"visibility\": 1.0, \"cell_class\": 0, \"confidence\": 1.0}'",
             },
             "task_status": {
                 "task_id": "VARCHAR(36) NOT NULL",
@@ -110,6 +115,10 @@ def check_and_fix_table_structure():
 
                 if not result:
                     print(f"✗ 字段缺失: {field} (表: {table})")
+                    # 添加缺失字段
+                    alter_sql = f"ALTER TABLE {table} ADD COLUMN {field} {expected_definition}"
+                    db.execute(alter_sql)
+                    print(f"✓ 添加字段: {field} -> {expected_definition}")
                     continue
 
                 actual_definition = result[0]["Type"]
@@ -124,9 +133,9 @@ def check_and_fix_table_structure():
 
                 print(f"✓ 字段检查通过: {field}")
 
-    print("=" * 50)
-    print("✓ 表结构检查完成")
-    print("=" * 50)
+        print("=" * 50)
+        print("✓ 表结构检查完成")
+        print("=" * 50)
 
 
 def init_root_user() -> bool:

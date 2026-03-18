@@ -135,7 +135,7 @@ python scripts/init_db.py
 #### task_status 表
 记录任务实时处理状态的表，存储动态状态和实时进度信息
 - `id`: 状态记录 ID（主键，INTEGER, 自增）
-- `task_id`: 关联任务ID（VARCHAR(36), NOT NULL, UNIQUE），关联tasks表的task_id字段
+- `task_status_id`: 关联任务ID（VARCHAR(36), NOT NULL, UNIQUE），关联tasks表的task_id字段
 - `status`: 任务状态（VARCHAR(20), 默认'pending', 枚举值: 'pending', 'processing', 'completed', 'failed'）
 - `progress`: 进度（INTEGER, 默认0, 范围0-100）
 - `stage`: 当前处理阶段（VARCHAR(50), 可为NULL）
