@@ -3,29 +3,36 @@ import '@/assets/styles/colors.css'
 import { computed } from 'vue'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 
+type TabType = 'video' | 'cell' | 'chart' | 'frame'
+
 const props = defineProps<{
   record: AnalysisRecord
   isExporting: boolean
-  viewMode: 'overall' | 'detail'
+  activeTab: TabType
 }>()
 
 const emit = defineEmits<{
   export: [format: 'csv' | 'json']
   download: []
-  viewModeChange: [mode: 'overall' | 'detail']
+  tabChange: [tab: TabType]
 }>()
 
 // 滑块位置计算
 const sliderStyle = computed(() => {
+  const tabPositions: Record<TabType, string> = {
+    video: '0%',
+    cell: '25%',
+    chart: '50%',
+    frame: '75%'
+  }
   return {
-    left: props.viewMode === 'overall' ? '0' : '50%'
+    left: tabPositions[props.activeTab]
   }
 })
 
-// 切换视图模式
-function toggleViewMode() {
-  const newMode = props.viewMode === 'overall' ? 'detail' : 'overall'
-  emit('viewModeChange', newMode)
+// 切换选项卡
+function switchTab(tab: TabType) {
+  emit('tabChange', tab)
 }
 </script>
 
@@ -55,12 +62,16 @@ function toggleViewMode() {
       </div>
     </div>
     <div class="header-actions">
-      <button class="view-toggle" @click="toggleViewMode">
+      <div class="view-toggle">
         <div class="view-toggle-slider" :style="sliderStyle"></div>
-        <span class="view-toggle-item" :class="{ active: props.viewMode === 'overall' }">整体</span>
+        <span class="view-toggle-item" :class="{ active: props.activeTab === 'video' }" @click="switchTab('video')">视频对比</span>
         <span class="view-toggle-divider"></span>
-        <span class="view-toggle-item" :class="{ active: props.viewMode === 'detail' }">细化</span>
-      </button>
+        <span class="view-toggle-item" :class="{ active: props.activeTab === 'cell' }" @click="switchTab('cell')">细胞详情</span>
+        <span class="view-toggle-divider"></span>
+        <span class="view-toggle-item" :class="{ active: props.activeTab === 'chart' }" @click="switchTab('chart')">图表绘制</span>
+        <span class="view-toggle-divider"></span>
+        <span class="view-toggle-item" :class="{ active: props.activeTab === 'frame' }" @click="switchTab('frame')">逐帧分析</span>
+      </div>
       <div class="header-actions-spacer"></div>
       <button class="btn-action" @click="emit('export', 'csv')" :disabled="isExporting">
         <svg
@@ -205,8 +216,8 @@ function toggleViewMode() {
   cursor: pointer;
   transition: all 0.2s;
   overflow: hidden;
-  width: 140px;
-  margin-right:5vh;
+  width: 320px;
+  margin-right: 5vh;
 }
 
 :global(:root:not(.dark)) .view-toggle {
@@ -223,7 +234,7 @@ function toggleViewMode() {
   border-radius: 4px;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 0;
-  width: 50%;
+  width: 25%;
 }
 
 :global(:root:not(.dark)) .view-toggle-slider {
@@ -231,7 +242,7 @@ function toggleViewMode() {
 }
 
 .view-toggle-item {
-  padding: 0.375rem 0;
+  padding: 0.5rem 0.25rem;
   font-size: 0.875rem;
   color: var(--text-muted);
   transition: all 0.2s;

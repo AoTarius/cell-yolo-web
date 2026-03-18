@@ -14,7 +14,7 @@ const sortDirection = ref<'asc' | 'desc'>('asc')
 const sortedCells = computed(() => {
   const cells = store.selectedRecord?.result?.cells || []
   if (!sortColumn.value) return cells
-  
+
   const sorted = [...cells].sort((a, b) => {
     let comparison = 0
 
@@ -53,7 +53,7 @@ const sortedCells = computed(() => {
     if (comparison === 0) {
       const aId2 = typeof a.cell_id === 'string' ? parseInt(a.cell_id.replace(/\D/g, '') || '0') : 0
       const bId2 = typeof b.cell_id === 'string' ? parseInt(b.cell_id.replace(/\D/g, '') || '0') : 0
-      
+
       // 二级排序也遵循当前的排序方向
       let secondaryComparison = aId2 - bId2
       if (sortDirection.value === 'desc') {
