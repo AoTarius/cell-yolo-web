@@ -34,7 +34,9 @@ let connectionCheckInterval: number | null = null
 async function checkConnection() {
   try {
     // 尝试调用一个简单的 API 来检查连接
-    await axios.get('/api/tasks/', { timeout: 3000 })
+    // 传递用户名参数，避免返回所有用户的大量数据
+    const params = userStore.currentUser?.username ? { username: userStore.currentUser.username } : {}
+    await axios.get('/api/tasks/', { params, timeout: 3000 })
     isConnected.value = true
   } catch (error) {
     isConnected.value = false

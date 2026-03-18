@@ -286,7 +286,7 @@ class ProcessTaskView(APIView):
                     FROM models
                     WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
                     """
-                    cursor.execute(model_sql, (user_id, model_name.rsplit('.', 1)[0]))
+                    cursor.execute(model_sql, (user_id, model_name))
                     model_record = cursor.fetchone()
 
                     if not model_record:
@@ -882,7 +882,7 @@ class ModelListView(APIView):
                 return Response({
                     'models': models,
                     'count': len(models),
-                    'default': 'best_split.pt'
+                    'default': 'best_split'
                 }, status=status.HTTP_200_OK)
 
         finally:
@@ -1572,7 +1572,7 @@ class ModelUploadView(APIView):
                                 SET is_deleted = FALSE, updated_at = NOW(), model_name = %s
                                 WHERE id = %s
                                 """
-                                cursor.execute(update_sql, (model_file.name, existing_model['id']))
+                                cursor.execute(update_sql, (model_name, existing_model['id']))
                                 connection.commit()
                                 message = '模型已恢复'
                             else:
@@ -1581,7 +1581,7 @@ class ModelUploadView(APIView):
                                 INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted)
                                 VALUES (%s, %s, %s, NOW(), NOW(), FALSE)
                                 """
-                                cursor.execute(insert_sql, (user_id, model_file.name, model_file.name))
+                                cursor.execute(insert_sql, (user_id, model_name, model_file.name))
                                 connection.commit()
                                 message = '模型上传成功'
                         else:
@@ -1596,7 +1596,7 @@ class ModelUploadView(APIView):
                         INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted)
                         VALUES (%s, %s, %s, NOW(), NOW(), FALSE)
                         """
-                        cursor.execute(insert_sql, (user_id, model_file.name, model_file.name))
+                        cursor.execute(insert_sql, (user_id, model_name, model_file.name))
                         connection.commit()
                         message = '模型上传成功'
 
