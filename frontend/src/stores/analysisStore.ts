@@ -83,6 +83,15 @@ export const useAnalysisStore = defineStore('analysis', () => {
   // 当前选中的分析记录ID
   const selectedId = ref<string | null>(null)
 
+  // 排序条件
+  const sortConditions = ref<Array<{ id: string; field: string; direction: string }>>([
+    {
+      id: '1',
+      field: 'createdAt',
+      direction: 'desc'
+    }
+  ])
+
   // 当前选中的记录
   const selectedRecord = computed(() => {
     if (!selectedId.value) return null
@@ -115,6 +124,11 @@ export const useAnalysisStore = defineStore('analysis', () => {
     selectedId.value = id
     showUploadPanel.value = false
     selectedCellId.value = null // 重置细胞选择
+  }
+
+  // 设置排序条件
+  function setSortConditions(conditions: Array<{ id: string; field: string; direction: string }>) {
+    sortConditions.value = conditions
   }
 
   // 清除选中状态
@@ -171,7 +185,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
       const response = await axios.get('/api/tasks/', {
         params: {
-          username: userStore.currentUser.username
+          username: userStore.currentUser.username,
+          sort_by: JSON.stringify(sortConditions.value)
         }
       })
       const historyTasks = response.data.tasks || []
@@ -466,6 +481,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
     selectedCellId,
     selectedCellData,
     compareRecords,
+    sortConditions,
     selectRecord,
     clearSelection,
     createNewAnalysis,
@@ -483,5 +499,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     updateTaskProgress,
     startGlobalPolling,
     stopGlobalPolling,
+    setSortConditions,
   }
 })

@@ -696,6 +696,40 @@ class TaskListView(APIView):
         """获取所有任务（包括已完成和处理中）的列表"""
         username = request.GET.get('username')
 
+        # 获取排序参数
+        sort_by = request.GET.get('sort_by', '[]')
+        try:
+            import json
+            sort_conditions = json.loads(sort_by)
+            if not isinstance(sort_conditions, list):
+                sort_conditions = []
+        except (json.JSONDecodeError, ValueError):
+            sort_conditions = []
+
+        # 构建排序字段映射
+        field_mapping = {
+            'createdAt': 't.created_at',
+            'updatedAt': 't.updated_at',
+            'taskName': 't.task_name'
+        }
+
+        # 构建 ORDER BY 子句
+        order_by_clauses = []
+        for condition in sort_conditions:
+            field = condition.get('field')
+            direction = condition.get('direction', 'desc')
+
+            if field in field_mapping:
+                db_field = field_mapping[field]
+                direction_upper = direction.upper()
+                order_by_clauses.append(f"{db_field} {direction_upper}")
+
+        # 默认排序（如果没有提供排序条件）
+        if not order_by_clauses:
+            order_by_clauses.append('t.created_at DESC')
+
+        order_by_sql = ', '.join(order_by_clauses)
+
         try:
             # 连接数据库
             connection = pymysql.connect(
@@ -716,7 +750,7 @@ class TaskListView(APIView):
             with connection.cursor() as cursor:
                 # 查询任务列表
                 if username:
-                    task_sql = """
+                    task_sql = f"""
                     SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status,
                            ts.progress, ts.stage, ts.current_frame, ts.total_frames,
                            t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
@@ -727,11 +761,11 @@ class TaskListView(APIView):
                     LEFT JOIN models m ON t.model_id = m.id AND m.is_deleted = FALSE
                     LEFT JOIN task_status ts ON t.task_id = ts.task_id
                     WHERE u.username = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
-                    ORDER BY t.created_at DESC
+                    ORDER BY {order_by_sql}
                     """
                     cursor.execute(task_sql, (username,))
                 else:
-                    task_sql = """
+                    task_sql = f"""
                     SELECT t.id, t.user_id, t.video_id, t.model_id, t.task_id, t.task_name, t.status,
                            ts.progress, ts.stage, ts.current_frame, ts.total_frames,
                            t.conf, t.imgsz, t.fps, t.annotated_video_name, t.error_message,
@@ -742,7 +776,7 @@ class TaskListView(APIView):
                     LEFT JOIN models m ON t.model_id = m.id AND m.is_deleted = FALSE
                     LEFT JOIN task_status ts ON t.task_id = ts.task_id
                     WHERE t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
-                    ORDER BY t.created_at DESC
+                    ORDER BY {order_by_sql}
                     """
                     cursor.execute(task_sql)
 
@@ -1521,9 +1555,9 @@ class ModelUploadView(APIView):
                     # 检查模型是否已存在（包括软删除的记录）
                     check_sql = """
                     SELECT id, is_deleted, model_path FROM models
-                    WHERE user_id = %s
+                    WHERE user_id = %s AND model_name = %s
                     """
-                    cursor.execute(check_sql, (user_id,))
+                    cursor.execute(check_sql, (user_id, model_name))
                     existing_model = cursor.fetchone()
 
                     if existing_model:

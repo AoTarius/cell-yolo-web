@@ -8,6 +8,7 @@ import { authApi } from '@/api/authApi'
 import ConfirmDialog from './ConfirmDialog.vue'
 import SettingsDialog from './SettingsDialog.vue'
 import HistoryFilter, { type FilterCondition } from './HistoryFilter.vue'
+import HistorySort, { type SortCondition } from './HistorySort.vue'
 import axios from 'axios'
 import '@/assets/styles/colors.css'
 
@@ -95,6 +96,14 @@ const outputPath = ref('')
 const showFilterDialog = ref(false)
 const isFiltering = ref(false)
 const filteredRecords = ref<AnalysisRecord[]>([])
+const showSortDialog = ref(false)
+const sortConditions = ref<SortCondition[]>([
+  {
+    id: '1',
+    field: 'createdAt',
+    direction: 'desc'
+  }
+])
 
 // 主题切换
 const isDark = ref(true)
@@ -368,6 +377,21 @@ function openFilter() {
   showFilterDialog.value = true
 }
 
+// 打开排序器
+function openSort() {
+  showSortDialog.value = true
+}
+
+// 应用排序
+function handleSort(conditions: SortCondition[]) {
+  sortConditions.value = conditions
+  // 更新 store 中的排序条件
+  store.setSortConditions(conditions)
+  // 重新加载任务列表以应用排序
+  store.loadHistoryTasks()
+  showToast('排序已应用', 'success')
+}
+
 // 应用筛选
 function handleFilter(conditions: FilterCondition[]) {
   if (conditions.length === 0) {
@@ -479,22 +503,40 @@ const displayRecords = computed(() => {
     <div v-if="!isCollapsed" class="sidebar-content">
       <div class="section-header">
         <h2 class="section-title">历史记录</h2>
-        <button class="btn-filter" :class="{ active: isFiltering }" @click="openFilter" title="筛选历史记录">
-          <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-              class="filter-icon"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-              ></path>
-            </svg>
-        </button>
+        <div class="section-actions">
+          <button class="btn-sort" @click="openSort" title="排序历史记录">
+            <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+                class="sort-icon"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+                ></path>
+              </svg>
+          </button>
+          <button class="btn-filter" :class="{ active: isFiltering }" @click="openFilter" title="筛选历史记录">
+            <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+                class="filter-icon"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                ></path>
+              </svg>
+          </button>
+        </div>
       </div>
       <div class="records-list">
         <div
@@ -674,6 +716,13 @@ const displayRecords = computed(() => {
     <HistoryFilter
       v-model:visible="showFilterDialog"
       @filter="handleFilter"
+    />
+
+    <!-- 历史记录排序器 -->
+    <HistorySort
+      v-model:visible="showSortDialog"
+      :current-sort="sortConditions"
+      @sort="handleSort"
     />
 
     <!-- 底部状态栏 -->
@@ -1046,6 +1095,12 @@ const displayRecords = computed(() => {
   padding: 0 0.5rem;
 }
 
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .btn-filter {
   width: 28px;
   height: 28px;
@@ -1085,6 +1140,37 @@ const displayRecords = computed(() => {
 }
 
 .btn-filter .filter-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-sort {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-sort:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  transform: translateY(-1px);
+}
+
+.btn-sort:active {
+  transform: scale(0.95);
+}
+
+.btn-sort .sort-icon {
   width: 14px;
   height: 14px;
 }

@@ -29,29 +29,29 @@ const emit = defineEmits<Emits>()
 const filterConditions = ref<FilterCondition[]>([
   {
     id: '1',
+    field: 'fileName',
+    operator: 'contains',
+    value: '',
+    enabled: false
+  },
+  {
+    id: '2',
     field: 'status',
     operator: 'equals',
     value: '',
     enabled: false
   },
   {
-    id: '2',
+    id: '3',
     field: 'createTime',
     operator: 'equals',
     value: '',
     enabled: false
   },
   {
-    id: '3',
+    id: '4',
     field: 'modelType',
     operator: 'equals',
-    value: '',
-    enabled: false
-  },
-  {
-    id: '4',
-    field: 'fileName',
-    operator: 'contains',
     value: '',
     enabled: false
   },
@@ -66,6 +66,11 @@ const filterConditions = ref<FilterCondition[]>([
 
 // 字段定义
 const fieldDefinitions = {
+  fileName: {
+    label: '文件名',
+    icon: 'fa-file-video',
+    operators: ['contains', 'notContains']
+  },
   status: {
     label: '状态',
     icon: 'fa-circle-check',
@@ -80,11 +85,6 @@ const fieldDefinitions = {
     label: '模型类型',
     icon: 'fa-microchip',
     operators: ['equals', 'notEquals']
-  },
-  fileName: {
-    label: '文件名',
-    icon: 'fa-file-video',
-    operators: ['contains', 'notContains']
   },
   cellCount: {
     label: '细胞数量',
@@ -279,7 +279,14 @@ function handleRangeValueChange(condition: FilterCondition, index: number, newVa
                   class="field-icon"
                 >
                   <path
-                    v-if="condition.field === 'status'"
+                    v-if="condition.field === 'fileName'"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  ></path>
+                  <path
+                    v-else-if="condition.field === 'status'"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     stroke-width="2"
@@ -298,13 +305,6 @@ function handleRangeValueChange(condition: FilterCondition, index: number, newVa
                     stroke-linejoin="round"
                     stroke-width="2"
                     d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                  ></path>
-                  <path
-                    v-else-if="condition.field === 'fileName'"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                   ></path>
                   <path
                     v-else-if="condition.field === 'cellCount'"
