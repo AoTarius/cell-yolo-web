@@ -108,26 +108,61 @@ const avgArea = computed(() => {
         </div>
       </div>
 
-      <!-- 轨迹图占位 -->
-      <div class="trajectory-section">
-        <h3>运动轨迹</h3>
-        <div class="trajectory-placeholder">
-          <svg
-            class="placeholder-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            ></path>
-          </svg>
-          <p>细胞运动轨迹图</p>
-          <p class="placeholder-hint">此处将展示该细胞的详细运动轨迹</p>
+      <!-- 轨迹图和统计分析 - 三栏布局 -->
+      <div class="analysis-grid">
+        <!-- 轨迹图占位 -->
+        <div class="trajectory-section">
+          <h3>运动轨迹</h3>
+          <div class="trajectory-placeholder">
+            <svg
+              class="placeholder-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              ></path>
+            </svg>
+            <p>细胞运动轨迹图</p>
+            <p class="placeholder-hint">此处将展示该细胞的详细运动轨迹</p>
+          </div>
+        </div>
+
+        <!-- 竖向分隔线 -->
+        <div class="analysis-divider"></div>
+
+        <!-- 统计信息占位 -->
+        <div class="stats-section">
+          <h3>统计分析</h3>
+          <div class="stats-placeholder">
+            <svg
+              class="placeholder-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
+              ></path>
+            </svg>
+            <p>统计图表</p>
+            <p class="placeholder-hint">此处将展示速度分布、方向变化等统计图表</p>
+          </div>
         </div>
       </div>
 
@@ -162,34 +197,6 @@ const avgArea = computed(() => {
         </div>
       </div>
 
-      <!-- 统计信息占位 -->
-      <div class="stats-section">
-        <h3>统计分析</h3>
-        <div class="stats-placeholder">
-          <svg
-            class="placeholder-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
-            ></path>
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
-            ></path>
-          </svg>
-          <p>统计图表</p>
-          <p class="placeholder-hint">此处将展示速度分布、方向变化等统计图表</p>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -250,9 +257,7 @@ const avgArea = computed(() => {
 }
 
 .info-section,
-.trajectory-section,
-.position-section,
-.stats-section {
+.position-section {
   margin-bottom: 2rem;
 }
 
@@ -293,6 +298,28 @@ const avgArea = computed(() => {
   color: var(--text-primary);
 }
 
+/* 三栏布局容器 */
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.trajectory-section,
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.analysis-divider {
+  width: 1px;
+  background: var(--border-color);
+  height: 100%;
+  align-self: stretch;
+}
+
 .trajectory-placeholder,
 .stats-placeholder {
   background: var(--bg-card);
@@ -301,6 +328,11 @@ const avgArea = computed(() => {
   padding: 4rem 2rem;
   text-align: center;
   color: var(--text-muted);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .placeholder-icon {
