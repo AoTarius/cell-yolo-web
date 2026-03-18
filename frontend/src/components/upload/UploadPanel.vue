@@ -455,8 +455,8 @@ function getStageLabel(stage: string): string {
 .upload-panel {
   flex: 1;
   display: flex;
-  overflow: hidden;
-  align-items: center;
+  overflow-y: auto;
+  align-items: flex-start;
   justify-content: center;
   background: var(--bg-main);
   transition: background 0.3s;
@@ -472,6 +472,7 @@ function getStageLabel(stage: string): string {
   display: flex;
   flex-direction: column;
   padding: 2rem;
+  margin: 3rem 0;
 }
 
 h2 {
@@ -992,9 +993,9 @@ h2 {
 }
 
 .setting-select:hover {
-  background: var(--border-color);
+  background: var(--bg-input);
   border-color: var(--accent-blue);
-  color: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 :global(:root:not(.dark)) .setting-select:hover {
@@ -1007,13 +1008,11 @@ h2 {
   outline: none;
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px var(--alpha-focus);
-  background: var(--border-color);
 }
 
 :global(:root:not(.dark)) .setting-select:focus {
   border-color: var(--accent-blue);
   box-shadow: 0 0 0 3px var(--alpha-focus);
-  background: var(--bg-card-light);
 }
 
 .setting-hint {
