@@ -323,7 +323,7 @@ function resetSort() {
           </div>
 
           <!-- 添加排序条件按钮 -->
-          <button class="btn-add" @click="addSortCondition" v-if="sortConditions.length < 3">
+          <button class="btn-add" @click="addSortCondition" v-if="sortConditions.length < 4">
             <svg
               fill="none"
               stroke="currentColor"
