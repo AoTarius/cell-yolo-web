@@ -122,7 +122,6 @@ python scripts/init_db.py
 - `task_id`: 任务唯一标识（VARCHAR(36), NOT NULL, UNIQUE），是创建tasks内文件夹的标识
 - `task_name`: 任务名（VARCHAR(255), NOT NULL）
 - `status`: 任务状态（VARCHAR(20), NOT NULL, 枚举值: 'pending', 'processing', 'completed', 'failed'）
-- `total_frames`: 总帧数（INTEGER, 默认0）
 - `conf`: 置信度阈值（FLOAT, 默认0.3, 范围0-1）
 - `imgsz`: 图像尺寸（INTEGER, 默认1024）
 - `fps`: 帧率（INTEGER, 默认10）
@@ -143,7 +142,6 @@ python scripts/init_db.py
 - `current_frame`: 当前处理帧数（INTEGER, 默认0）
 - `total_frames`: 总帧数（INTEGER, 默认0）
 - `error_message`: 错误信息（TEXT, 可为NULL）
-- `estimated_remaining_time`: 预计剩余时间（INTEGER, 可为NULL, 单位：秒）
 - `created_at`: 创建时间（DATETIME, NOT NULL, 默认当前时间）
 - `updated_at`: 更新时间（DATETIME, NOT NULL, 默认当前时间）
 - `is_deleted`: 软删除标识（BOOLEAN, NOT NULL, 默认False）
