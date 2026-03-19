@@ -186,23 +186,24 @@ class Cell(BaseModel):
         "confidence": float
     }
     """
-
-    DEFAULT_METRICS_JSON = {
-        "bbox": {"left": 0.0, "top": 0.0, "width": 0.0, "height": 0.0},
-        "center": {"cx": 0.0, "cy": 0.0},
-        "shape": {
-            "perimeter": 0.0, "circularity": 0.0, "circularity_increment": 0.0,
-            "aspect_ratio": 0.0, "shape_change_rate": 0.0, "spreading_index": 0.0,
-            "protrusion_activity_index": 0.0
-        },
-        "motion": {
-            "vx": 0.0, "vy": 0.0, "distance": 0.0, "migration_speed": 0.0,
-            "mean_square_displacement": 0.0, "turning_angle": 0.0, "persistence_index": 0.0
-        },
-        "visibility": 1.0,
-        "cell_class": 0,
-        "confidence": 1.0
-    }
+    def get_default_metrics():
+        """返回默认的 metrics_json 值"""
+        return {
+            "bbox": {"left": 0.0, "top": 0.0, "width": 0.0, "height": 0.0},
+            "center": {"cx": 0.0, "cy": 0.0},
+            "shape": {
+                "perimeter": 0.0, "circularity": 0.0, "circularity_increment": 0.0,
+                "aspect_ratio": 0.0, "shape_change_rate": 0.0, "spreading_index": 0.0,
+                "protrusion_activity_index": 0.0
+            },
+            "motion": {
+                "vx": 0.0, "vy": 0.0, "distance": 0.0, "migration_speed": 0.0,
+                "mean_square_displacement": 0.0, "turning_angle": 0.0, "persistence_index": 0.0
+            },
+            "visibility": 1.0,
+            "cell_class": 0,
+            "confidence": 1.0
+        }
 
     task = models.ForeignKey(Task, on_delete=models.DO_NOTHING, db_column='task_id', verbose_name='所属任务')
     frame = models.IntegerField(verbose_name='帧号')
@@ -218,7 +219,7 @@ class Cell(BaseModel):
     speed = models.FloatField(default=0.0, verbose_name='速度')
     tracking_persistence = models.FloatField(default=0.0, verbose_name='持续追踪度')
     metrics_json = models.JSONField(
-        default=DEFAULT_METRICS_JSON,
+        default=get_default_metrics,  # 使用顶层函数返回默认值
         verbose_name='聚合后的指标 JSON'
     )
 

@@ -12,6 +12,7 @@ import threading
 from pathlib import Path
 from typing import Callable, Optional, Dict, Any, Tuple
 from datetime import datetime
+from .preprocess_data import process_and_save  # 导入数据预处理函数
 
 
 # 线程标识辅助函数
@@ -120,6 +121,9 @@ class VideoProcessor:
         task_dir = self.output_base_dir / 'tasks' / task_id
         task_dir.mkdir(parents=True, exist_ok=True)
 
+        # 确保模型名称已定义
+        model_name = model_path.split('/')[-1] if model_path else 'unknown_model'
+
         # 阶段1: 分解视频为帧
         if progress_callback:
             progress_callback('extracting', 0, {'message': '开始分解视频...'})
@@ -209,12 +213,6 @@ class VideoProcessor:
             progress_callback('processing', 100, {'message': 'YOLO 处理完成'})
 
         # 阶段3: 生成 JSON 结果
-        if progress_callback:
-            progress_callback('packaging', 0, {'message': '生成 JSON 结果...'})
-
-        # 从完整路径中提取模型名称（用于显示）
-        model_name = Path(model_path).stem if model_path else MODEL_NAME
-
         result = self._generate_json_result(
             task_id,
             output_dir,
@@ -225,9 +223,16 @@ class VideoProcessor:
             progress_callback=lambda prog: progress_callback('packaging', prog, {'message': '生成 JSON 结果...'})
         )
 
-        if progress_callback:
-            progress_callback('packaging', 100, {'message': '处理完成'})
-
+        # 阶段4: 数据预处理并写入数据库
+        try:
+            json_path = output_dir.parent / 'result.json'
+            process_and_save(json_path, task_id=task_id)  
+            if progress_callback:
+                progress_callback('data_processing', 100, {'message': '数据预处理完成并写入数据库'})
+        except Exception as e:
+            print(f"数据预处理失败: {e}")
+            if progress_callback:
+                progress_callback('data_processing', 0, {'message': f'数据预处理失败: {e}'})
         return result
 
     def _generate_json_result(
@@ -255,8 +260,6 @@ class VideoProcessor:
         Returns:
             JSON 结果字典
         """
-        ensure_temp_files_directory()  # 确保 temp_files 文件夹存在
-
         # 读取 tracking_summary.txt
         summary_path = output_dir / 'tracking_summary.txt'
         summary = self._parse_summary(summary_path)
@@ -409,11 +412,6 @@ class VideoProcessor:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
-        # 额外保存一份 JSON 文件到临时文件夹
-        temp_json_path = Path(__file__).parent / 'temp_files' / 'result.json'
-        with open(temp_json_path, 'w', encoding='utf-8') as f:
-            json.dump(result, f, ensure_ascii=False, indent=2)
-
         if progress_callback:
             progress_callback(100)
 
@@ -512,10 +510,3 @@ class VideoProcessor:
             frame_labels[frame_name] = labels
 
         return frame_labels
-
-
-def ensure_temp_files_directory():
-    """检查并创建 temp_files 文件夹"""
-    temp_files_path = Path(__file__).parent / 'temp_files'
-    if not temp_files_path.exists():
-        temp_files_path.mkdir()
