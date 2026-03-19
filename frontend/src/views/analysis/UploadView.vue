@@ -8,7 +8,7 @@ import { useAnalysisApi } from '@/composables/useAnalysisApi'
 import { useToast } from '@/composables/useToast'
 import { analysisApi } from '@/api/analysisApi'
 import axios from 'axios'
-import Sidebar from '@/components/common/Sidebar.vue'
+import Sidebar from '@/components/common/layout/Sidebar.vue'
 
 const router = useRouter()
 const store = useAnalysisStore()

@@ -1,13 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
-import CellTrackingView from '../views/CellTrackingView.vue'
-import UploadView from '../views/UploadView.vue'
-import ProgressView from '../views/ProgressView.vue'
-import ModelUploadView from '../views/ModelUploadView.vue'
-import CompareView from '../views/CompareView.vue'
+import CellTrackingView from '../views/home/CellTrackingView.vue'
+import UploadView from '../views/analysis/UploadView.vue'
+import ProgressView from '../views/analysis/ProgressView.vue'
+import ModelUploadView from '../views/models/ModelUploadView.vue'
+import CompareView from '../views/compare/CompareView.vue'
 import CompareResult from '../components/compare/CompareResult.vue'
-import LoginView from '../views/LoginView.vue'
-import RegisterView from '../views/RegisterView.vue'
+import LoginView from '../views/auth/LoginView.vue'
+import RegisterView from '../views/auth/RegisterView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

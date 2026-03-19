@@ -626,7 +626,7 @@ function handleVideoError(event: Event) {
 }
 
 .btn-control:hover {
-  background: var(--border-color);
+  background: var(--bg-hover);
   border-color: var(--text-muted);
 }
 
@@ -805,7 +805,7 @@ function handleVideoError(event: Event) {
 }
 
 .rate-option:hover {
-  background: var(--border-color);
+  background: var(--bg-hover);
 }
 
 :global(:root:not(.dark)) .rate-option:hover {

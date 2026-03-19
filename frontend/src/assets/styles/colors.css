@@ -17,7 +17,7 @@
   --bg-dialog: #1e1e1e;        /* 对话框背景（dialog-container） */
   --bg-card: #161b22;          /* 卡片背景（stat-card, settings-content等） */
   --bg-input: #21262d;         /* 输入框背景（model-select, setting-select, frame-input等） */
-  --bg-hover: #30363d;         /* 通用hover背景（可排序列表头hover、按钮hover等） */
+  --bg-hover: #444c55;         /* 通用hover背景（可排序列表头hover、按钮hover等） */
   --bg-disabled: #1a1a1a;      /* 禁用状态背景（禁用按钮等） */
   --bg-toast: #1c1917;         /* Toast背景（toast-item） */
   --bg-video: #000;            /* 视频背景（video-container） */
@@ -107,7 +107,7 @@
   --bg-dialog: #fff;           /* 对话框背景（dialog-container） */
   --bg-card: #fff;             /* 卡片背景（stat-card, settings-content等） */
   --bg-input: #fff;            /* 输入框背景（model-select, setting-select, frame-input等） */
-  --bg-hover: #e8e8e8;         /* 通用hover背景（可排序列表头hover、按钮hover等） */
+  --bg-hover: #b9b9b9ce;         /* 通用hover背景（可排序列表头hover、按钮hover等） */
   --bg-disabled: #d0d0d0;      /* 禁用状态背景（禁用按钮等） */
   --bg-toast: #ffffff;         /* Toast背景（toast-item） */
   --bg-video: #000;            /* 视频背景（video-container） */

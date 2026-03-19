@@ -4,7 +4,7 @@ import { computed, onMounted, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
-import Sidebar from '@/components/common/Sidebar.vue'
+import Sidebar from '@/components/common/layout/Sidebar.vue'
 
 const props = defineProps<{
   taskId?: string // 可选的 taskId，用于内嵌模式

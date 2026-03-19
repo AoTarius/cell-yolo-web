@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
-import Sidebar from '@/components/common/Sidebar.vue'
+import Sidebar from '@/components/common/layout/Sidebar.vue'
 import '@/assets/styles/colors.css'
 
 const router = useRouter()

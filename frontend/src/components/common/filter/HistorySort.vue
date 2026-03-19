@@ -744,9 +744,7 @@ function resetSort() {
 }
 
 .btn-add:hover {
-  background: var(--accent-blue);
-  color: white;
-  border-style: solid;
+  background: var(--bg-hover);
 }
 
 .btn-add svg {

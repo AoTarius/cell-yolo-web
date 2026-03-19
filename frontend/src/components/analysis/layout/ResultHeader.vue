@@ -318,9 +318,9 @@ function switchTab(tab: TabType) {
 }
 
 .btn-action:hover {
-  background: var(--border-color);
+  background: var(--bg-hover);
   border-color: var(--text-muted);
-  color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 :global(:root:not(.dark)) .btn-action:hover {

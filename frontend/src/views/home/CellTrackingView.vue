@@ -2,9 +2,9 @@
 import { computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
-import Sidebar from '@/components/common/Sidebar.vue'
-import ProgressView from '@/views/ProgressView.vue'
-import AnalysisResult from '@/components/analysis/AnalysisResult.vue'
+import Sidebar from '@/components/common/layout/Sidebar.vue'
+import ProgressView from '@/views/analysis/ProgressView.vue'
+import AnalysisResult from '@/components/analysis/layout/AnalysisResult.vue'
 import '@/assets/styles/colors.css'
 
 const store = useAnalysisStore()

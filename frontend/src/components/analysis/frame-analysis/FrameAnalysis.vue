@@ -321,7 +321,7 @@ function handleVideoError() {
 }
 
 .detail-btn-control:hover {
-  background: var(--border-color);
+  background: var(--bg-hover);
   border-color: var(--text-muted);
 }
 
