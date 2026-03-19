@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import '@/assets/styles/colors.css'
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
 import { useToast } from '@/composables/useToast'
 import { analysisApi } from '@/api/analysisApi'
 import axios from 'axios'
+import Sidebar from '@/components/common/Sidebar.vue'
 
+const router = useRouter()
 const store = useAnalysisStore()
 const userStore = useUserStore()
 const api = useAnalysisApi()
@@ -167,7 +170,7 @@ async function submitUpload() {
       start_time: new Date(),
     })
 
-    // 4. 立即关闭上传面板，返回主页
+    // 4. 重置表单状态
     showAdvancedSettings.value = false
     selectedFile.value = null
     uploadStatus.value = 'idle'
@@ -177,8 +180,10 @@ async function submitUpload() {
     // 显示成功提示
     showToast(`分析任务已启动！视频 "${fileName}" 正在处理中...`, 'success')
 
-    // 关闭上传面板
-    store.showUploadPanel = false
+    // 5. 跳转到主页并选中该任务
+    router.push('/').then(() => {
+      store.selectRecord(taskId.value!)
+    })
 
   } catch (error: any) {
     uploadStatus.value = 'error'
@@ -205,10 +210,13 @@ function getStageLabel(stage: string): string {
 </script>
 
 <template>
-  <div class="upload-panel">
-    <div class="upload-container">
-      <h2>上传视频文件</h2>
-      <p class="upload-description">上传细胞显微镜视频进行分析</p>
+  <div class="upload-view">
+    <Sidebar />
+
+    <main class="main-panel">
+      <div class="upload-container">
+        <h2>上传视频文件</h2>
+        <p class="upload-description">上传细胞显微镜视频进行分析</p>
 
       <!-- 路径提示框 -->
       <div class="path-info-box">
@@ -318,7 +326,7 @@ function getStageLabel(stage: string): string {
           </option>
         </select>
         <p v-if="!isLoadingModels && models.length === 0" class="model-warning">
-          ⚠️ 检测到没有可用的模型文件，请在“模型管理”中上传模型。
+          ⚠️ 检测到没有可用的模型文件，请在"模型管理"中上传模型。
         </p>
       </div>
 
@@ -448,22 +456,31 @@ function getStageLabel(stage: string): string {
         </button>
       </div>
     </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.upload-panel {
+.upload-view {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.main-panel {
   flex: 1;
   display: flex;
   overflow-y: auto;
   align-items: flex-start;
   justify-content: center;
-  background: var(--bg-main);
-  transition: background 0.3s;
-}
-
-:global(:root:not(.dark)) .upload-panel {
-  background: var(--bg-main-light);
 }
 
 .upload-container {
@@ -472,7 +489,7 @@ function getStageLabel(stage: string): string {
   display: flex;
   flex-direction: column;
   padding: 2rem;
-  margin: 3rem 0;
+  margin: 3rem auto;
 }
 
 h2 {

@@ -289,14 +289,8 @@ function handleRenameCancel() {
 }
 
 function handleNewAnalysis() {
-  // 如果不在主页，先跳转回主页
-  if (route.path !== '/') {
-    router.push('/').then(() => {
-      store.createNewAnalysis()
-    })
-  } else {
-    store.createNewAnalysis()
-  }
+  // 直接跳转到上传页面
+  router.push('/upload')
 }
 
 function handleModelUpload() {

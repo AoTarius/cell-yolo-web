@@ -203,7 +203,7 @@ function handleVideoError() {
         <div class="header-title">
           <h2>对比分析结果</h2>
           <p class="header-subtitle">
-            {{ recordA?.video_name || '未知' }} vs {{ recordB?.video_name || '未知' }}
+            {{ recordA?.task_name || '未知' }} vs {{ recordB?.task_name || '未知' }}
           </p>
         </div>
       </div>
@@ -215,7 +215,7 @@ function handleVideoError() {
         <div class="video-compare-wrapper">
           <!-- 左侧：记录A的标注视频 -->
           <div class="video-panel video-panel-left">
-            <h3>标注视频 A - {{ recordA?.video_name || '未知' }}</h3>
+            <h3>标注视频 A - {{ recordA?.task_name || '未知' }}</h3>
             <div class="video-container">
               <div class="video-wrapper">
                 <video
@@ -320,7 +320,7 @@ function handleVideoError() {
 
           <!-- 右侧：记录B的标注视频 -->
           <div class="video-panel video-panel-right">
-            <h3>标注视频 B - {{ recordB?.video_name || '未知' }}</h3>
+            <h3>标注视频 B - {{ recordB?.task_name || '未知' }}</h3>
             <div class="video-container">
               <div class="video-wrapper">
                 <video

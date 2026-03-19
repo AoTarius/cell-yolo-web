@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
 import CellTrackingView from '../views/CellTrackingView.vue'
+import UploadView from '../views/UploadView.vue'
 import ProgressView from '../views/ProgressView.vue'
 import ModelUploadView from '../views/ModelUploadView.vue'
 import CompareView from '../views/CompareView.vue'
@@ -33,6 +34,11 @@ const router = createRouter({
       path: '/cellTracking',
       name: 'cellTracking',
       component: CellTrackingView,
+    },
+    {
+      path: '/upload',
+      name: 'upload',
+      component: UploadView,
     },
     {
       path: '/progress/:taskId',

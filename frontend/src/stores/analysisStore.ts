@@ -98,9 +98,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     return records.value.find((r) => r.task_id === selectedId.value) || null
   })
 
-  // 是否显示上传面板（创建新分析）
-  const showUploadPanel = ref(false)
-
   // 当前选中的细胞ID（用于显示细胞详情）
   const selectedCellId = ref<string | null>(null)
 
@@ -122,7 +119,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
   // 选择记录
   function selectRecord(id: string) {
     selectedId.value = id
-    showUploadPanel.value = false
     selectedCellId.value = null // 重置细胞选择
   }
 
@@ -134,13 +130,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
   // 清除选中状态
   function clearSelection() {
     selectedId.value = null
-    selectedCellId.value = null
-  }
-
-  // 创建新分析
-  function createNewAnalysis() {
-    selectedId.value = null
-    showUploadPanel.value = true
     selectedCellId.value = null
   }
 
@@ -260,7 +249,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
     records.value.unshift(newRecord)
     selectedId.value = newRecord.task_id
-    showUploadPanel.value = false
 
     // 模拟处理进度更新
     const progressInterval = setInterval(() => {
@@ -296,7 +284,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
   function addUploadedRecord(record: AnalysisRecord) {
     records.value.unshift(record)
     selectedId.value = record.task_id
-    showUploadPanel.value = false
   }
 
   // 更新任务状态（用于 API 集成）
@@ -477,14 +464,12 @@ export const useAnalysisStore = defineStore('analysis', () => {
     records,
     selectedId,
     selectedRecord,
-    showUploadPanel,
     selectedCellId,
     selectedCellData,
     compareRecords,
     sortConditions,
     selectRecord,
     clearSelection,
-    createNewAnalysis,
     addRecord,
     selectCell,
     backToResultList,

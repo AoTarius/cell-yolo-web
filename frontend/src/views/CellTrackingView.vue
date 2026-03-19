@@ -3,7 +3,6 @@ import { computed, onMounted } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
 import Sidebar from '@/components/common/Sidebar.vue'
-import UploadPanel from '@/components/upload/UploadPanel.vue'
 import ProgressView from '@/views/ProgressView.vue'
 import AnalysisResult from '@/components/analysis/AnalysisResult.vue'
 import '@/assets/styles/colors.css'
@@ -21,9 +20,6 @@ onMounted(async () => {
 
 // 当前显示的主面板
 const currentPanel = computed(() => {
-  if (store.showUploadPanel) {
-    return 'upload'
-  }
   if (store.selectedRecord) {
     if (store.selectedRecord.status === 'processing') {
       return 'loading'
@@ -62,9 +58,6 @@ const currentPanel = computed(() => {
           <p>点击左侧 "新建分析" 开始上传视频，或选择历史记录查看结果</p>
         </div>
       </div>
-
-      <!-- 上传面板 -->
-      <UploadPanel v-else-if="currentPanel === 'upload'" />
 
       <!-- 加载面板 -->
       <ProgressView
