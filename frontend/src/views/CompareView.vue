@@ -48,6 +48,7 @@ defineExpose({
         <div class="compare-header">
           <h1>对比分析</h1>
           <p class="compare-description">从左侧历史栏选择两条历史条目进行对比分析</p>
+          <p class="compare-description">再次点击【对比分析】快速退出对比模式</p>
         </div>
 
         <div class="compare-items">
