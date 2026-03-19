@@ -12,6 +12,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
+from django.db import models
+
+from .models import Cell
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
 
 from .services.video_processor import VideoProcessor
 
@@ -1926,3 +1931,37 @@ class RegisterView(APIView):
                 {'error': f'注册失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+# 获取细胞数据接口
+@api_view(['GET'])
+def get_cells_by_task(request, task_id):
+    """
+    根据 task_id 查询 cells 表中的所有数据。
+    """
+    try:
+        # 查询指定 task_id 的所有 Cell 数据
+        cells = Cell.objects.filter(task__id=task_id, is_deleted=False)
+        
+        # 序列化数据
+        data = [
+            {
+                "frame": cell.frame,
+                "track_id": cell.track_id,
+                "bb_left": cell.bb_left,
+                "bb_top": cell.bb_top,
+                "bb_width": cell.bb_width,
+                "bb_height": cell.bb_height,
+                "conf": cell.conf,
+                "class_id": cell.class_id,
+                "visibility": cell.visibility,
+                "area": cell.area,
+                "speed": cell.speed,
+                "tracking_persistence": cell.tracking_persistence,
+                "metrics_json": cell.metrics_json,
+            }
+            for cell in cells
+        ]
+
+        return JsonResponse({"success": True, "data": data}, status=200)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
