@@ -45,6 +45,10 @@ export interface CellData {
   avg_conf: number // 平均置信度
   avg_velocity: number // 平均速度
   frames: CellFrameData[] // 每一帧的数据
+  // 扩展字段
+  rawMetrics?: any[] // 原始 metrics_json 数据（用于展示形状和运动特征）
+  avgVisibility?: number // 平均可见性
+  cellClass?: number // 细胞类别
 }
 
 // 处理结果数据
@@ -533,6 +537,102 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
+  // 后端返回的单帧细胞数据类型
+  type RawCellFrame = {
+    frame: number
+    track_id: number
+    bb_left: number
+    bb_top: number
+    bb_width: number
+    bb_height: number
+    conf: number
+    class_id: number
+    visibility: number | null
+    area: number
+    speed: number
+    tracking_persistence: number
+    metrics_json: any
+  }
+
+  // 将后端返回的原始数据转换为 CellData 格式
+  function transformCellData(rawFrames: RawCellFrame[]): CellData {
+    if (rawFrames.length === 0) {
+      throw new Error('No frame data provided')
+    }
+
+    // 计算聚合值
+    const frames = rawFrames.map(r => r.frame)
+    const widths = rawFrames.map(r => r.bb_width)
+    const heights = rawFrames.map(r => r.bb_height)
+    const confidences = rawFrames.map(r => r.conf)
+    const velocities = rawFrames.map(r => r.speed || 0)
+    const visibilities = rawFrames.map(r => r.visibility ?? 1)
+
+    const firstFrame = Math.min(...frames)
+    const lastFrame = Math.max(...frames)
+    const frameCount = frames.length
+    const avgWidth = widths.reduce((a, b) => a + b, 0) / widths.length
+    const avgHeight = heights.reduce((a, b) => a + b, 0) / heights.length
+    const avgConf = confidences.reduce((a, b) => a + b, 0) / confidences.length
+    const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length
+    const avgVisibility = visibilities.reduce((a, b) => a + b, 0) / visibilities.length
+    const cellClass = rawFrames[0]!.class_id
+
+    // 转换帧数据
+    const framesData: CellFrameData[] = rawFrames.map(r => {
+      const metrics = r.metrics_json || {}
+      return {
+        frame_number: r.frame,
+        position: {
+          x: metrics.center?.cx ?? (r.bb_left + r.bb_width / 2),
+          y: metrics.center?.cy ?? (r.bb_top + r.bb_height / 2)
+        },
+        area: r.area || (r.bb_width * r.bb_height),
+        velocity: {
+          vx: metrics.motion?.vx ?? 0,
+          vy: metrics.motion?.vy ?? 0,
+          speed: metrics.motion?.migration_speed ?? r.speed ?? 0
+        },
+        bounding_box: {
+          x: metrics.bbox?.left ?? r.bb_left,
+          y: metrics.bbox?.top ?? r.bb_top,
+          width: metrics.bbox?.width ?? r.bb_width,
+          height: metrics.bbox?.height ?? r.bb_height
+        }
+      }
+    })
+
+    return {
+      cell_id: String(rawFrames[0]!.track_id),
+      first_frame: firstFrame,
+      last_frame: lastFrame,
+      frame_count: frameCount,
+      avg_width: avgWidth,
+      avg_height: avgHeight,
+      avg_conf: avgConf,
+      avg_velocity: avgVelocity,
+      frames: framesData,
+      // 扩展字段
+      rawMetrics: rawFrames.map(r => r.metrics_json || {}),
+      avgVisibility,
+      cellClass
+    }
+  }
+
+  // 加载单个细胞的详细数据
+  async function loadCellDetail(taskId: string, trackId: string): Promise<CellData | null> {
+    try {
+      const response = await axios.get(`/api/cells/${taskId}/${trackId}/`)
+      if (response.data.success && response.data.data) {
+        return transformCellData(response.data.data)
+      }
+      return null
+    } catch (error) {
+      console.error('加载细胞详情失败:', error)
+      return null
+    }
+  }
+
   return {
     records,
     selectedId,
@@ -560,5 +660,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     setSortConditions,
     aggregateCells,
     loadCellsByTask,
+    loadCellDetail,
   }
 })

@@ -1972,3 +1972,47 @@ def get_cells_by_task(request, task_id):
         return JsonResponse({"success": True, "data": data}, status=200)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+# 获取单个细胞详细数据接口
+@api_view(['GET'])
+def get_cell_detail(request, task_id, track_id):
+    """
+    根据 task_id 和 track_id 查询指定细胞的详细数据（所有帧）。
+    """
+    try:
+        # 先根据 task_id 查找 Task 对象
+        task_obj = Task.objects.filter(task_id=task_id, is_deleted=False).first()
+        
+        if not task_obj:
+            return JsonResponse({"success": False, "error": "Task not found"}, status=404)
+        
+        # 查询指定细胞的每一帧数据
+        cells = Cell.objects.filter(task=task_obj.id, track_id=track_id, is_deleted=False).order_by('frame')
+        
+        if not cells.exists():
+            return JsonResponse({"success": False, "error": "Cell not found"}, status=404)
+        
+        # 序列化数据
+        data = [
+            {
+                "frame": cell.frame,
+                "track_id": cell.track_id,
+                "bb_left": cell.bb_left,
+                "bb_top": cell.bb_top,
+                "bb_width": cell.bb_width,
+                "bb_height": cell.bb_height,
+                "conf": cell.conf,
+                "class_id": cell.class_id,
+                "visibility": cell.visibility,
+                "area": cell.area,
+                "speed": cell.speed,
+                "tracking_persistence": cell.tracking_persistence,
+                "metrics_json": cell.metrics_json,
+            }
+            for cell in cells
+        ]
+
+        return JsonResponse({"success": True, "data": data}, status=200)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

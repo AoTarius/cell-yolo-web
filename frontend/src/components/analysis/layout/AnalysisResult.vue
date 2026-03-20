@@ -86,6 +86,7 @@ function handleTabChange(tab: TabType) {
   <CellDetailPanel
     v-if="store.selectedCellData"
     :cell-data="store.selectedCellData"
+    :cell-id="store.selectedCellId ?? undefined"
     @back="handleBackToList"
   />
 

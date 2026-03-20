@@ -321,7 +321,7 @@ function handleViewCell(cellId: string) {
 }
 
 .cell-table th.sortable:hover {
-  background: var(--border-color);
+  background: var(--bg-hover);
   color: var(--text-secondary);
 }
 
