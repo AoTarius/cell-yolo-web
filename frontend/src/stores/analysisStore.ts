@@ -116,7 +116,10 @@ export const useAnalysisStore = defineStore('analysis', () => {
     )
   })
 
-  
+  // 缓存机制
+  const cellsCache = new Map<string, CellData[]>()  // taskId -> 细胞列表
+  const cellDetailCache = new Map<string, CellData>()  // cellId -> 细胞详情
+
   // 对比模式相关状态
   const compareRecords = ref<AnalysisRecord[]>([])
 
@@ -124,6 +127,24 @@ export const useAnalysisStore = defineStore('analysis', () => {
   function selectRecord(id: string) {
     selectedId.value = id
     selectedCellId.value = null // 重置细胞选择
+    // 切换任务时，清空缓存
+    clearCellsCache()
+  }
+
+  // 清空细胞列表缓存
+  function clearCellsCache() {
+    cellsCache.clear()
+  }
+
+  // 清空细胞详情缓存
+  function clearCellDetailCache() {
+    cellDetailCache.clear()
+  }
+
+  // 清空所有缓存
+  function clearAllCaches() {
+    cellsCache.clear()
+    cellDetailCache.clear()
   }
 
   // 设置排序条件
@@ -525,10 +546,20 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
   // 从数据库加载细胞数据（用于替代从 JSON 读取）
   async function loadCellsByTask(taskId: string): Promise<CellData[]> {
+    // 检查缓存
+    if (cellsCache.has(taskId)) {
+      console.log(`[缓存命中] 从缓存加载细胞列表: ${taskId}`)
+      return cellsCache.get(taskId)!
+    }
+
     try {
       const response = await axios.get(`/api/cells/${taskId}/`)
       if (response.data.success && response.data.data) {
-        return aggregateCells(response.data.data)
+        const cells = aggregateCells(response.data.data)
+        // 存储到缓存
+        cellsCache.set(taskId, cells)
+        console.log(`[API调用] 加载细胞列表并缓存: ${taskId}, 细胞数量: ${cells.length}`)
+        return cells
       }
       return []
     } catch (error) {
@@ -621,10 +652,23 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
   // 加载单个细胞的详细数据
   async function loadCellDetail(taskId: string, trackId: string): Promise<CellData | null> {
+    // 使用 taskId_trackId 作为缓存键，确保不同任务的同名细胞不会混淆
+    const cacheKey = `${taskId}_${trackId}`
+
+    // 检查缓存
+    if (cellDetailCache.has(cacheKey)) {
+      console.log(`[缓存命中] 从缓存加载细胞详情: ${cacheKey}`)
+      return cellDetailCache.get(cacheKey)!
+    }
+
     try {
       const response = await axios.get(`/api/cells/${taskId}/${trackId}/`)
       if (response.data.success && response.data.data) {
-        return transformCellData(response.data.data)
+        const cellDetail = transformCellData(response.data.data)
+        // 存储到缓存
+        cellDetailCache.set(cacheKey, cellDetail)
+        console.log(`[API调用] 加载细胞详情并缓存: ${cacheKey}`)
+        return cellDetail
       }
       return null
     } catch (error) {
@@ -661,5 +705,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
     aggregateCells,
     loadCellsByTask,
     loadCellDetail,
+    clearCellsCache,
+    clearCellDetailCache,
+    clearAllCaches,
   }
 })
