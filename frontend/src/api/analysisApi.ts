@@ -189,6 +189,7 @@ export const analysisApi = {
   async downloadDataPackage(taskId: string): Promise<Blob> {
     const { data } = await api.get(`/export-task-data/${taskId}`, {
       responseType: 'blob',
+      timeout: 600000,  // 10分钟超时，用于大文件导出
     })
 
     return data
@@ -242,6 +243,7 @@ export const analysisApi = {
         'Content-Type': 'multipart/form-data',
       },
       onUploadProgress: onProgress,
+      timeout: 600000,  // 10分钟超时，用于大文件导入
     })
 
     return data

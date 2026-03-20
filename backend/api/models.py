@@ -258,7 +258,6 @@ class TaskStatus(BaseModel):
     current_frame = models.IntegerField(default=0, verbose_name='当前处理帧数')
     total_frames = models.IntegerField(default=0, verbose_name='总帧数')
     error_message = models.TextField(null=True, blank=True, verbose_name='错误信息')
-    estimated_remaining_time = models.IntegerField(null=True, blank=True, verbose_name='预计剩余时间（秒）')
 
     class Meta:
         db_table = 'task_status'

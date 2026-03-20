@@ -2264,33 +2264,53 @@ class ImportDataPackageView(APIView):
                 video_name = video_file.name
                 video_size = video_file.stat().st_size
 
-                # 11. 插入videos表
+                # 11. 插入videos表（先检查是否已存在同名视频）
+                existing_video = None
                 with connection.cursor() as cursor:
-                    insert_video_sql = """
-                    INSERT INTO videos (user_id, video_name, video_path, total_frames, video_duration, file_size, created_at, updated_at, is_deleted, deleted_at)
-                    VALUES (%s, %s, '', %s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                    # 检查是否已存在同名视频
+                    check_video_sql = """
+                    SELECT id, video_path FROM videos 
+                    WHERE user_id = %s AND video_name = %s AND is_deleted = FALSE
                     """
-                    cursor.execute(insert_video_sql, (
-                        user_id,
-                        video_name,
-                        result_data.get('total_frames', 0),
-                        result_data.get('video_duration', 0),
-                        video_size
-                    ))
-                    connection.commit()
-                    new_video_id = cursor.lastrowid
+                    cursor.execute(check_video_sql, (user_id, video_name))
+                    existing_video = cursor.fetchone()
 
-                    # 更新video_path
-                    video_path = f"videos/{new_video_id}/{video_name}"
-                    update_video_sql = "UPDATE videos SET video_path = %s WHERE id = %s"
-                    cursor.execute(update_video_sql, (video_path, new_video_id))
-                    connection.commit()
+                    if existing_video:
+                        # 使用现有的视频记录
+                        new_video_id = existing_video['id']
+                        video_path = existing_video['video_path']
+                        print(f"使用已存在的视频记录: {new_video_id}, 路径: {video_path}")
+                    else:
+                        # 插入新的视频记录
+                        insert_video_sql = """
+                        INSERT INTO videos (user_id, video_name, video_path, total_frames, video_duration, file_size, created_at, updated_at, is_deleted, deleted_at)
+                        VALUES (%s, %s, '', %s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                        """
+                        cursor.execute(insert_video_sql, (
+                            user_id,
+                            video_name,
+                            result_data.get('total_frames', 0),
+                            result_data.get('video_duration', 0),
+                            video_size
+                        ))
+                        connection.commit()
+                        new_video_id = cursor.lastrowid
 
-                # 12. 移动视频文件到videos目录
-                videos_dir = output_base_path / 'videos' / str(new_video_id)
-                videos_dir.mkdir(parents=True, exist_ok=True)
-                video_dest_path = videos_dir / video_name
-                shutil.move(str(video_file), str(video_dest_path))
+                        # 更新video_path
+                        video_path = f"videos/{new_video_id}/{video_name}"
+                        update_video_sql = "UPDATE videos SET video_path = %s WHERE id = %s"
+                        cursor.execute(update_video_sql, (video_path, new_video_id))
+                        connection.commit()
+
+                # 12. 移动视频文件到videos目录（只有新插入视频时才需要移动）
+                if not existing_video:
+                    videos_dir = output_base_path / 'videos' / str(new_video_id)
+                    videos_dir.mkdir(parents=True, exist_ok=True)
+                    video_dest_path = videos_dir / video_name
+                    shutil.move(str(video_file), str(video_dest_path))
+                else:
+                    # 使用现有视频，从数据库获取完整路径
+                    video_dest_path = output_base_path / video_path
 
                 # 13. 更新result.json中的original_video_path
                 if 'original_video_path' in result_data:
@@ -2327,8 +2347,8 @@ class ImportDataPackageView(APIView):
                 # 18. 创建TaskStatus记录
                 with connection.cursor() as cursor:
                     insert_status_sql = """
-                    INSERT INTO task_status (task_id, status, progress, stage, current_frame, total_frames, error_message, estimated_remaining_time, created_at, updated_at, is_deleted, deleted_at)
-                    VALUES (%s, 'completed', 100, 'data_processing', 0, 0, '', NULL, NOW(), NOW(), FALSE, NULL)
+                    INSERT INTO task_status (task_id, status, progress, stage, current_frame, total_frames, error_message, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, 'completed', 100, 'data_processing', 0, 0, '', NOW(), NOW(), FALSE, NULL)
                     """
                     cursor.execute(insert_status_sql, (new_task_id,))
                     connection.commit()

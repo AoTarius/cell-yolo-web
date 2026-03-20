@@ -102,7 +102,6 @@ def check_and_fix_table_structure():
                 "current_frame": "INT DEFAULT 0",
                 "total_frames": "INT DEFAULT 0",
                 "error_message": "TEXT",
-                "estimated_remaining_time": "INT",
             },
         }
 

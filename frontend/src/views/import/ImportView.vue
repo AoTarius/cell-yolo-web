@@ -241,9 +241,10 @@ async function handleImport() {
           <p>数据包应包含以下内容：</p>
           <ul>
             <li>result.json - 分析结果数据</li>
-            <li>原始视频文件</li>
-            <li>标注后的视频文件</li>
-            <li>metadata.json - 任务元数据</li>
+            <li>frames文件夹</li>
+            <li>output文件夹</li>
+            <li>original文件夹</li>
+            <li>processed_cells_{task_id}.csv - csv格式数据</li>
           </ul>
         </div>
       </div>
