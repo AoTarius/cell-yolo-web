@@ -460,6 +460,79 @@ export const useAnalysisStore = defineStore('analysis', () => {
   // 初始化时启动全局轮询
   startGlobalPolling()
 
+  // 将后端 get_cells_by_task 返回的原始帧级数据聚合为细胞级数据
+  // 用于替换从 JSON 读取的数据
+  function aggregateCells(rawCells: any[]): CellData[] {
+    // 按 track_id 分组
+    const cellGroups = new Map<number, any[]>()
+
+    for (const cell of rawCells) {
+      const trackId = cell.track_id
+      if (!cellGroups.has(trackId)) {
+        cellGroups.set(trackId, [])
+      }
+      cellGroups.get(trackId)!.push(cell)
+    }
+
+    // 对每个细胞组进行聚合计算
+    const aggregatedCells: CellData[] = []
+
+    for (const [trackId, cells] of cellGroups.entries()) {
+      // 计算统计值
+      const frames = cells.map(c => c.frame)
+      const widths = cells.map(c => c.bb_width)
+      const heights = cells.map(c => c.bb_height)
+      const confidences = cells.map(c => c.conf)
+      const velocities = cells.map(c => c.speed || 0)
+
+      const firstFrame = Math.min(...frames)
+      const lastFrame = Math.max(...frames)
+      const frameCount = frames.length
+      const avgWidth = widths.reduce((a, b) => a + b, 0) / widths.length
+      const avgHeight = heights.reduce((a, b) => a + b, 0) / heights.length
+      const avgConf = confidences.reduce((a, b) => a + b, 0) / confidences.length
+      const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length
+
+      // 构建聚合数据
+      const aggregatedCell: CellData = {
+        cell_id: String(trackId),
+        first_frame: firstFrame,
+        last_frame: lastFrame,
+        frame_count: frameCount,
+        avg_width: avgWidth,
+        avg_height: avgHeight,
+        avg_conf: avgConf,
+        avg_velocity: avgVelocity,
+        frames: [] // 这里暂时为空，如果需要详细帧数据，可以从 cells 构造
+      }
+
+      aggregatedCells.push(aggregatedCell)
+    }
+
+    // 按 cell_id 排序
+    aggregatedCells.sort((a, b) => {
+      const aId = parseInt(a.cell_id.replace(/\D/g, '') || '0', 10)
+      const bId = parseInt(b.cell_id.replace(/\D/g, '') || '0', 10)
+      return aId - bId
+    })
+
+    return aggregatedCells
+  }
+
+  // 从数据库加载细胞数据（用于替代从 JSON 读取）
+  async function loadCellsByTask(taskId: string): Promise<CellData[]> {
+    try {
+      const response = await axios.get(`/api/cells/${taskId}/`)
+      if (response.data.success && response.data.data) {
+        return aggregateCells(response.data.data)
+      }
+      return []
+    } catch (error) {
+      console.error('加载细胞数据失败:', error)
+      return []
+    }
+  }
+
   return {
     records,
     selectedId,
@@ -485,5 +558,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
     startGlobalPolling,
     stopGlobalPolling,
     setSortConditions,
+    aggregateCells,
+    loadCellsByTask,
   }
 })

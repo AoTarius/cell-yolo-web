@@ -1,9 +1,43 @@
 <script setup lang="ts">
 import '@/assets/styles/colors.css'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAnalysisStore } from '@/stores/analysisStore'
+import type { CellData } from '@/stores/analysisStore'
 
 const store = useAnalysisStore()
+
+// 从数据库加载的细胞数据（替代从 JSON 读取的数据）
+const dbCells = ref<CellData[]>([])
+const isLoading = ref(false)
+
+// 加载细胞数据
+async function loadCellsData() {
+  if (!store.selectedRecord?.task_id) {
+    return
+  }
+
+  isLoading.value = true
+  try {
+    dbCells.value = await store.loadCellsByTask(store.selectedRecord.task_id)
+  } catch (error) {
+    console.error('加载细胞数据失败:', error)
+    dbCells.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadCellsData()
+})
+
+// 监听任务切换，自动重新加载数据
+watch(() => store.selectedRecord?.task_id, (newTaskId, oldTaskId) => {
+  if (newTaskId && newTaskId !== oldTaskId) {
+    loadCellsData()
+  }
+})
 
 // 排序状态
 type SortColumn = 'cell_id' | 'first_frame' | 'last_frame' | 'frame_count' | 'avg_conf' | 'avg_velocity'
@@ -12,7 +46,8 @@ const sortDirection = ref<'asc' | 'desc'>('asc')
 
 // 排序后的细胞列表
 const sortedCells = computed(() => {
-  const cells = store.selectedRecord?.result?.cells || []
+  // 优先使用从数据库加载的数据，如果没有则使用 JSON 中的数据（兼容性）
+  const cells = dbCells.value.length > 0 ? dbCells.value : (store.selectedRecord?.result?.cells || [])
   if (!sortColumn.value) return cells
 
   const sorted = [...cells].sort((a, b) => {
@@ -114,7 +149,13 @@ function handleViewCell(cellId: string) {
 <template>
   <div class="cell-list-section">
     <h3>细胞详细信息</h3>
-    <div class="table-placeholder">
+    <div v-if="isLoading" class="loading-placeholder">
+      <svg class="loading-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+      </svg>
+      <p>加载细胞数据中...</p>
+    </div>
+    <div v-else class="table-placeholder">
       <table class="cell-table">
         <thead>
           <tr>
@@ -159,7 +200,7 @@ function handleViewCell(cellId: string) {
               第 {{ cell.last_frame ?? '-' }} 帧
             </td>
             <td>{{ cell.frame_count }} 帧</td>
-            <td>{{ cell.avg_width }}×{{ cell.avg_height }} px</td>
+            <td>{{ cell.avg_width.toFixed(3) }}×{{ cell.avg_height.toFixed(3) }} px</td>
             <td>{{ cell.avg_conf.toFixed(2) }}</td>
             <td>
               {{
@@ -194,6 +235,48 @@ function handleViewCell(cellId: string) {
 
 :global(:root:not(.dark)) .cell-list-section h3 {
   color: var(--text-primary-light);
+}
+
+.loading-placeholder {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+:global(:root:not(.dark)) .loading-placeholder {
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+}
+
+.loading-icon {
+  width: 48px;
+  height: 48px;
+  animation: spin 1s linear infinite;
+  color: var(--accent-blue);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-placeholder p {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-secondary);
 }
 
 .table-placeholder {

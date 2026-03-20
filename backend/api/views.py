@@ -14,7 +14,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from django.db import models
 
-from .models import Cell
+from .models import Cell, Task
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 
@@ -1939,8 +1939,15 @@ def get_cells_by_task(request, task_id):
     根据 task_id 查询 cells 表中的所有数据。
     """
     try:
-        # 查询指定 task_id 的所有 Cell 数据
-        cells = Cell.objects.filter(task__id=task_id, is_deleted=False)
+        # 先根据 task_id 查找 Task 对象
+        # Task 模型的主键是整数 id，task_id 是字符串
+        task_obj = Task.objects.filter(task_id=task_id, is_deleted=False).first()
+        
+        if not task_obj:
+            return JsonResponse({"success": False, "error": "Task not found"}, status=404)
+        
+        # 使用 Task 对象的主键来查询 Cell 数据
+        cells = Cell.objects.filter(task=task_obj.id, is_deleted=False)
         
         # 序列化数据
         data = [
