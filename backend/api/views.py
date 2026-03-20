@@ -1951,10 +1951,10 @@ def get_cell_detail(request, task_id, track_id):
         
         # 查询指定细胞的每一帧数据
         cells = Cell.objects.filter(task=task_obj.id, track_id=track_id, is_deleted=False).order_by('frame')
-        
+
         if not cells.exists():
             return JsonResponse({"success": False, "error": "Cell not found"}, status=404)
-        
+
         # 序列化数据
         data = [
             {
@@ -1978,3 +1978,95 @@ def get_cell_detail(request, task_id, track_id):
         return JsonResponse({"success": True, "data": data}, status=200)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+class ExportTaskDataView(APIView):
+    """导出任务数据包接口"""
+
+    def get(self, request, task_id):
+        """将 task_id 对应的文件夹打包成 zip 并下载"""
+        try:
+            import zipfile
+            import io
+
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务信息和用户的 output_base_path
+                task_sql = """
+                SELECT u.output_base_path, t.status, t.task_name
+                FROM tasks t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                """
+                cursor.execute(task_sql, (task_id,))
+                task_info = cursor.fetchone()
+
+                if not task_info:
+                    return Response(
+                        {'error': '任务不存在'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                if task_info['status'] != 'completed':
+                    return Response(
+                        {'error': '任务尚未完成，无法导出'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                output_base_path = Path(task_info['output_base_path'])
+                task_dir = output_base_path / 'tasks' / task_id
+
+                if not task_dir.exists():
+                    return Response(
+                        {'error': f'任务文件夹不存在: {task_dir}'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                # 创建内存中的 zip 文件
+                zip_buffer = io.BytesIO()
+
+                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                    # 遍历任务文件夹中的所有文件和子文件夹
+                    for root, dirs, files in os.walk(task_dir):
+                        for file in files:
+                            file_path = Path(root) / file
+                            # 计算相对路径，保持目录结构
+                            arcname = file_path.relative_to(output_base_path)
+                            zip_file.write(file_path, arcname)
+
+                # 重置指针到文件开头
+                zip_buffer.seek(0)
+
+                # 生成文件名
+                task_name = task_info['task_name'] or task_id
+                safe_task_name = ''.join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in task_name)
+                filename = f"{safe_task_name}_data_package.zip"
+
+                # 返回 zip 文件
+                response = HttpResponse(zip_buffer.read(), content_type='application/zip')
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+
+        except Exception as e:
+            return Response(
+                {'error': f'导出数据包失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        finally:
+            connection.close()

@@ -210,6 +210,29 @@ export function useAnalysisApi() {
   }
 
   /**
+   * 下载任务数据包
+   */
+  async function downloadDataPackage(taskId: string, taskName: string) {
+    try {
+      const blob = await analysisApi.downloadDataPackage(taskId)
+
+      // 创建下载链接
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const safeTaskName = taskName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')
+      a.download = `${safeTaskName}_data_package.zip`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Failed to download data package:', error)
+      throw error
+    }
+  }
+
+  /**
    * 获取单个细胞数据
    */
   async function fetchCellData(taskId: string, cellId: string) {
@@ -246,6 +269,7 @@ export function useAnalysisApi() {
     unsubscribeTask,
     exportData,
     downloadVideo,
+    downloadDataPackage,
     fetchCellData,
     cleanup,
   }

@@ -181,6 +181,20 @@ export const analysisApi = {
   },
 
   /**
+   * 下载任务数据包（zip 格式）
+   * GET /api/export-task-data/:task_id
+   * @param taskId 任务ID
+   * @returns Blob 数据
+   */
+  async downloadDataPackage(taskId: string): Promise<Blob> {
+    const { data } = await api.get(`/export-task-data/${taskId}`, {
+      responseType: 'blob',
+    })
+
+    return data
+  },
+
+  /**
    * 获取可用模型列表
    * GET /api/models
    * @param username 用户名

@@ -7,13 +7,17 @@ type TabType = 'video' | 'cell' | 'chart' | 'frame'
 
 const props = defineProps<{
   record: AnalysisRecord
-  isExporting: boolean
+  isExportingCsv: boolean
+  isExportingJson: boolean
+  isDownloadingVideo: boolean
+  isDownloadingDataPackage: boolean
   activeTab: TabType
 }>()
 
 const emit = defineEmits<{
   export: [format: 'csv' | 'json']
   download: []
+  downloadDataPackage: []
   tabChange: [tab: TabType]
 }>()
 
@@ -73,7 +77,7 @@ function switchTab(tab: TabType) {
         <span class="view-toggle-item" :class="{ active: props.activeTab === 'frame' }" @click="switchTab('frame')">逐帧分析</span>
       </div>
       <div class="header-actions-spacer"></div>
-      <button class="btn-action" @click="emit('export', 'csv')" :disabled="isExporting">
+      <button class="btn-action" @click="emit('export', 'csv')" :disabled="props.isExportingCsv">
         <svg
           fill="none"
           stroke="currentColor"
@@ -87,9 +91,9 @@ function switchTab(tab: TabType) {
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
           ></path>
         </svg>
-        {{ isExporting ? '导出中...' : '导出 CSV' }}
+        {{ props.isExportingCsv ? '导出中...' : '导出 CSV' }}
       </button>
-      <button class="btn-action" @click="emit('export', 'json')" :disabled="isExporting">
+      <button class="btn-action" @click="emit('export', 'json')" :disabled="props.isExportingJson">
         <svg
           fill="none"
           stroke="currentColor"
@@ -103,9 +107,9 @@ function switchTab(tab: TabType) {
             d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           ></path>
         </svg>
-        导出 JSON
+        {{ props.isExportingJson ? '导出中...' : '导出 JSON' }}
       </button>
-      <button class="btn-action" @click="emit('download')" :disabled="isExporting">
+      <button class="btn-action" @click="emit('download')" :disabled="props.isDownloadingVideo">
         <svg
           fill="none"
           stroke="currentColor"
@@ -119,7 +123,23 @@ function switchTab(tab: TabType) {
             d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
           ></path>
         </svg>
-        下载视频
+        {{ props.isDownloadingVideo ? '下载中...' : '下载视频' }}
+      </button>
+      <button class="btn-action" @click="emit('downloadDataPackage')" :disabled="props.isDownloadingDataPackage">
+        <svg
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+          ></path>
+        </svg>
+        {{ props.isDownloadingDataPackage ? '导出中...' : '导出数据包' }}
       </button>
     </div>
   </div>

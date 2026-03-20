@@ -30,7 +30,10 @@ watch(() => props.record, () => {
   activeTab.value = 'video'
 })
 
-const isExporting = ref(false)
+const isExportingCsv = ref(false)
+const isExportingJson = ref(false)
+const isDownloadingVideo = ref(false)
+const isDownloadingDataPackage = ref(false)
 const exportError = ref<string | null>(null)
 
 // 处理返回结果列表
@@ -40,8 +43,9 @@ function handleBackToList() {
 
 // 处理数据导出
 async function handleExport(format: 'csv' | 'json' = 'csv') {
+  const stateVar = format === 'csv' ? isExportingCsv : isExportingJson
   try {
-    isExporting.value = true
+    stateVar.value = true
     exportError.value = null
     await api.exportData(props.record.task_id, format)
     showToast(`数据已成功导出为 ${format.toUpperCase()} 格式`, 'success')
@@ -50,14 +54,14 @@ async function handleExport(format: 'csv' | 'json' = 'csv') {
     console.error('Export error:', error)
     showToast(error.message || '导出失败', 'error')
   } finally {
-    isExporting.value = false
+    stateVar.value = false
   }
 }
 
 // 处理视频下载
 async function handleDownloadVideo() {
   try {
-    isExporting.value = true
+    isDownloadingVideo.value = true
     exportError.value = null
     await api.downloadVideo(props.record.task_id, props.record.video_name)
     showToast('标注视频下载成功！', 'success')
@@ -66,7 +70,23 @@ async function handleDownloadVideo() {
     console.error('Download error:', error)
     showToast(error.message || '下载失败', 'error')
   } finally {
-    isExporting.value = false
+    isDownloadingVideo.value = false
+  }
+}
+
+// 处理数据包下载
+async function handleDownloadDataPackage() {
+  try {
+    isDownloadingDataPackage.value = true
+    exportError.value = null
+    await api.downloadDataPackage(props.record.task_id, props.record.task_name || props.record.video_name)
+    showToast('数据包导出成功！', 'success')
+  } catch (error: any) {
+    exportError.value = error.message || '导出失败'
+    console.error('Data package download error:', error)
+    showToast(error.message || '导出失败', 'error')
+  } finally {
+    isDownloadingDataPackage.value = false
   }
 }
 
@@ -95,10 +115,14 @@ function handleTabChange(tab: TabType) {
     <!-- 结果头部 -->
     <ResultHeader
       :record="record"
-      :is-exporting="isExporting"
+      :is-exporting-csv="isExportingCsv"
+      :is-exporting-json="isExportingJson"
+      :is-downloading-video="isDownloadingVideo"
+      :is-downloading-data-package="isDownloadingDataPackage"
       :activeTab="activeTab"
       @export="handleExport"
       @download="handleDownloadVideo"
+      @downloadDataPackage="handleDownloadDataPackage"
       @tabChange="handleTabChange"
     />
 
