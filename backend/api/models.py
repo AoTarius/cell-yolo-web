@@ -139,7 +139,6 @@ class Task(BaseModel):
     task_id = models.CharField(max_length=36, unique=True, verbose_name='任务ID')
     task_name = models.CharField(max_length=255, verbose_name='任务名称')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='状态')
-    total_frames = models.IntegerField(default=0, verbose_name='总帧数')
     conf = models.FloatField(default=0.3, verbose_name='置信度阈值')
     imgsz = models.IntegerField(default=1024, verbose_name='图像尺寸')
     fps = models.IntegerField(default=10, verbose_name='帧率')

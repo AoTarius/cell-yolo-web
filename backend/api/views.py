@@ -2006,12 +2006,13 @@ class ExportTaskDataView(APIView):
 
         try:
             with connection.cursor() as cursor:
-                # 查询任务信息和用户的 output_base_path
+                # 查询任务信息和用户的 output_base_path，以及video_id和video_name
                 task_sql = """
-                SELECT u.output_base_path, t.status, t.task_name
+                SELECT u.output_base_path, t.status, t.task_name, t.video_id, v.video_name, v.video_path
                 FROM tasks t
                 JOIN users u ON t.user_id = u.id
-                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                JOIN videos v ON t.video_id = v.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE AND v.is_deleted = FALSE
                 """
                 cursor.execute(task_sql, (task_id,))
                 task_info = cursor.fetchone()
@@ -2045,9 +2046,18 @@ class ExportTaskDataView(APIView):
                     for root, dirs, files in os.walk(task_dir):
                         for file in files:
                             file_path = Path(root) / file
-                            # 计算相对路径，保持目录结构
-                            arcname = file_path.relative_to(output_base_path)
+                            # 计算相对路径，去掉 tasks/{task_id} 层级
+                            arcname = file_path.relative_to(task_dir)
                             zip_file.write(file_path, arcname)
+
+                    # 添加原视频到 original/ 文件夹
+                    video_path_relative = task_info['video_path']
+                    if video_path_relative:
+                        original_video_path = output_base_path / video_path_relative
+                        if original_video_path.exists():
+                            # 将原视频放到 original/ 目录下
+                            original_arcname = f"original/{task_info['video_name']}"
+                            zip_file.write(original_video_path, original_arcname)
 
                 # 重置指针到文件开头
                 zip_buffer.seek(0)
