@@ -8,6 +8,7 @@ import CompareView from '../views/compare/CompareView.vue'
 import CompareResult from '../components/compare/CompareResult.vue'
 import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
+import ImportView from '../views/import/ImportView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -59,6 +60,11 @@ const router = createRouter({
       path: '/compare/result',
       name: 'compareResult',
       component: CompareResult,
+    },
+    {
+      path: '/import',
+      name: 'import',
+      component: ImportView,
     },
   ],
 })

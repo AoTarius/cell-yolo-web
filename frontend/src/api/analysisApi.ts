@@ -219,6 +219,33 @@ export const analysisApi = {
     })
     return data
   },
+
+  /**
+   * 导入数据包
+   * POST /api/import
+   * @param file ZIP数据包文件
+   * @param username 用户名
+   * @param onProgress 上传进度回调
+   * @returns 导入结果
+   */
+  async importDataPackage(
+    file: File,
+    username: string,
+    onProgress?: UploadProgressCallback
+  ): Promise<{ message: string; task_id?: string; status: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('username', username)
+
+    const { data } = await api.post('/import/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: onProgress,
+    })
+
+    return data
+  },
 }
 
 /**

@@ -312,7 +312,7 @@ function handleCompare() {
 }
 
 function handleExport() {
-  showToast('备用功能开发中...', 'info')
+  router.push('/import')
 }
 
 function handleLogout() {
@@ -505,7 +505,7 @@ const isSorting = computed(() => {
           </button>
           <button class="btn-export" @click="handleExport">
             <span class="icon">↓</span>
-            备用按钮
+            导入分析
           </button>
         </div>
       </template>

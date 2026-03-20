@@ -33,4 +33,7 @@ urlpatterns = [
     path('export-task-data/<str:task_id>/', views.ExportTaskDataView.as_view(), name='export_task_data'),
     path('cells/<str:task_id>/', views.get_cells_by_task, name='get_cells_by_task'),
     path('cells/<str:task_id>/<int:track_id>/', views.get_cell_detail, name='get_cell_detail'),
+
+    # 数据导入接口
+    path('import/', views.ImportDataPackageView.as_view(), name='import_data_package'),
 ]

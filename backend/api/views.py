@@ -2070,3 +2070,59 @@ class ExportTaskDataView(APIView):
 
         finally:
             connection.close()
+
+
+class ImportDataPackageView(APIView):
+    """导入数据包接口"""
+
+    def post(self, request):
+        """
+        导入ZIP格式的分析数据包
+
+        请求体格式: multipart/form-data
+        - file: ZIP文件
+        - username: 用户名
+        """
+        try:
+            # 获取ZIP文件
+            zip_file = request.FILES.get('file')
+            if not zip_file:
+                return Response(
+                    {'error': '未找到ZIP文件'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 验证文件类型
+            if not zip_file.name.endswith('.zip'):
+                return Response(
+                    {'error': '只支持ZIP格式的数据包'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # 获取用户名
+            username = request.data.get('username', '')
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # TODO: 实现导入逻辑
+            # 1. 解压ZIP文件
+            # 2. 验证数据包格式（result.json, 视频文件, metadata.json）
+            # 3. 创建新的Video记录
+            # 4. 创建新的Task记录（生成新的task_id）
+            # 5. 保存视频文件到用户目录
+            # 6. 使用process_and_save方法导入Cell数据
+            # 7. 更新任务状态为completed
+
+            return Response({
+                'message': '导入功能正在开发中',
+                'status': 'pending'
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {'error': f'导入数据包失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

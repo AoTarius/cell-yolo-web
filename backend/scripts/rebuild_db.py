@@ -8,7 +8,6 @@ import os
 import sys
 import pymysql
 from dotenv import load_dotenv
-from init_data import init_root_user, check_and_fix_table_structure  # 导入数据初始化函数
 
 # 加载环境变量（从上一级目录加载 .env）
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -113,11 +112,6 @@ def main():
 
     rebuilder = DatabaseRebuilder()
     rebuilder.rebuild()
-
-    # 初始化并验证数据
-    check_and_fix_table_structure()
-    success = init_root_user()
-    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

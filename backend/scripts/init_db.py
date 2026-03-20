@@ -8,6 +8,7 @@ import os
 import sys
 import pymysql
 from dotenv import load_dotenv
+from init_data import init_root_user, check_and_fix_table_structure, init_import_model # 导入数据初始化函数
 
 # 加载环境变量（从上一级目录加载 .env）
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -76,7 +77,15 @@ class DatabaseInitializer:
             self.disconnect()
             sys.exit(1)
 
-        # 步骤 3: 关闭连接
+
+        # 步骤 3: 初始化并验证数据
+        check_and_fix_table_structure()
+        success = init_root_user()
+        if success:
+            success = init_import_model()
+        sys.exit(0 if success else 1)
+
+        # 步骤 4: 关闭连接
         self.disconnect()
 
         print("=" * 50)

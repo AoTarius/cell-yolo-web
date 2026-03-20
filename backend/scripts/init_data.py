@@ -218,12 +218,77 @@ def init_root_user() -> bool:
         else:
             print("✗ 创建 root 用户失败")
             return False
+        
+def init_import_model() -> bool:
+    """
+    初始化 导入model 
+
+    用户信息：
+    - model_name: 非本地模型
+    - model_path: 非本地模型路径
+    - user_id: 1，表示该模型属于 root 用户，实际使用时一般用户需要注册账号使用，不会暴露给用户
+    - created_at: 当前时间
+    - updated_at: 当前时间
+    - is_deleted: False
+    - deleted_at: NULL
+
+    Returns:
+        是否成功
+    """
+    print("=" * 50)
+    print("初始化 导入model")
+    print("=" * 50)
+
+    # 检查 导入model 是否已存在
+    with DatabaseOperator() as db:
+        # 查询是否已存在 导入model
+        check_sql = "SELECT id FROM models WHERE model_name = %s AND is_deleted = FALSE"
+        existing_model = db.execute_query(check_sql, ('非本地模型',))
+
+        if existing_model:
+            print(f"✗ 导入model 已存在 (ID: {existing_model[0]['id']})")
+            print("如需重新创建，请先删除现有model")
+            return False
+
+        # 准备插入数据
+        current_time = datetime.now()
+
+        insert_sql = """
+        INSERT INTO models (
+            model_name, model_path, user_id,
+            created_at, updated_at, is_deleted, deleted_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+
+        params = (
+            '非本地模型',                  # model_name
+            '非本地模型路径',                # model_path
+            1,                        # user_id
+            current_time,              # created_at
+            current_time,              # updated_at
+            False,                     # is_deleted
+            None                       # deleted_at (NULL)
+        )
+
+        # 插入模型
+        model = db.execute_insert(insert_sql, params)
+
+        if model:
+            print(f"✓ 导入model 创建成功 (ID: {model})")
+            print("=" * 50)
+            print("✓ 初始化完成！")
+            print("=" * 50)
+            return True
+        else:
+            print("✗ 创建 导入model 失败")
+            return False
 
 
 def main():
     """主函数"""
     check_and_fix_table_structure()
     success = init_root_user()
+    success = success and init_import_model()
     sys.exit(0 if success else 1)
 
 
