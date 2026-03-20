@@ -3,11 +3,14 @@ import '@/assets/styles/colors.css'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import { useAnalysisStore } from '@/stores/analysisStore'
 import { useToast } from '@/composables/useToast'
+import { analysisApi } from '@/api/analysisApi'
 import Sidebar from '@/components/common/layout/Sidebar.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const store = useAnalysisStore()
 const { showToast } = useToast()
 
 const selectedFile = ref<File | null>(null)
@@ -69,24 +72,36 @@ async function handleImport() {
       return
     }
 
-    // TODO: 实现导入逻辑
-    // 这里暂时只模拟导入过程
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 200))
-      importProgress.value = i
-    }
+    // 调用后端导入接口
+    const result = await analysisApi.importDataPackage(
+      selectedFile.value,
+      userStore.currentUser.username,
+      (progressEvent: any) => {
+        if (progressEvent.total) {
+          importProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        }
+      }
+    )
 
     importStatus.value = 'completed'
+    importProgress.value = 100
     showToast('数据包导入成功！', 'success')
 
-    // 3秒后跳转到主页
+    // 刷新任务列表
+    await store.loadHistoryTasks()
+
+    // 2秒后跳转到主页并选中新任务
     setTimeout(() => {
-      router.push('/')
-    }, 3000)
+      router.push('/').then(() => {
+        if (result.task_id) {
+          store.selectRecord(result.task_id)
+        }
+      })
+    }, 2000)
 
   } catch (error: any) {
     importStatus.value = 'error'
-    importError.value = error.message || '导入失败'
+    importError.value = error.response?.data?.error || error.message || '导入失败'
     showToast(importError.value || '导入失败', 'error')
   } finally {
     isImporting.value = false

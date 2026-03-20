@@ -2117,22 +2117,261 @@ class ImportDataPackageView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # TODO: 实现导入逻辑
-            # 1. 解压ZIP文件
-            # 2. 验证数据包格式（result.json, 视频文件, metadata.json）
-            # 3. 创建新的Video记录
-            # 4. 创建新的Task记录（生成新的task_id）
-            # 5. 保存视频文件到用户目录
-            # 6. 使用process_and_save方法导入Cell数据
-            # 7. 更新任务状态为completed
+            # 连接数据库
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-            return Response({
-                'message': '导入功能正在开发中',
-                'status': 'pending'
-            }, status=status.HTTP_200_OK)
+            # 用于回滚的变量
+            temp_extract_dir = None
+            new_task_dir = None
+            new_video_id = None
 
-        except Exception as e:
-            return Response(
-                {'error': f'导入数据包失败: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            try:
+                import zipfile
+                import tempfile
+                import shutil
+                from pathlib import Path
+
+                # 1. 查询用户信息，获取output_base_path和model_base_path
+                with connection.cursor() as cursor:
+                    user_sql = "SELECT id, output_base_path, model_base_path FROM users WHERE username = %s AND is_deleted = FALSE"
+                    cursor.execute(user_sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    user_id = user['id']
+                    output_base_path = Path(user['output_base_path'])
+                    model_base_path = Path(user['model_base_path'])
+
+                # 2. 生成新的task_id
+                new_task_id = str(uuid.uuid4())
+
+                # 3. 解压ZIP文件到临时目录
+                temp_extract_dir = Path(tempfile.mkdtemp())
+
+                # 保存上传的ZIP文件
+                zip_temp_path = temp_extract_dir / 'uploaded.zip'
+                with open(zip_temp_path, 'wb') as f:
+                    for chunk in zip_file.chunks():
+                        f.write(chunk)
+
+                # 解压ZIP文件
+                with zipfile.ZipFile(zip_temp_path, 'r') as zip_ref:
+                    zip_ref.extractall(temp_extract_dir)
+
+                # 获取解压后的根目录（应该是唯一的子目录）
+                extracted_dirs = [d for d in temp_extract_dir.iterdir() if d.is_dir()]
+                if len(extracted_dirs) != 1:
+                    # 如果解压后没有子目录，直接使用temp_extract_dir
+                    extracted_root = temp_extract_dir
+                else:
+                    extracted_root = extracted_dirs[0]
+
+                # 4. 验证数据包完整性
+                required_items = ['original', 'frames', 'output', 'result.json']
+                missing_items = []
+                for item in required_items:
+                    item_path = extracted_root / item
+                    if not item_path.exists():
+                        missing_items.append(item)
+
+                # 检查CSV文件（可能包含task_id）
+                csv_files = list(extracted_root.glob('processed_cells_*.csv'))
+                if not csv_files:
+                    missing_items.append('processed_cells_*.csv')
+
+                if missing_items:
+                    return Response(
+                        {'error': f'数据包不完整，缺少: {", ".join(missing_items)}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # 5. 读取result.json
+                result_json_path = extracted_root / 'result.json'
+                with open(result_json_path, 'r', encoding='utf-8') as f:
+                    result_data = json.load(f)
+
+                # 6. 创建新的任务目录
+                new_task_dir = output_base_path / 'tasks' / new_task_id
+                new_task_dir.mkdir(parents=True, exist_ok=True)
+
+                # 7. 复制解压后的文件到新目录
+                for item in extracted_root.iterdir():
+                    if item.is_file() and item.name != 'uploaded.zip':
+                        dest = new_task_dir / item.name
+                        shutil.copy2(item, dest)
+                    elif item.is_dir() and item.name != 'original':
+                        dest = new_task_dir / item.name
+                        shutil.copytree(item, dest)
+
+                # 8. 重命名CSV文件
+                old_csv = csv_files[0]
+                new_csv_name = f"processed_cells_{new_task_id}.csv"
+                new_csv_path = new_task_dir / new_csv_name
+                shutil.move(new_task_dir / old_csv.name, new_csv_path)
+
+                # 9. 修改result.json
+                old_task_id = result_data.get('task_id', '')
+                result_data['task_id'] = new_task_id
+                result_data['created_at'] = datetime.now().isoformat()
+
+                # 更新annotated_video_path
+                if 'annotated_video_path' in result_data:
+                    result_data['annotated_video_path'] = str(new_task_dir / 'output' / 'tracking_result.mp4')
+
+                # 更新annotated_video_url
+                if 'annotated_video_url' in result_data:
+                    result_data['annotated_video_url'] = f'/api/video/{new_task_id}'
+
+                # 保存修改后的result.json
+                with open(new_task_dir / 'result.json', 'w', encoding='utf-8') as f:
+                    json.dump(result_data, f, ensure_ascii=False, indent=2)
+
+                # 10. 获取original文件夹中的视频文件
+                original_dir = extracted_root / 'original'
+                video_files = list(original_dir.glob('*.mp4'))
+                if not video_files:
+                    video_files = list(original_dir.glob('*.avi'))
+                if not video_files:
+                    video_files = list(original_dir.glob('*.mov'))
+                if not video_files:
+                    video_files = list(original_dir.glob('*.mkv'))
+
+                if not video_files:
+                    return Response(
+                        {'error': 'original文件夹中没有找到视频文件'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                video_file = video_files[0]
+                video_name = video_file.name
+                video_size = video_file.stat().st_size
+
+                # 11. 插入videos表
+                with connection.cursor() as cursor:
+                    insert_video_sql = """
+                    INSERT INTO videos (user_id, video_name, video_path, total_frames, video_duration, file_size, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, %s, '', %s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                    """
+                    cursor.execute(insert_video_sql, (
+                        user_id,
+                        video_name,
+                        result_data.get('total_frames', 0),
+                        result_data.get('video_duration', 0),
+                        video_size
+                    ))
+                    connection.commit()
+                    new_video_id = cursor.lastrowid
+
+                    # 更新video_path
+                    video_path = f"videos/{new_video_id}/{video_name}"
+                    update_video_sql = "UPDATE videos SET video_path = %s WHERE id = %s"
+                    cursor.execute(update_video_sql, (video_path, new_video_id))
+                    connection.commit()
+
+                # 12. 移动视频文件到videos目录
+                videos_dir = output_base_path / 'videos' / str(new_video_id)
+                videos_dir.mkdir(parents=True, exist_ok=True)
+                video_dest_path = videos_dir / video_name
+                shutil.move(str(video_file), str(video_dest_path))
+
+                # 13. 更新result.json中的original_video_path
+                if 'original_video_path' in result_data:
+                    result_data['original_video_path'] = str(video_dest_path)
+                    with open(new_task_dir / 'result.json', 'w', encoding='utf-8') as f:
+                        json.dump(result_data, f, ensure_ascii=False, indent=2)
+
+                # 14. 删除original文件夹
+                original_dir_new = new_task_dir / 'original'
+                if original_dir_new.exists():
+                    shutil.rmtree(original_dir_new)
+
+                # 15. 计算fps
+                video_duration = result_data.get('video_duration', 0)
+                total_frames = result_data.get('total_frames', 0)
+                if video_duration > 0:
+                    fps = int(total_frames / video_duration)
+                else:
+                    fps = 10
+
+                # 16. 插入tasks表
+                with connection.cursor() as cursor:
+                    insert_task_sql = """
+                    INSERT INTO tasks (user_id, video_id, model_id, task_id, task_name, status, conf, imgsz, fps, annotated_video_name, error_message, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, %s, 1, %s, '新 导入任务', 'completed', 0.3, 1024, %s, 'tracking_result.mp4', '', NOW(), NOW(), FALSE, NULL)
+                    """
+                    cursor.execute(insert_task_sql, (user_id, new_video_id, new_task_id, fps))
+                    connection.commit()
+
+                # 17. 使用process_and_save方法导入Cell数据
+                from .services.preprocess_data import process_and_save
+                process_and_save(new_task_dir / 'result.json', new_task_id)
+
+                # 18. 创建TaskStatus记录
+                with connection.cursor() as cursor:
+                    insert_status_sql = """
+                    INSERT INTO task_status (task_id, status, progress, stage, current_frame, total_frames, error_message, estimated_remaining_time, created_at, updated_at, is_deleted, deleted_at)
+                    VALUES (%s, 'completed', 100, 'data_processing', 0, 0, '', NULL, NOW(), NOW(), FALSE, NULL)
+                    """
+                    cursor.execute(insert_status_sql, (new_task_id,))
+                    connection.commit()
+
+                # 清理临时目录
+                if temp_extract_dir and temp_extract_dir.exists():
+                    shutil.rmtree(temp_extract_dir)
+
+                return Response({
+                    'message': '数据包导入成功',
+                    'task_id': new_task_id,
+                    'status': 'completed'
+                }, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                # 回滚：删除已创建的目录和文件
+                try:
+                    if new_task_dir and new_task_dir.exists():
+                        shutil.rmtree(new_task_dir)
+                    if new_video_id:
+                        videos_dir = output_base_path / 'videos' / str(new_video_id)
+                        if videos_dir.exists():
+                            shutil.rmtree(videos_dir)
+                    if temp_extract_dir and temp_extract_dir.exists():
+                        shutil.rmtree(temp_extract_dir)
+                except Exception as rollback_error:
+                    print(f"回滚失败: {rollback_error}")
+
+                # 如果已插入数据库记录，需要删除（软删除）
+                try:
+                    with connection.cursor() as cursor:
+                        if new_task_id:
+                            cursor.execute("UPDATE tasks SET is_deleted = TRUE, deleted_at = NOW() WHERE task_id = %s", (new_task_id,))
+                        if new_video_id:
+                            cursor.execute("UPDATE videos SET is_deleted = TRUE, deleted_at = NOW() WHERE id = %s", (new_video_id,))
+                        connection.commit()
+                except Exception as db_rollback_error:
+                    print(f"数据库回滚失败: {db_rollback_error}")
+
+                return Response(
+                    {'error': f'导入数据包失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        finally:
+            connection.close()
