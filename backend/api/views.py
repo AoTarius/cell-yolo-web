@@ -1333,15 +1333,10 @@ class ExportDataView(APIView):
             import csv
             import io
 
-            print(f"{get_thread_prefix(task_id)} ExportDataView called")
-            print(f"{get_thread_prefix(task_id)} Request query params: {dict(request.GET)}")
-
             # 获取导出格式（使用 export_format 避免与 DRF 的 format 参数冲突）
             format_type = request.GET.get('export_format', 'csv').lower()
-            print(f"{get_thread_prefix(task_id)} Format type: {format_type}")
 
             if format_type not in ['csv', 'json']:
-                print(f"{get_thread_prefix(task_id)} Invalid format: {format_type}")
                 return Response(
                     {'error': '不支持的格式，支持的格式: csv, json'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -1382,85 +1377,52 @@ class ExportDataView(APIView):
                         )
 
                     output_base_path = Path(task_info['output_base_path'])
-                    json_path = output_base_path / 'tasks' / task_id / 'result.json'
-                    print(f"{get_thread_prefix(task_id)} JSON path: {json_path}")
-                    print(f"{get_thread_prefix(task_id)} JSON exists: {json_path.exists()}")
+                    task_dir = output_base_path / 'tasks' / task_id
 
-                    if not json_path.exists():
-                        print(f"{get_thread_prefix(task_id)} JSON file not found at: {json_path}")
-                        return Response(
-                            {'error': '结果不存在'},
-                            status=status.HTTP_404_NOT_FOUND
+                    if format_type == 'csv':
+                        # CSV 格式：直接返回 processed_cells 文件
+                        csv_filename = f"processed_cells_{task_id}.csv"
+                        csv_path = task_dir / csv_filename
+
+                        if not csv_path.exists():
+                            return Response(
+                                {'error': f'CSV 文件不存在: {csv_filename}'},
+                                status=status.HTTP_404_NOT_FOUND
+                            )
+
+                        # 返回 CSV 文件
+                        with open(csv_path, 'rb') as f:
+                            response = HttpResponse(
+                                f.read(),
+                                content_type='text/csv; charset=utf-8'
+                            )
+                            response['Content-Disposition'] = f'attachment; filename="{csv_filename}"'
+                            return response
+
+                    elif format_type == 'json':
+                        # JSON 格式：读取 result.json 并返回
+                        json_path = task_dir / 'result.json'
+
+                        if not json_path.exists():
+                            return Response(
+                                {'error': '结果文件不存在'},
+                                status=status.HTTP_404_NOT_FOUND
+                            )
+
+                        with open(json_path, 'r', encoding='utf-8') as f:
+                            result = json.load(f)
+
+                        response = Response(
+                            json.dumps(result, ensure_ascii=False, indent=2),
+                            content_type='application/json'
                         )
+                        response['Content-Disposition'] = f'attachment; filename="analysis_{task_id}.json"'
+                        return response
+
             finally:
                 connection.close()
 
-            with open(json_path, 'r', encoding='utf-8') as f:
-                result = json.load(f)
-            print(f"{get_thread_prefix(task_id)} Loaded result with {len(result.get('tracking_data', []))} tracking records")
-
-            if format_type == 'json':
-                print(f"{get_thread_prefix(task_id)} Exporting JSON")
-                # 导出 JSON
-                response = Response(
-                    json.dumps(result, ensure_ascii=False, indent=2),
-                    content_type='application/json'
-                )
-                response['Content-Disposition'] = f'attachment; filename="analysis_{task_id}.json"'
-                return response
-
-            elif format_type == 'csv':
-                print(f"{get_thread_prefix(task_id)} Exporting CSV")
-                # 导出 CSV
-                output = io.StringIO()
-                writer = csv.writer(output)
-
-                # 写入表头
-                writer.writerow([
-                    'track_id',
-                    'frame',
-                    'bb_left',
-                    'bb_top',
-                    'bb_width',
-                    'bb_height',
-                    'conf',
-                    'class',
-                    'visibility'
-                ])
-
-                # 写入数据（使用实际的 tracking_data 结构）
-                rows_written = 0
-                for record in result.get('tracking_data', []):
-                    writer.writerow([
-                        record.get('track_id', ''),
-                        record.get('frame', ''),
-                        record.get('bb_left', ''),
-                        record.get('bb_top', ''),
-                        record.get('bb_width', ''),
-                        record.get('bb_height', ''),
-                        record.get('conf', ''),
-                        record.get('class', ''),
-                        record.get('visibility', '')
-                    ])
-                    rows_written += 1
-
-                print(f"{get_thread_prefix(task_id)} CSV rows written: {rows_written}")
-
-                # 创建响应
-                csv_content = output.getvalue()
-                print(f"{get_thread_prefix(task_id)} CSV content length: {len(csv_content)}")
-
-                response = HttpResponse(
-                    csv_content,
-                    content_type='text/csv; charset=utf-8'
-                )
-                response['Content-Disposition'] = f'attachment; filename="analysis_{task_id}.csv"'
-                return response
-
         except Exception as e:
-            print(f"{get_thread_prefix(task_id)} Export error: {str(e)}")
-            import traceback
-            print(f"{get_thread_prefix(task_id)} Traceback: {traceback.format_exc()}")
             return Response(
                 {'error': f'导出失败: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
