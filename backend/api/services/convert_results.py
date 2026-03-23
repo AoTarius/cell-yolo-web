@@ -13,6 +13,7 @@ import threading
 from pathlib import Path
 from tqdm import tqdm
 from collections import deque
+import imageio.v2 as imageio
 
 
 # 线程标识辅助函数
@@ -153,6 +154,67 @@ def draw_trajectory(img, track_id, center):
             continue
         thickness = int(np.sqrt(64 / float(j + 1)) * 1.5)
         cv2.line(img, data_deque[track_id][j - 1], data_deque[track_id][j], color, max(thickness, 1))
+
+
+def generate_video_with_imageio(frames, output_path, fps):
+    """
+    使用 imageio 生成浏览器兼容的 H.264 视频
+    与 convert.py 保持相同的编码参数
+    """
+    if not frames:
+        print(f"{get_thread_prefix()} 没有帧可写入视频")
+        return
+
+    # 获取第一帧的尺寸
+    first_frame = frames[0]
+    height, width = first_frame.shape[:2]
+    print(f"{get_thread_prefix()} 视频尺寸: {width}x{height}, 帧数: {len(frames)}, FPS: {fps}")
+
+    # 与 convert.py 完全相同的编码参数
+    writer = imageio.get_writer(
+        output_path,
+        fps=fps,
+        codec='libx264',
+        pixelformat='yuv420p',      # Chrome 兼容性关键
+        quality=8,
+        macro_block_size=1,         # 避免强制缩放到16的倍数
+        ffmpeg_params=[
+            '-preset', 'fast',
+            '-movflags', 'faststart',    # 支持流式播放
+            '-profile:v', 'high',        # 支持高分辨率
+            '-level', '4.0',             # 支持大尺寸视频
+            '-crf', '23',
+            '-vf', 'format=yuv420p'      # 确保像素格式正确
+        ]
+    )
+
+    # 写入所有帧
+    for i, frame in enumerate(frames):
+        # 确保帧格式正确 (RGB uint8)
+        if len(frame.shape) == 2:
+            frame = np.stack([frame, frame, frame], axis=-1)
+        elif frame.shape[2] == 4:
+            frame = frame[:, :, :3]
+        
+        if frame.dtype != np.uint8:
+            frame = (frame / frame.max() * 255).astype(np.uint8)
+        
+        writer.append_data(frame)
+        
+        # 每10帧输出一次进度
+        if (i + 1) % 10 == 0 or i == len(frames) - 1:
+            print(f"{get_thread_prefix()} 视频编码进度: {i + 1}/{len(frames)}")
+
+    writer.close()
+
+    print(f"{get_thread_prefix()} ✅ 视频已保存到: {output_path}")
+    print(f"{get_thread_prefix()} 📊 视频信息:")
+    print(f"{get_thread_prefix()}    - 分辨率: {width}x{height}")
+    print(f"{get_thread_prefix()}    - 帧数: {len(frames)}")
+    print(f"{get_thread_prefix()}    - 帧率: {fps} fps")
+    print(f"{get_thread_prefix()}    - 时长: {len(frames) / fps:.1f} 秒")
+    print(f"{get_thread_prefix()}    - 编码: H.264 (libx264, high profile, level 4.0)")
+    print(f"{get_thread_prefix()}    - 像素格式: yuv420p (浏览器兼容)")
 
 
 def run_tracking_with_colored_masks(
@@ -366,15 +428,8 @@ def run_tracking_with_colored_masks(
 
     # ========== 生成视频 ==========
     if len(frames) > 1:
-        video_path = output_path / "tracking_result.mp4"
-        h, w = frames[0].shape[:2]
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        writer = cv2.VideoWriter(str(video_path), fourcc, fps, (w, h))
-        for frame in frames:
-            writer.write(frame)
-        writer.release()
-        print(f"{get_thread_prefix(task_id)} 视频已保存到: {video_path}")
-
+        video_output_path = output_path / "tracking_result.mp4"
+        generate_video_with_imageio(frames, str(video_output_path), fps)
     # 清理轨迹数据
     data_deque.clear()
 

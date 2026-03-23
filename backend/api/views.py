@@ -625,8 +625,7 @@ class AnnotatedVideoView(APIView):
                 return FileResponse(
                     open(video_path, 'rb'),
                     content_type='video/mp4',
-                    as_attachment=True,
-                    filename=filename
+                    as_attachment=False
                 )
 
         finally:
@@ -686,8 +685,7 @@ class OriginalVideoView(APIView):
                 return FileResponse(
                     open(video_path, 'rb'),
                     content_type='video/mp4',
-                    as_attachment=True,
-                    filename=filename
+                    as_attachment=False
                 )
 
         finally:
