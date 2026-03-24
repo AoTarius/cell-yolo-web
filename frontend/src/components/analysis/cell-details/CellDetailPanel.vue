@@ -403,8 +403,8 @@ const motionMetrics = computed(() => {
 }
 
 .btn-back:hover {
-  background: var(--border-color);
-  border-color: var(--text-muted);
+  background: var(--bg-cover);
+  border-color: var(--border-hover);
 }
 
 .btn-back svg {

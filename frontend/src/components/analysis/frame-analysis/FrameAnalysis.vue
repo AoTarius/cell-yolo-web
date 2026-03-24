@@ -57,7 +57,6 @@ async function loadAllCells() {
   isLoadingCells.value = true
   try {
     allCellsCache.value = await store.loadCellsByTask(props.record.task_id)
-    console.log(`[逐帧分析] 加载任务细胞数据: ${props.record.task_id}, 细胞数量: ${allCellsCache.value.length}`)
   } catch (error) {
     console.error('加载细胞数据失败:', error)
     allCellsCache.value = []
@@ -122,8 +121,6 @@ function loadCurrentFrameCells() {
     avgVisibility: cell.visibility,
     cellClass: cell.class_id
   }))
-
-  console.log(`[逐帧分析] 第 ${currentFrameNum} 帧的细胞数量: ${frameCells.length}`)
 }
 
 // 下一帧
@@ -234,6 +231,12 @@ function getConfClass(conf: number): string {
   if (conf >= 0.7) return 'conf-medium'
   return 'conf-low'
 }
+
+// 处理查看细胞详情
+function handleViewCell(cellId: string) {
+  store.selectCell(cellId)
+}
+
 </script>
 
 <template>
@@ -384,6 +387,7 @@ function getConfClass(conf: number): string {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
           <p>当前帧未检测到细胞</p>
+          <p>若为初始帧则为正常情况</p>
         </div>
 
         <!-- 细胞信息表格 -->
@@ -396,6 +400,7 @@ function getConfClass(conf: number): string {
                 <th>面积</th>
                 <th>速度</th>
                 <th>方向 (VX, VY)</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -405,6 +410,9 @@ function getConfClass(conf: number): string {
                 <td>{{ cell.frames[0]?.area.toFixed(1) }}</td>
                 <td>{{ cell.frames[0]?.velocity.speed.toFixed(2) }}</td>
                 <td>{{ cell.frames[0]?.velocity.vx.toFixed(2) }}, {{ cell.frames[0]?.velocity.vy.toFixed(2) }}</td>
+                <td>
+                  <button class="btn-view" @click="handleViewCell(cell.cell_id)">查看详情</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -733,7 +741,6 @@ function getConfClass(conf: number): string {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
 .cell-count {
@@ -920,5 +927,32 @@ function getConfClass(conf: number): string {
 
 .cells-table-container::-webkit-scrollbar-corner {
   background: var(--bg-main);
+}
+
+.btn-view {
+  padding: 0.25rem 0.75rem;
+  background: var(--bg-input);
+  color: var(--accent-blue);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+:global(:root:not(.dark)) .btn-view {
+  background: var(--bg-card-light);
+  color: var(--accent-blue);
+  border-color: var(--border-color-light);
+}
+
+.btn-view:hover {
+  background: var(--alpha-badge);
+  border-color: var(--accent-blue);
+}
+
+:global(:root:not(.dark)) .btn-view:hover {
+  background: var(--upload-hover-bg);
+  border-color: var(--accent-blue);
 }
 </style>

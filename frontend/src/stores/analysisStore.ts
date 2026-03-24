@@ -581,7 +581,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
   async function loadCellsByTask(taskId: string): Promise<CellData[]> {
     // 检查缓存
     if (cellsCache.has(taskId)) {
-      console.log(`[缓存命中] 从缓存加载细胞列表: ${taskId}`)
       return cellsCache.get(taskId)!
     }
 
@@ -591,7 +590,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
         const cells = aggregateCells(response.data.data)
         // 存储到缓存
         cellsCache.set(taskId, cells)
-        console.log(`[API调用] 加载细胞列表并缓存: ${taskId}, 细胞数量: ${cells.length}`)
         return cells
       }
       return []
@@ -690,7 +688,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
 
     // 检查缓存
     if (cellDetailCache.has(cacheKey)) {
-      console.log(`[缓存命中] 从缓存加载细胞详情: ${cacheKey}`)
       return cellDetailCache.get(cacheKey)!
     }
 
@@ -700,7 +697,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
         const cellDetail = transformCellData(response.data.data)
         // 存储到缓存
         cellDetailCache.set(cacheKey, cellDetail)
-        console.log(`[API调用] 加载细胞详情并缓存: ${cacheKey}`)
         return cellDetail
       }
       return null
