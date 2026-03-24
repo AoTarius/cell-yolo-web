@@ -509,6 +509,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
       const heights = cells.map(c => c.bb_height)
       const confidences = cells.map(c => c.conf)
       const velocities = cells.map(c => c.speed || 0)
+      const visibilities = cells.map(c => c.visibility ?? 1)
 
       const firstFrame = Math.min(...frames)
       const lastFrame = Math.max(...frames)
@@ -517,6 +518,35 @@ export const useAnalysisStore = defineStore('analysis', () => {
       const avgHeight = heights.reduce((a, b) => a + b, 0) / heights.length
       const avgConf = confidences.reduce((a, b) => a + b, 0) / confidences.length
       const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length
+      const avgVisibility = visibilities.reduce((a, b) => a + b, 0) / visibilities.length
+      const cellClass = cells[0]?.class_id ?? 0
+
+      // 构建帧数据
+      const framesData: CellFrameData[] = cells.map(c => {
+        const metrics = c.metrics_json || {}
+        return {
+          frame_number: c.frame,
+          position: {
+            x: metrics.center?.cx ?? (c.bb_left + c.bb_width / 2),
+            y: metrics.center?.cy ?? (c.bb_top + c.bb_height / 2)
+          },
+          area: c.area || (c.bb_width * c.bb_height),
+          velocity: {
+            vx: metrics.motion?.vx ?? 0,
+            vy: metrics.motion?.vy ?? 0,
+            speed: metrics.motion?.migration_speed ?? c.speed ?? 0
+          },
+          bounding_box: {
+            x: metrics.bbox?.left ?? c.bb_left,
+            y: metrics.bbox?.top ?? c.bb_top,
+            width: metrics.bbox?.width ?? c.bb_width,
+            height: metrics.bbox?.height ?? c.bb_height
+          }
+        }
+      })
+
+      // 收集所有原始指标
+      const rawMetrics = cells.map(c => c.metrics_json || {})
 
       // 构建聚合数据
       const aggregatedCell: CellData = {
@@ -528,7 +558,10 @@ export const useAnalysisStore = defineStore('analysis', () => {
         avg_height: avgHeight,
         avg_conf: avgConf,
         avg_velocity: avgVelocity,
-        frames: [] // 这里暂时为空，如果需要详细帧数据，可以从 cells 构造
+        frames: framesData,
+        rawMetrics: rawMetrics,
+        avgVisibility: avgVisibility,
+        cellClass: cellClass
       }
 
       aggregatedCells.push(aggregatedCell)
