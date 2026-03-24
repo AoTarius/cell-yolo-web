@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import '@/assets/styles/colors.css'
-import { ref, computed, onMounted } from 'vue'
-import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useAnalysisStore, type CellData } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
 import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
@@ -92,8 +92,99 @@ function loadImageB() {
   img.src = newUrl
 }
 
-// ==================== 视频A的控制函数 ====================
+// 添加响应式变量以存储细胞数据
+const allCellsCacheA = ref<CellData[]>([])
+const allCellsCacheB = ref<CellData[]>([])
+const currentFrameCellsA = ref<CellData[]>([])
+const currentFrameCellsB = ref<CellData[]>([])
 
+// 加载任务A的所有细胞数据
+async function loadAllCellsA() {
+  if (!recordA.value?.task_id) return
+  if (allCellsCacheA.value.length > 0) return
+
+  try {
+    allCellsCacheA.value = await store.loadCellsByTask(recordA.value.task_id)
+  } catch (error) {
+    console.error('加载任务A的细胞数据失败:', error)
+    allCellsCacheA.value = []
+  }
+}
+
+// 加载任务B的所有细胞数据
+async function loadAllCellsB() {
+  if (!recordB.value?.task_id) return
+  if (allCellsCacheB.value.length > 0) return
+
+  try {
+    allCellsCacheB.value = await store.loadCellsByTask(recordB.value.task_id)
+  } catch (error) {
+    console.error('加载任务B的细胞数据失败:', error)
+    allCellsCacheB.value = []
+  }
+}
+
+// 加载任务A当前帧的细胞数据
+function loadCurrentFrameCellsA() {
+  if (!recordA.value?.task_id || allCellsCacheA.value.length === 0) {
+    currentFrameCellsA.value = []
+    return
+  }
+
+  const currentFrameNum = currentFrameIndexA.value + 1
+  
+  // 筛选并提取当前帧数据
+  currentFrameCellsA.value = allCellsCacheA.value
+    .map(cell => {
+      const frameData = cell.frames.find(f => f.frame_number === currentFrameNum)
+      if (!frameData) return null
+      // 返回新对象，只保留当前帧数据在 frames[0]
+      return {
+        ...cell,
+        frames: [frameData]
+      }
+    })
+    .filter((cell): cell is CellData => cell !== null)
+}
+
+// 加载任务B当前帧的细胞数据
+function loadCurrentFrameCellsB() {
+  if (!recordB.value?.task_id || allCellsCacheB.value.length === 0) {
+    currentFrameCellsB.value = []
+    return
+  }
+
+  const currentFrameNum = currentFrameIndexB.value + 1
+  
+  currentFrameCellsB.value = allCellsCacheB.value
+    .map(cell => {
+      const frameData = cell.frames.find(f => f.frame_number === currentFrameNum)
+      if (!frameData) return null
+      return {
+        ...cell,
+        frames: [frameData]
+      }
+    })
+    .filter((cell): cell is CellData => cell !== null)
+}
+
+// 当帧号变化时更新帧细胞数据
+watch(() => currentFrameIndexA.value, loadCurrentFrameCellsA)
+watch(() => currentFrameIndexB.value, loadCurrentFrameCellsB)
+
+// 组件挂载时加载所有细胞数据
+onMounted(async () => {
+  if (recordA.value?.task_id) {
+    await loadAllCellsA()
+    loadCurrentFrameCellsA()
+  }
+  if (recordB.value?.task_id) {
+    await loadAllCellsB()
+    loadCurrentFrameCellsB()
+  }
+})
+
+// ==================== 视频A的控制函数 ====================
 // 视频A下一帧
 function handleNextFrameA() {
   const totalFrames = recordA.value?.result?.total_frames || 0
@@ -129,7 +220,6 @@ function handleJumpToFrameA(frameStr: string) {
 }
 
 // ==================== 视频B的控制函数 ====================
-
 // 视频B下一帧
 function handleNextFrameB() {
   const totalFrames = recordB.value?.result?.total_frames || 0
@@ -165,7 +255,6 @@ function handleJumpToFrameB(frameStr: string) {
 }
 
 // ==================== 计算属性 ====================
-
 // 计算属性：当前帧号（从1开始显示）
 const currentFrameNumberA = computed(() => currentFrameIndexA.value + 1)
 const currentFrameNumberB = computed(() => currentFrameIndexB.value + 1)
@@ -419,6 +508,87 @@ function handleBackToCompare() {
         </div>
       </div>
 
+      <!-- 细胞详细信息部分（左右两块） -->
+      <div class="cell-detail-section">
+        <h3>细胞详细信息</h3>
+        <div class="cell-detail-wrapper">
+          <!-- 左侧：记录A的细胞信息 -->
+          <div class="cell-detail-panel cell-detail-panel-left">
+            <!-- 无数据状态 -->
+            <div v-if="currentFrameCellsA.length === 0" class="no-cells-state">
+              <svg class="no-cells-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p>当前帧无可用数据</p>
+              <p class="placeholder-hint">若为初始帧则为正常情况</p>
+            </div>
+            
+            <!-- 表格数据 -->
+            <div v-else class="cells-table-container">
+              <table class="cells-table">
+                <thead>
+                  <tr>
+                    <th>细胞ID</th>
+                    <th>位置 (X, Y)</th>
+                    <th>面积</th>
+                    <th>速度</th>
+                    <th>方向 (VX, VY)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="cell in currentFrameCellsA" :key="cell.cell_id">
+                    <td class="cell-id">{{ cell.cell_id }}</td>
+                    <td>{{ cell.frames[0]?.position.x.toFixed(1) }}, {{ cell.frames[0]?.position.y.toFixed(1) }}</td>
+                    <td>{{ cell.frames[0]?.area.toFixed(1) }}</td>
+                    <td>{{ cell.frames[0]?.velocity.speed.toFixed(2) }}</td>
+                    <td>{{ cell.frames[0]?.velocity.vx.toFixed(2) }}, {{ cell.frames[0]?.velocity.vy.toFixed(2) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 中间分隔线 -->
+          <div class="cell-detail-divider"></div>
+
+          <!-- 右侧：记录B的细胞信息 -->
+          <div class="cell-detail-panel cell-detail-panel-right">
+            <!-- 无数据状态 -->
+            <div v-if="currentFrameCellsB.length === 0" class="no-cells-state">
+              <svg class="no-cells-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p>当前帧无可用数据</p>
+              <p class="placeholder-hint">若为初始帧则为正常情况</p>
+            </div>
+            
+            <!-- 表格数据 -->
+            <div v-else class="cells-table-container">
+              <table class="cells-table">
+                <thead>
+                  <tr>
+                    <th>细胞ID</th>
+                    <th>位置 (X, Y)</th>
+                    <th>面积</th>
+                    <th>速度</th>
+                    <th>方向 (VX, VY)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="cell in currentFrameCellsB" :key="cell.cell_id">
+                    <td class="cell-id">{{ cell.cell_id }}</td>
+                    <td>{{ cell.frames[0]?.position.x.toFixed(1) }}, {{ cell.frames[0]?.position.y.toFixed(1) }}</td>
+                    <td>{{ cell.frames[0]?.area.toFixed(1) }}</td>
+                    <td>{{ cell.frames[0]?.velocity.speed.toFixed(2) }}</td>
+                    <td>{{ cell.frames[0]?.velocity.vx.toFixed(2) }}, {{ cell.frames[0]?.velocity.vy.toFixed(2) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 图表部分（左右两块） -->
       <div class="chart-section">
         <h3>对比图表</h3>
@@ -466,59 +636,6 @@ function handleBackToCompare() {
                 ></path>
               </svg>
               <p>任务 B 图表区域</p>
-              <p class="placeholder-hint">功能开发中...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 细胞详细信息部分（左右两块） -->
-      <div class="cell-detail-section">
-        <h3>细胞详细信息</h3>
-        <div class="cell-detail-wrapper">
-          <!-- 左侧：记录A的细胞信息 -->
-          <div class="cell-detail-panel cell-detail-panel-left">
-            <div class="cell-detail-placeholder">
-              <svg
-                class="placeholder-icon"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-                ></path>
-              </svg>
-              <p>任务 A 细胞详细信息</p>
-              <p class="placeholder-hint">功能开发中...</p>
-            </div>
-          </div>
-
-          <!-- 中间分隔线 -->
-          <div class="cell-detail-divider"></div>
-
-          <!-- 右侧：记录B的细胞信息 -->
-          <div class="cell-detail-panel cell-detail-panel-right">
-            <div class="cell-detail-placeholder">
-              <svg
-                class="placeholder-icon"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-                ></path>
-              </svg>
-              <p>任务 B 细胞详细信息</p>
               <p class="placeholder-hint">功能开发中...</p>
             </div>
           </div>
@@ -961,7 +1078,7 @@ function handleBackToCompare() {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 1rem;
-  min-height: 500px;
+  min-height: 400px;
 }
 
 .cell-detail-panel {
@@ -1080,4 +1197,144 @@ function handleBackToCompare() {
 :global(:root:not(.dark)) .result-content::-webkit-scrollbar-thumb:hover {
   background: var(--border-hover-light);
 }
+
+/* 无数据状态 */
+.no-cells-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  height: 400px; /* 固定高度 */
+}
+
+:global(:root:not(.dark)) .no-cells-state {
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+}
+
+.no-cells-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-muted);
+}
+
+:global(:root:not(.dark)) .no-cells-icon {
+  color: var(--text-disabled-light);
+}
+
+.no-cells-state > p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+:global(:root:not(.dark)) .no-cells-state > p {
+  color: var(--text-primary-light);
+}
+
+.no-cells-state .placeholder-hint {
+  font-size: 0.875rem;
+  color: var(--text-disabled) !important;
+}
+
+:global(:root:not(.dark)) .no-cells-state .placeholder-hint {
+  color: var(--text-disabled-light) !important;
+}
+
+/* 细胞表格容器 - 固定高度，内部滚动 */
+.cells-table-container {
+  height: 400px; /* 固定高度 */
+  overflow: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+:global(:root:not(.dark)) .cells-table-container {
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+}
+
+/* 细胞表格 */
+.cells-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.cells-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.cells-table th {
+  background: var(--bg-input);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+:global(:root:not(.dark)) .cells-table th {
+  background: var(--bg-hover);
+  border-bottom-color: var(--border-color-light);
+  color: var(--text-muted-light);
+}
+
+.cells-table td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--bg-input);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+:global(:root:not(.dark)) .cells-table td {
+  border-bottom-color: var(--border-color-light);
+  color: var(--text-primary-light);
+}
+
+.cells-table tbody tr:hover {
+  background: var(--bg-main);
+}
+
+:global(:root:not(.dark)) .cells-table tbody tr:hover {
+  background: var(--bg-main-light);
+}
+
+.cells-table .cell-id {
+  font-weight: 600;
+  color: var(--accent-blue);
+}
+
+/* 表格滚动条样式 */
+.cells-table-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.cells-table-container::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+.cells-table-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 5px;
+}
+
+.cells-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+.cells-table-container::-webkit-scrollbar-corner {
+  background: var(--bg-main);
+}
+
 </style>
