@@ -22,12 +22,24 @@ const hasValidRecords = computed(() => recordA.value && recordB.value)
 onMounted(() => {
   if (!hasValidRecords.value) {
     router.push({ name: 'compare' })
+  } else {
+    // 加载第一帧
+    if (recordA.value?.task_id) {
+      loadImageA()
+    }
+    if (recordB.value?.task_id) {
+      loadImageB()
+    }
   }
 })
 
-// 视频播放器引用
-const videoARef = ref<HTMLVideoElement | null>(null)
-const videoBRef = ref<HTMLVideoElement | null>(null)
+// 图片显示
+const displayedImageUrlA = ref('')
+const displayedImageUrlB = ref('')
+
+// 图片加载状态
+const isImageLoadingA = ref(false)
+const isImageLoadingB = ref(false)
 
 // 响应式的当前帧号（各自独立）
 const currentFrameIndexA = ref(0)
@@ -36,28 +48,58 @@ const currentFrameIndexB = ref(0)
 const isExporting = ref(false)
 const exportError = ref<string | null>(null)
 
-// ==================== 视频A的控制函数 ====================
-
-// 计算视频A的帧率
-function getVideoFpsA(): number {
-  const totalFramesA = recordA.value?.result?.total_frames || 0
-  const durationA = recordA.value?.result?.video_duration || 0
-  if (durationA > 0 && totalFramesA > 0) {
-    return totalFramesA / durationA
+// 加载图片A
+function loadImageA() {
+  if (!recordA.value?.task_id) {
+    return
   }
-  return 30
+
+  const timestamp = Date.now()
+  const newUrl = `/api/frame/${recordA.value.task_id}/${currentFrameIndexA.value}/?t=${timestamp}`
+  isImageLoadingA.value = true
+
+  const img = new Image()
+  img.onload = () => {
+    displayedImageUrlA.value = newUrl
+    isImageLoadingA.value = false
+  }
+  img.onerror = () => {
+    console.error('帧图片加载失败:', newUrl)
+    isImageLoadingA.value = false
+  }
+  img.src = newUrl
 }
+
+// 加载图片B
+function loadImageB() {
+  if (!recordB.value?.task_id) {
+    return
+  }
+
+  const timestamp = Date.now()
+  const newUrl = `/api/frame/${recordB.value.task_id}/${currentFrameIndexB.value}/?t=${timestamp}`
+  isImageLoadingB.value = true
+
+  const img = new Image()
+  img.onload = () => {
+    displayedImageUrlB.value = newUrl
+    isImageLoadingB.value = false
+  }
+  img.onerror = () => {
+    console.error('帧图片加载失败:', newUrl)
+    isImageLoadingB.value = false
+  }
+  img.src = newUrl
+}
+
+// ==================== 视频A的控制函数 ====================
 
 // 视频A下一帧
 function handleNextFrameA() {
   const totalFrames = recordA.value?.result?.total_frames || 0
   if (currentFrameIndexA.value < totalFrames - 1) {
     currentFrameIndexA.value++
-    const fps = getVideoFpsA()
-    if (videoARef.value) {
-      videoARef.value.currentTime = currentFrameIndexA.value / fps
-      videoARef.value.pause()
-    }
+    loadImageA()
   }
 }
 
@@ -65,21 +107,14 @@ function handleNextFrameA() {
 function handlePrevFrameA() {
   if (currentFrameIndexA.value > 0) {
     currentFrameIndexA.value--
-    const fps = getVideoFpsA()
-    if (videoARef.value) {
-      videoARef.value.currentTime = currentFrameIndexA.value / fps
-      videoARef.value.pause()
-    }
+    loadImageA()
   }
 }
 
 // 视频A回到第一帧
 function handleGoToFirstFrameA() {
   currentFrameIndexA.value = 0
-  if (videoARef.value) {
-    videoARef.value.currentTime = 0
-    videoARef.value.pause()
-  }
+  loadImageA()
 }
 
 // 视频A跳转到指定帧
@@ -89,36 +124,18 @@ function handleJumpToFrameA(frameStr: string) {
 
   if (!isNaN(frame) && frame >= 1 && frame <= total) {
     currentFrameIndexA.value = frame - 1
-    const fps = getVideoFpsA()
-    if (videoARef.value) {
-      videoARef.value.currentTime = currentFrameIndexA.value / fps
-      videoARef.value.pause()
-    }
+    loadImageA()
   }
 }
 
 // ==================== 视频B的控制函数 ====================
-
-// 计算视频B的帧率
-function getVideoFpsB(): number {
-  const totalFramesB = recordB.value?.result?.total_frames || 0
-  const durationB = recordB.value?.result?.video_duration || 0
-  if (durationB > 0 && totalFramesB > 0) {
-    return totalFramesB / durationB
-  }
-  return 30
-}
 
 // 视频B下一帧
 function handleNextFrameB() {
   const totalFrames = recordB.value?.result?.total_frames || 0
   if (currentFrameIndexB.value < totalFrames - 1) {
     currentFrameIndexB.value++
-    const fps = getVideoFpsB()
-    if (videoBRef.value) {
-      videoBRef.value.currentTime = currentFrameIndexB.value / fps
-      videoBRef.value.pause()
-    }
+    loadImageB()
   }
 }
 
@@ -126,21 +143,14 @@ function handleNextFrameB() {
 function handlePrevFrameB() {
   if (currentFrameIndexB.value > 0) {
     currentFrameIndexB.value--
-    const fps = getVideoFpsB()
-    if (videoBRef.value) {
-      videoBRef.value.currentTime = currentFrameIndexB.value / fps
-      videoBRef.value.pause()
-    }
+    loadImageB()
   }
 }
 
 // 视频B回到第一帧
 function handleGoToFirstFrameB() {
   currentFrameIndexB.value = 0
-  if (videoBRef.value) {
-    videoBRef.value.currentTime = 0
-    videoBRef.value.pause()
-  }
+  loadImageB()
 }
 
 // 视频B跳转到指定帧
@@ -150,11 +160,7 @@ function handleJumpToFrameB(frameStr: string) {
 
   if (!isNaN(frame) && frame >= 1 && frame <= total) {
     currentFrameIndexB.value = frame - 1
-    const fps = getVideoFpsB()
-    if (videoBRef.value) {
-      videoBRef.value.currentTime = currentFrameIndexB.value / fps
-      videoBRef.value.pause()
-    }
+    loadImageB()
   }
 }
 
@@ -171,11 +177,6 @@ const totalFramesB = computed(() => recordB.value?.result?.total_frames || 0)
 // 处理返回对比页面
 function handleBackToCompare() {
   store.backToCompareList(router)
-}
-
-// 处理视频错误
-function handleVideoError() {
-  exportError.value = '视频加载失败'
 }
 </script>
 
@@ -211,23 +212,21 @@ function handleVideoError() {
 
     <div class="result-content">
       <!-- 视频对比区域 -->
-      <div class="video-compare-section">
-        <div class="video-compare-wrapper">
+      <div class="image-compare-section">
+        <div class="image-compare-wrapper">
           <!-- 左侧：记录A的标注视频 -->
-          <div class="video-panel video-panel-left">
+          <div class="image-panel image-panel-left">
             <h3>标注视频 A - {{ recordA?.task_name || '未知' }}</h3>
-            <div class="video-container">
-              <div class="video-wrapper">
-                <video
-                  ref="videoARef"
-                  v-if="recordA?.result?.output_video_path"
-                  :src="`/api/video/${recordA.task_id}/`"
-                  class="video-player"
-                  @error="handleVideoError"
-                >
-                  您的浏览器不支持视频播放
-                </video>
-                <div v-else class="video-placeholder">
+            <div class="image-container">
+              <div class="image-wrapper">
+                <img
+                  v-if="displayedImageUrlA"
+                  :src="displayedImageUrlA"
+                  class="image-player"
+                  alt="当前帧 A"
+                  :class="{ 'loading': isImageLoadingA }"
+                />
+                <div v-else class="image-placeholder">
                   <svg
                     class="placeholder-icon"
                     fill="none"
@@ -242,13 +241,13 @@ function handleVideoError() {
                       d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                     ></path>
                   </svg>
-                  <p class="placeholder-text">暂无标注视频</p>
+                  <p class="placeholder-text">暂无帧数据</p>
                 </div>
               </div>
             </div>
 
             <!-- 视频A的帧控制栏 -->
-            <div class="video-controls">
+            <div class="image-controls">
               <button class="btn-control" @click="handleGoToFirstFrameA">
                 <svg
                   fill="none"
@@ -316,23 +315,21 @@ function handleVideoError() {
           </div>
 
           <!-- 中间分隔线 -->
-          <div class="video-divider"></div>
+          <div class="image-divider"></div>
 
           <!-- 右侧：记录B的标注视频 -->
-          <div class="video-panel video-panel-right">
+          <div class="image-panel image-panel-right">
             <h3>标注视频 B - {{ recordB?.task_name || '未知' }}</h3>
-            <div class="video-container">
-              <div class="video-wrapper">
-                <video
-                  ref="videoBRef"
-                  v-if="recordB?.result?.output_video_path"
-                  :src="`/api/video/${recordB.task_id}/`"
-                  class="video-player"
-                  @error="handleVideoError"
-                >
-                  您的浏览器不支持视频播放
-                </video>
-                <div v-else class="video-placeholder">
+            <div class="image-container">
+              <div class="image-wrapper">
+                <img
+                  v-if="displayedImageUrlB"
+                  :src="displayedImageUrlB"
+                  class="image-player"
+                  alt="当前帧 B"
+                  :class="{ 'loading': isImageLoadingB }"
+                />
+                <div v-else class="image-placeholder">
                   <svg
                     class="placeholder-icon"
                     fill="none"
@@ -347,13 +344,13 @@ function handleVideoError() {
                       d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                     ></path>
                   </svg>
-                  <p class="placeholder-text">暂无标注视频</p>
+                  <p class="placeholder-text">暂无帧数据</p>
                 </div>
               </div>
             </div>
 
             <!-- 视频B的帧控制栏 -->
-            <div class="video-controls">
+            <div class="image-controls">
               <button class="btn-control" @click="handleGoToFirstFrameB">
                 <svg
                   fill="none"
@@ -634,24 +631,18 @@ function handleVideoError() {
   padding: 2rem;
 }
 
-.video-compare-section {
+.image-compare-section {
   margin-bottom: 2rem;
 }
 
-.video-compare-wrapper {
+.image-compare-wrapper {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
-.video-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.video-panel h3 {
+.image-panel h3 {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -659,11 +650,11 @@ function handleVideoError() {
   transition: color 0.3s;
 }
 
-:global(:root:not(.dark)) .video-panel h3 {
+:global(:root:not(.dark)) .image-panel h3 {
   color: var(--text-primary-light);
 }
 
-.video-container {
+.image-container {
   flex: 1;
   background: var(--bg-main);
   border: 1px solid var(--border-color);
@@ -673,23 +664,28 @@ function handleVideoError() {
   min-height: 400px;
 }
 
-:global(:root:not(.dark)) .video-container {
+:global(:root:not(.dark)) .image-container {
   background: var(--bg-main-light);
   border-color: var(--border-color-light);
 }
 
-.video-wrapper {
+.image-wrapper {
   width: 100%;
   height: 100%;
 }
 
-.video-player {
+.image-player {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transition: opacity 0.15s ease-in-out;
 }
 
-.video-placeholder {
+.image-player.loading {
+  opacity: 0.7;
+}
+
+.image-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
@@ -700,11 +696,11 @@ function handleVideoError() {
   transition: background 0.3s;
 }
 
-:global(:root:not(.dark)) .video-placeholder {
+:global(:root:not(.dark)) .image-placeholder {
   background: var(--alpha-toast-light);
 }
 
-.video-placeholder .placeholder-icon {
+.image-placeholder .placeholder-icon {
   width: 64px;
   height: 64px;
   color: var(--text-muted);
@@ -712,33 +708,33 @@ function handleVideoError() {
   transition: color 0.3s;
 }
 
-:global(:root:not(.dark)) .video-placeholder .placeholder-icon {
+:global(:root:not(.dark)) .image-placeholder .placeholder-icon {
   color: var(--text-disabled-light);
 }
 
-.video-placeholder .placeholder-text {
+.image-placeholder .placeholder-text {
   font-size: 1rem;
   color: var(--text-secondary);
   margin: 0;
   transition: color 0.3s;
 }
 
-:global(:root:not(.dark)) .video-placeholder .placeholder-text {
+:global(:root:not(.dark)) .image-placeholder .placeholder-text {
   color: var(--text-primary-light);
 }
 
-.video-divider {
+.image-divider {
   width: 1px;
   background: var(--border-color);
   align-self: stretch;
   transition: background 0.3s;
 }
 
-:global(:root:not(.dark)) .video-divider {
+:global(:root:not(.dark)) .image-divider {
   background: var(--border-color-light);
 }
 
-.video-controls {
+.image-controls {
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem;
@@ -748,7 +744,7 @@ function handleVideoError() {
   transition: background 0.3s, border-color 0.3s;
 }
 
-:global(:root:not(.dark)) .video-controls {
+:global(:root:not(.dark)) .image-controls {
   background: var(--bg-card-light);
   border-color: var(--border-color-light);
 }
