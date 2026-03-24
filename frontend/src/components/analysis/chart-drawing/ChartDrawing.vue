@@ -97,7 +97,7 @@ function closeModal(chartType: keyof typeof modalStates.value) {
 <style scoped>
 .content {
   height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--bg-main);
   padding: 24px;
   display: flex;
   justify-content: center;
@@ -110,8 +110,8 @@ function closeModal(chartType: keyof typeof modalStates.value) {
   grid-template-rows: 1fr 1fr;
   gap: 24px;
   padding: 24px;
-  background-color: #f5f5f5;
-  border: 2px solid #000; /* 黑色边框 */
+  background-color: var(--bg-card);
+  border: 2px solid var(--border-color);
   border-radius: 12px;
 }
 
@@ -120,22 +120,22 @@ function closeModal(chartType: keyof typeof modalStates.value) {
   flex-direction: column;
   align-items: center;
   cursor: pointer;
-  background-color: #ffffff;
+  background-color: var(--bg-card);
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .image-box {
   width: 100%;
   height: 200px;
-  background-color: #ffffff;
-  border: 2px solid #4a90e2;
+  background-color: var(--bg-input);
+  border: 2px solid var(--accent-blue);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -153,7 +153,7 @@ function closeModal(chartType: keyof typeof modalStates.value) {
 .title {
   margin-top: 12px;
   font-size: 16px;
-  color: #333;
+  color: var(--text-primary);
   font-weight: normal;
   text-align: center;
 }
@@ -164,7 +164,7 @@ function closeModal(chartType: keyof typeof modalStates.value) {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -172,7 +172,7 @@ function closeModal(chartType: keyof typeof modalStates.value) {
 }
 
 .modal-content {
-  background-color: #fff;
+  background-color: var(--bg-dialog);
   padding: 30px;
   border-radius: 10px;
   width: 50%;
@@ -183,7 +183,7 @@ function closeModal(chartType: keyof typeof modalStates.value) {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .close {
@@ -192,5 +192,6 @@ function closeModal(chartType: keyof typeof modalStates.value) {
   right: 15px;
   font-size: 24px;
   cursor: pointer;
+  color: var(--text-primary);
 }
 </style>

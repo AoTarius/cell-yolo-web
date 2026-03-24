@@ -240,6 +240,7 @@ npm install
 - Vue Router 5.0.1
 - Pinia 3.0.4
 - Axios 1.13.5
+- **ECharts 5.x**
 
 ### 第八步：执行 Django 迁移
 
