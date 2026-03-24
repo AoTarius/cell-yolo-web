@@ -692,6 +692,61 @@ class OriginalVideoView(APIView):
             connection.close()
 
 
+class FrameImageView(APIView):
+    """获取指定帧的图片接口"""
+
+    def get(self, request, task_id, frame_number):
+        try:
+            # 连接数据库
+            connection = pymysql.connect(
+                host=os.getenv('DB_HOST', 'localhost'),
+                port=int(os.getenv('DB_PORT', 3306)),
+                user=os.getenv('DB_USER', 'root'),
+                password=os.getenv('DB_PASSWORD', ''),
+                database=os.getenv('DB_NAME', 'cell_tracking'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except pymysql.Error as e:
+            return Response(
+                {'error': f'数据库连接失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        try:
+            with connection.cursor() as cursor:
+                # 查询任务信息和用户的 output_base_path
+                task_sql = """
+                SELECT u.output_base_path
+                FROM tasks t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.task_id = %s AND t.is_deleted = FALSE AND u.is_deleted = FALSE
+                """
+                cursor.execute(task_sql, (task_id,))
+                task_info = cursor.fetchone()
+
+                if not task_info:
+                    return HttpResponseNotFound('任务不存在')
+
+                output_base_path = Path(task_info['output_base_path'])
+
+                # 构建帧图片路径：{output_base_path}/tasks/{task_id}/output/t{frame_number:04d}.png
+                frame_filename = f"t{frame_number:04d}.png"
+                frame_path = output_base_path / 'tasks' / task_id / 'output' / frame_filename
+
+                if not frame_path.exists():
+                    return HttpResponseNotFound(f'帧 {frame_number} 不存在')
+
+                # 返回图片文件
+                return FileResponse(
+                    open(frame_path, 'rb'),
+                    content_type='image/png',
+                    as_attachment=False
+                )
+
+        finally:
+            connection.close()
+
+
 class TaskListView(APIView):
     """获取所有任务列表接口"""
 

@@ -36,4 +36,7 @@ urlpatterns = [
 
     # 数据导入接口
     path('import/', views.ImportDataPackageView.as_view(), name='import_data_package'),
+
+    # 帧图片接口
+    path('frame/<str:task_id>/<int:frame_number>/', views.FrameImageView.as_view(), name='frame_image'),
 ]

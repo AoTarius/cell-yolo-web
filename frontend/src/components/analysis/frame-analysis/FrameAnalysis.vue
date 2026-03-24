@@ -1,38 +1,27 @@
 <script setup lang="ts">
 import '@/assets/styles/colors.css'
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import type { AnalysisRecord } from '@/stores/analysisStore'
 
 const props = defineProps<{
   record: AnalysisRecord
 }>()
 
-// 视频播放器引用
-const detailVideoRef = ref<HTMLVideoElement | null>(null)
-
 // 响应式的当前帧号
 const currentFrameIndex = ref(0)
 
-// 计算视频帧率
-function getVideoFps(): number {
-  const totalFrames = props.record.result?.total_frames || 0
-  const duration = props.record.result?.video_duration || 0
-  if (duration > 0 && totalFrames > 0) {
-    return totalFrames / duration
-  }
-  return 30 // 默认帧率
-}
+// 图片加载状态
+const isImageLoading = ref(false)
+
+// 当前显示的图片 URL
+const displayedImageUrl = ref('')
 
 // 下一帧
 function handleNextFrame() {
-  const totalFrames = props.record.result?.total_frames || 0
+  const totalFrames = props.record.result?.total_frames ?? 0
   if (currentFrameIndex.value < totalFrames - 1) {
     currentFrameIndex.value++
-    const fps = getVideoFps()
-    if (detailVideoRef.value) {
-      detailVideoRef.value.currentTime = currentFrameIndex.value / fps
-      detailVideoRef.value.pause()
-    }
+    loadImage()
   }
 }
 
@@ -40,67 +29,90 @@ function handleNextFrame() {
 function handlePrevFrame() {
   if (currentFrameIndex.value > 0) {
     currentFrameIndex.value--
-    const fps = getVideoFps()
-    if (detailVideoRef.value) {
-      detailVideoRef.value.currentTime = currentFrameIndex.value / fps
-      detailVideoRef.value.pause()
-    }
+    loadImage()
   }
 }
 
 // 回到第一帧
 function handleGoToFirstFrame() {
   currentFrameIndex.value = 0
-  if (detailVideoRef.value) {
-    detailVideoRef.value.currentTime = 0
-    detailVideoRef.value.pause()
-  }
+  loadImage()
 }
 
 // 跳转到指定帧
 function handleJumpToFrame(frameStr: string) {
   const frame = parseInt(frameStr, 10)
-  const total = props.record.result?.total_frames || 0
+  const total = props.record.result?.total_frames ?? 0
 
   if (!isNaN(frame) && frame >= 1 && frame <= total) {
     currentFrameIndex.value = frame - 1
-    const fps = getVideoFps()
-    if (detailVideoRef.value) {
-      detailVideoRef.value.currentTime = currentFrameIndex.value / fps
-      detailVideoRef.value.pause()
-    }
+    loadImage()
   }
 }
+
+// 加载图片
+function loadImage() {
+  if (!props.record?.task_id) {
+    return
+  }
+
+  // 添加时间戳参数避免浏览器缓存
+  const timestamp = Date.now()
+  const newUrl = `/api/frame/${props.record.task_id}/${currentFrameIndex.value}/?t=${timestamp}`
+  isImageLoading.value = true
+
+  const img = new Image()
+  img.onload = () => {
+    displayedImageUrl.value = newUrl
+    isImageLoading.value = false
+  }
+  img.onerror = () => {
+    console.error('帧图片加载失败:', newUrl)
+    isImageLoading.value = false
+  }
+  img.src = newUrl
+}
+
+// 检查并加载图片
+function checkAndLoadImage() {
+  if ((props.record?.result?.total_frames ?? 0) > 0 && props.record.task_id) {
+    currentFrameIndex.value = 0
+    loadImage()
+  }
+}
+
+// 监听 record 变化，初始化加载第一帧
+watch(() => props.record, (newRecord) => {
+  checkAndLoadImage()
+}, { deep: true })
+
+// 组件挂载时加载图片
+onMounted(() => {
+  checkAndLoadImage()
+})
 
 // 计算属性：当前帧号（从1开始显示）
 const currentFrameNumber = computed(() => currentFrameIndex.value + 1)
 
 // 计算属性：总帧数
-const totalFrames = computed(() => props.record.result?.total_frames || 0)
-
-// 处理视频错误
-function handleVideoError() {
-  console.error('视频加载失败')
-}
+const totalFrames = computed(() => props.record.result?.total_frames ?? 0)
 </script>
 
 <template>
   <div class="frame-analysis">
     <div class="detail-content">
-      <!-- 左侧：标注视频播放器 -->
+      <!-- 左侧：帧图片显示 -->
       <div class="detail-video-section">
-        <h3>标注视频</h3>
+        <h3>逐帧查看</h3>
         <div class="detail-video-wrapper">
           <div class="detail-video-container">
-            <video
-              ref="detailVideoRef"
-              v-if="record.result?.output_video_path"
-              :src="`/api/video/${record.task_id}/`"
+            <img
+              v-if="record.result && totalFrames > 0 && displayedImageUrl"
+              :src="displayedImageUrl"
               class="detail-video-player"
-              @error="handleVideoError"
-            >
-              您的浏览器不支持视频播放
-            </video>
+              alt="当前帧"
+              :class="{ 'loading': isImageLoading }"
+            />
             <div v-else class="detail-video-placeholder">
               <svg
                 class="placeholder-icon"
@@ -113,15 +125,15 @@ function handleVideoError() {
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                 ></path>
               </svg>
-              <p class="placeholder-text">暂无标注视频</p>
+              <p class="placeholder-text">暂无帧数据</p>
             </div>
           </div>
 
           <!-- 帧控制栏 -->
-          <div v-if="record.result?.output_video_path" class="detail-video-controls">
+          <div v-if="record.result && totalFrames > 0" class="detail-video-controls">
             <button class="detail-btn-control" @click="handleGoToFirstFrame">
               <svg
                 fill="none"
@@ -263,12 +275,13 @@ function handleVideoError() {
 
 .detail-video-container {
   background: var(--bg-main);
-  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
   transition: border-color 0.3s;
-  width: 100%;
   align-self: flex-start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 :global(:root:not(.dark)) .detail-video-container {
@@ -278,8 +291,14 @@ function handleVideoError() {
 
 .detail-video-player {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
+  object-fit: contain;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.detail-video-player.loading {
+  opacity: 0.7;
 }
 
 .detail-video-controls {
