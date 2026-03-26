@@ -10,6 +10,7 @@ const store = useAnalysisStore()
 const api = useAnalysisApi()
 const { showToast } = useToast()
 const router = useRouter()
+const COMPARE_FRAME_STATE_KEY = 'compareResultFrameState'
 
 // 从store中获取对比记录
 const recordA = computed(() => store.compareRecords[0])
@@ -23,7 +24,8 @@ onMounted(() => {
   if (!hasValidRecords.value) {
     router.push({ name: 'compare' })
   } else {
-    // 加载第一帧
+    restoreFrameState()
+    // 根据恢复后的帧号加载图像
     if (recordA.value?.task_id) {
       loadImageA()
     }
@@ -45,8 +47,241 @@ const isImageLoadingB = ref(false)
 const currentFrameIndexA = ref(0)
 const currentFrameIndexB = ref(0)
 
+function clampFrameIndex(index: number, totalFrames: number) {
+  if (!Number.isFinite(index) || totalFrames <= 0) return 0
+  return Math.min(Math.max(0, Math.floor(index)), totalFrames - 1)
+}
+
+function saveFrameState() {
+  if (!recordA.value?.task_id || !recordB.value?.task_id) return
+
+  const payload = {
+    taskIdA: String(recordA.value.task_id),
+    taskIdB: String(recordB.value.task_id),
+    frameIndexA: currentFrameIndexA.value,
+    frameIndexB: currentFrameIndexB.value,
+    updatedAt: Date.now(),
+  }
+
+  sessionStorage.setItem(COMPARE_FRAME_STATE_KEY, JSON.stringify(payload))
+}
+
+function restoreFrameState() {
+  if (!recordA.value?.task_id || !recordB.value?.task_id) return
+
+  const raw = sessionStorage.getItem(COMPARE_FRAME_STATE_KEY)
+  if (!raw) return
+
+  try {
+    const parsed = JSON.parse(raw)
+    const taskIdA = String(recordA.value.task_id)
+    const taskIdB = String(recordB.value.task_id)
+    if (parsed?.taskIdA !== taskIdA || parsed?.taskIdB !== taskIdB) return
+
+    const totalA = Number(recordA.value?.result?.total_frames || 0)
+    const totalB = Number(recordB.value?.result?.total_frames || 0)
+    currentFrameIndexA.value = clampFrameIndex(Number(parsed?.frameIndexA ?? 0), totalA)
+    currentFrameIndexB.value = clampFrameIndex(Number(parsed?.frameIndexB ?? 0), totalB)
+  } catch {
+    // ignore bad state cache
+  }
+}
+
 const isExporting = ref(false)
 const exportError = ref<string | null>(null)
+
+type CompareChartType = 'timeSeries' | 'histogram' | 'scatter' | 'trajectory'
+
+const chartTypeA = ref<CompareChartType>('scatter')
+const chartTypeB = ref<CompareChartType>('scatter')
+const chartImageA = ref('')
+const chartImageB = ref('')
+const chartLabelA = ref('')
+const chartLabelB = ref('')
+const chartRenderTypeA = ref<CompareChartType>('scatter')
+const chartRenderTypeB = ref<CompareChartType>('scatter')
+
+const featureOptions = [
+  { label: '面积', value: 'area' },
+  { label: '速度', value: 'speed' },
+  { label: '迁移速度', value: 'migration_speed' },
+]
+
+const chartConfigModalVisible = ref(false)
+const chartConfigSlot = ref<'A' | 'B' | null>(null)
+const chartConfigType = ref<CompareChartType>('scatter')
+const chartConfigDraft = ref<Record<string, any>>({})
+const chartConfigFramesText = ref('2,25,50,75')
+
+const slotConfigs = ref({
+  A: {
+    timeSeries: getDefaultConfigByType('timeSeries') as Record<string, any>,
+    histogram: getDefaultConfigByType('histogram') as Record<string, any>,
+    scatter: getDefaultConfigByType('scatter') as Record<string, any>,
+    trajectory: getDefaultConfigByType('trajectory') as Record<string, any>,
+  },
+  B: {
+    timeSeries: getDefaultConfigByType('timeSeries') as Record<string, any>,
+    histogram: getDefaultConfigByType('histogram') as Record<string, any>,
+    scatter: getDefaultConfigByType('scatter') as Record<string, any>,
+    trajectory: getDefaultConfigByType('trajectory') as Record<string, any>,
+  },
+})
+
+const chartTypeOptions: Array<{ label: string; value: CompareChartType }> = [
+  { label: '折线图', value: 'timeSeries' },
+  { label: '直方图', value: 'histogram' },
+  { label: '散点图', value: 'scatter' },
+  { label: '轨迹图', value: 'trajectory' },
+]
+
+function getDefaultConfigByType(type: CompareChartType) {
+  if (type === 'timeSeries') {
+    return {
+      yAxisFeature: 'area',
+      cellSelection: 'top',
+      sortBy: 'tracking_duration',
+      topN: 10,
+      lineType: 'smooth',
+      showDataPoints: false,
+    }
+  }
+
+  if (type === 'histogram') {
+    return {
+      xAxisFeature: 'area',
+      statMode: 'average',
+      frameMode: 'single',
+      selectedFrame: 2,
+      binCount: 12,
+      probabilityType: 'probability',
+    }
+  }
+
+  if (type === 'trajectory') {
+    return {
+      trajectoryType: 'normal',
+      colorMap: 'time',
+      cellSelection: 'top',
+      sortBy: 'tracking_duration',
+      topN: 10,
+      lineWidth: 2,
+      showStartPoint: false,
+      showEndPoint: false,
+      fadeEffect: false,
+    }
+  }
+
+  return {
+    frameMode: 'single',
+    selectedFrame: 2,
+    pointSize: 8,
+    colorBy: 'cell_id',
+    showTrajectory: false,
+    trajectoryLength: 10,
+  }
+}
+
+function loadCompareChartCache() {
+  const aRaw = sessionStorage.getItem('compareChartSlot_A')
+  const bRaw = sessionStorage.getItem('compareChartSlot_B')
+
+  if (aRaw) {
+    try {
+      const parsed = JSON.parse(aRaw)
+      if (parsed?.taskId === recordA.value?.task_id) {
+        chartImageA.value = parsed.imageDataUrl || ''
+        chartLabelA.value = parsed.chartLabel || ''
+        chartRenderTypeA.value = parsed.chartType || 'scatter'
+      }
+    } catch {
+      // ignore bad cache
+    }
+  }
+
+  if (bRaw) {
+    try {
+      const parsed = JSON.parse(bRaw)
+      if (parsed?.taskId === recordB.value?.task_id) {
+        chartImageB.value = parsed.imageDataUrl || ''
+        chartLabelB.value = parsed.chartLabel || ''
+        chartRenderTypeB.value = parsed.chartType || 'scatter'
+      }
+    } catch {
+      // ignore bad cache
+    }
+  }
+}
+
+function goToChartDrawing(slot: 'A' | 'B') {
+  const record = slot === 'A' ? recordA.value : recordB.value
+  const chartType = chartConfigType.value
+  if (!record?.task_id) return
+
+  const config = chartConfigDraft.value
+  router.push({
+    name: 'drawingCanvas',
+    query: {
+      type: chartType,
+      taskId: record.task_id,
+      config: JSON.stringify(config),
+      returnTo: 'compareResult',
+      compareSlot: slot,
+      compareTaskName: record.task_name || '',
+    },
+  })
+}
+
+function openChartConfigModal(slot: 'A' | 'B') {
+  const type = slot === 'A' ? chartTypeA.value : chartTypeB.value
+  chartConfigSlot.value = slot
+  chartConfigType.value = type
+  chartConfigDraft.value = JSON.parse(JSON.stringify(slotConfigs.value[slot][type]))
+  chartConfigFramesText.value = Array.isArray(chartConfigDraft.value.selectedFrames)
+    ? chartConfigDraft.value.selectedFrames.join(',')
+    : '2,25,50,75'
+  chartConfigModalVisible.value = true
+}
+
+function confirmChartConfigAndDraw() {
+  if (!chartConfigSlot.value) return
+
+  if (chartConfigType.value === 'histogram') {
+    chartConfigDraft.value.frameMode = 'single'
+  }
+
+  if (chartConfigType.value === 'scatter') {
+    const arr = chartConfigFramesText.value
+      .split(',')
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n))
+    chartConfigDraft.value.selectedFrames = arr.length ? arr : [2, 25, 50, 75]
+  }
+
+  slotConfigs.value[chartConfigSlot.value][chartConfigType.value] = JSON.parse(JSON.stringify(chartConfigDraft.value))
+  chartConfigModalVisible.value = false
+  goToChartDrawing(chartConfigSlot.value)
+}
+
+function closeChartConfigModal() {
+  chartConfigModalVisible.value = false
+}
+
+watch(chartConfigType, (nextType) => {
+  if (!chartConfigSlot.value || !chartConfigModalVisible.value) return
+  chartConfigDraft.value = JSON.parse(JSON.stringify(slotConfigs.value[chartConfigSlot.value][nextType]))
+  chartConfigFramesText.value = Array.isArray(chartConfigDraft.value.selectedFrames)
+    ? chartConfigDraft.value.selectedFrames.join(',')
+    : '2,25,50,75'
+})
+
+function handleRegenerateA() {
+  openChartConfigModal('A')
+}
+
+function handleRegenerateB() {
+  openChartConfigModal('B')
+}
 
 // 加载图片A
 function loadImageA() {
@@ -169,8 +404,14 @@ function loadCurrentFrameCellsB() {
 }
 
 // 当帧号变化时更新帧细胞数据
-watch(() => currentFrameIndexA.value, loadCurrentFrameCellsA)
-watch(() => currentFrameIndexB.value, loadCurrentFrameCellsB)
+watch(() => currentFrameIndexA.value, () => {
+  loadCurrentFrameCellsA()
+  saveFrameState()
+})
+watch(() => currentFrameIndexB.value, () => {
+  loadCurrentFrameCellsB()
+  saveFrameState()
+})
 
 // 组件挂载时加载所有细胞数据
 onMounted(async () => {
@@ -182,6 +423,8 @@ onMounted(async () => {
     await loadAllCellsB()
     loadCurrentFrameCellsB()
   }
+
+  loadCompareChartCache()
 })
 
 // ==================== 视频A的控制函数 ====================
@@ -267,6 +510,18 @@ const totalFramesB = computed(() => recordB.value?.result?.total_frames || 0)
 function handleBackToCompare() {
   store.backToCompareList(router)
 }
+
+watch([recordA, recordB], () => {
+  restoreFrameState()
+  if (recordA.value?.task_id) {
+    loadImageA()
+  }
+  if (recordB.value?.task_id) {
+    loadImageB()
+  }
+  saveFrameState()
+  loadCompareChartCache()
+})
 </script>
 
 <template>
@@ -595,23 +850,33 @@ function handleBackToCompare() {
         <div class="chart-wrapper">
           <!-- 左侧：记录A的图表 -->
           <div class="chart-panel chart-panel-left">
-            <div class="chart-placeholder">
-              <svg
-                class="placeholder-icon"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                ></path>
-              </svg>
-              <p>任务 A 图表区域</p>
-              <p class="placeholder-hint">功能开发中...</p>
+            <div class="chart-config-row">
+              <select v-model="chartTypeA" class="chart-type-select">
+                <option v-for="opt in chartTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+              <button class="btn-control" @click="handleRegenerateA">{{ chartImageA ? '重新绘图' : '去绘图' }}</button>
+            </div>
+            <div :class="['chart-placeholder', 'chart-placeholder-clickable', { 'chart-placeholder-has-image': !!chartImageA }]" @click="handleRegenerateA">
+              <img v-if="chartImageA" :src="chartImageA" :class="['compare-chart-image', { 'compare-chart-image-wide': chartRenderTypeA === 'timeSeries' || chartRenderTypeA === 'histogram' }]" alt="任务A对比图" />
+              <template v-else>
+                <svg
+                  class="placeholder-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  ></path>
+                </svg>
+                <p>任务 A 图表区域</p>
+                <p class="placeholder-hint">点击进入绘图并回填到此位置</p>
+              </template>
+              <p v-if="chartImageA && chartLabelA" class="placeholder-hint">{{ chartLabelA }}</p>
             </div>
           </div>
 
@@ -620,24 +885,158 @@ function handleBackToCompare() {
 
           <!-- 右侧：记录B的图表 -->
           <div class="chart-panel chart-panel-right">
-            <div class="chart-placeholder">
-              <svg
-                class="placeholder-icon"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                ></path>
-              </svg>
-              <p>任务 B 图表区域</p>
-              <p class="placeholder-hint">功能开发中...</p>
+            <div class="chart-config-row">
+              <select v-model="chartTypeB" class="chart-type-select">
+                <option v-for="opt in chartTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+              <button class="btn-control" @click="handleRegenerateB">{{ chartImageB ? '重新绘图' : '去绘图' }}</button>
             </div>
+            <div :class="['chart-placeholder', 'chart-placeholder-clickable', { 'chart-placeholder-has-image': !!chartImageB }]" @click="handleRegenerateB">
+              <img v-if="chartImageB" :src="chartImageB" :class="['compare-chart-image', { 'compare-chart-image-wide': chartRenderTypeB === 'timeSeries' || chartRenderTypeB === 'histogram' }]" alt="任务B对比图" />
+              <template v-else>
+                <svg
+                  class="placeholder-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  ></path>
+                </svg>
+                <p>任务 B 图表区域</p>
+                <p class="placeholder-hint">点击进入绘图并回填到此位置</p>
+              </template>
+              <p v-if="chartImageB && chartLabelB" class="placeholder-hint">{{ chartLabelB }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="chartConfigModalVisible" class="modal" @click.self="closeChartConfigModal">
+        <div class="modal-content config-modal-content">
+          <div class="modal-header">
+            <h3>图表参数设置（{{ chartConfigSlot }}）</h3>
+            <span class="close" @click="closeChartConfigModal">&times;</span>
+          </div>
+
+          <div class="modal-body">
+            <div class="form-item">
+              <label>图表类型</label>
+              <select v-model="chartConfigType">
+                <option v-for="opt in chartTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+
+            <div v-if="chartConfigType === 'timeSeries'" class="form-grid">
+              <div class="form-item">
+                <label>Y轴特征</label>
+                <select v-model="chartConfigDraft.yAxisFeature">
+                  <option v-for="f in featureOptions" :key="f.value" :value="f.value">{{ f.label }}</option>
+                </select>
+              </div>
+              <div class="form-item">
+                <label>TopN</label>
+                <input v-model.number="chartConfigDraft.topN" type="number" min="1" max="100" />
+              </div>
+              <div class="form-item">
+                <label>线型</label>
+                <select v-model="chartConfigDraft.lineType">
+                  <option value="smooth">平滑</option>
+                  <option value="line">折线</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="chartConfigType === 'histogram'" class="form-grid">
+              <div class="form-item">
+                <label>X轴特征</label>
+                <select v-model="chartConfigDraft.xAxisFeature">
+                  <option v-for="f in featureOptions" :key="f.value" :value="f.value">{{ f.label }}</option>
+                </select>
+              </div>
+              <div class="form-item">
+                <label>分箱</label>
+                <input v-model.number="chartConfigDraft.binCount" type="number" min="5" max="40" />
+              </div>
+              <div class="form-item">
+                <label>统计类型</label>
+                <select v-model="chartConfigDraft.statMode">
+                  <option value="average">整体平均</option>
+                  <option value="frame">单帧</option>
+                </select>
+              </div>
+              <div class="form-item" v-if="chartConfigDraft.statMode === 'frame'">
+                <label>帧号</label>
+                <input v-model.number="chartConfigDraft.selectedFrame" type="number" min="1" />
+              </div>
+            </div>
+
+            <div v-if="chartConfigType === 'scatter'" class="form-grid">
+              <div class="form-item">
+                <label>模式</label>
+                <select v-model="chartConfigDraft.frameMode">
+                  <option value="single">单帧</option>
+                  <option value="quad">四宫格</option>
+                </select>
+              </div>
+              <div class="form-item" v-if="chartConfigDraft.frameMode === 'single'">
+                <label>帧号</label>
+                <input v-model.number="chartConfigDraft.selectedFrame" type="number" min="1" />
+              </div>
+              <div class="form-item" v-else>
+                <label>四帧</label>
+                <input v-model="chartConfigFramesText" type="text" placeholder="2,25,50,75" />
+              </div>
+              <div class="form-item">
+                <label>点大小</label>
+                <input v-model.number="chartConfigDraft.pointSize" type="number" min="3" max="24" />
+              </div>
+              <div class="form-item">
+                <label>着色</label>
+                <select v-model="chartConfigDraft.colorBy">
+                  <option value="cell_id">细胞ID</option>
+                  <option value="area">面积</option>
+                  <option value="speed">速度</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="chartConfigType === 'trajectory'" class="form-grid">
+              <div class="form-item">
+                <label>轨迹类型</label>
+                <select v-model="chartConfigDraft.trajectoryType">
+                  <option value="normal">普通</option>
+                  <option value="normalized">归一化</option>
+                  <option value="3d">3D</option>
+                </select>
+              </div>
+              <div class="form-item">
+                <label>着色</label>
+                <select v-model="chartConfigDraft.colorMap">
+                  <option value="time">时间</option>
+                  <option value="speed">速度</option>
+                  <option value="cell_id">细胞ID</option>
+                </select>
+              </div>
+              <div class="form-item">
+                <label>线宽</label>
+                <input v-model.number="chartConfigDraft.lineWidth" type="number" min="1" max="8" />
+              </div>
+              <div class="form-item">
+                <label>TopN</label>
+                <input v-model.number="chartConfigDraft.topN" type="number" min="1" max="100" />
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-secondary" @click="closeChartConfigModal">取消</button>
+            <button class="btn-primary" @click="confirmChartConfigAndDraw">前往绘图</button>
           </div>
         </div>
       </div>
@@ -1006,12 +1405,36 @@ function handleBackToCompare() {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   gap: 1rem;
-  min-height: 500px;
+  align-items: start;
 }
 
 .chart-panel {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
+  align-self: start;
+}
+
+.chart-config-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chart-type-select {
+  flex: 1;
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  padding: 0 0.75rem;
+}
+
+:global(:root:not(.dark)) .chart-type-select {
+  border-color: var(--border-color-light);
+  background: var(--bg-card-light);
+  color: var(--text-primary-light);
 }
 
 .chart-panel h4 {
@@ -1038,11 +1461,12 @@ function handleBackToCompare() {
 }
 
 .chart-placeholder {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-height: 340px;
   background: var(--bg-card);
   border: 2px dashed var(--border-color);
   border-radius: 8px;
@@ -1050,6 +1474,133 @@ function handleBackToCompare() {
   text-align: center;
   color: var(--text-muted);
   transition: background 0.3s, border-color 0.3s;
+}
+
+.chart-placeholder-clickable {
+  cursor: pointer;
+}
+
+.chart-placeholder-has-image {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 0;
+  padding: 0.45rem;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.compare-chart-image {
+  width: auto;
+  height: auto;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.compare-chart-image-wide {
+  image-rendering: auto;
+  max-width: 92%;
+  max-height: 92%;
+  margin: auto;
+  object-fit: contain;
+}
+
+.config-modal-content {
+  width: min(760px, 92vw);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-item label {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.form-item input,
+.form-item select {
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 0.6rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-body {
+  padding: 1rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.close {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+.btn-secondary,
+.btn-primary {
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  padding: 0 0.9rem;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+}
+
+.btn-primary {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
 }
 
 :global(:root:not(.dark)) .chart-placeholder {

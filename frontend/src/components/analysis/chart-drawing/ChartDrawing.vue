@@ -68,7 +68,7 @@ const histogramConfig = reactive({
   selectedFrame: 2,
   frameRange: [2, 100] as [number, number],
   showQuadGrid: false,
-  selectedFrames: [2, 25, 50, 75] as number[],
+  selectedFrames: [2, 12, 22, 32] as number[],
   probabilityType: 'probability' as 'probability' | 'count',
 });
 
@@ -76,9 +76,9 @@ const histogramConfig = reactive({
 // 3. 散点图参数配置
 // ==========================================
 const scatterConfig = reactive({
-  frameMode: 'single' as 'single' | 'quad' | 'sequence',
+  frameMode: 'single' as 'single' | 'quad',
   selectedFrame: 2,
-  selectedFrames: [2, 25, 50, 75] as number[],
+  selectedFrames: [2, 12, 22, 32] as number[],
   pointSize: 8,
   colorBy: 'cell_id' as 'cell_id' | 'area' | 'speed',
   showTrajectory: false,
@@ -430,10 +430,6 @@ function generateTrajectory() {
                 <label class="radio-label">
                   <input type="radio" v-model="scatterConfig.frameMode" value="quad">
                   <span>四宫格对比</span>
-                </label>
-                <label class="radio-label">
-                  <input type="radio" v-model="scatterConfig.frameMode" value="sequence">
-                  <span>连续播放</span>
                 </label>
               </div>
             </div>

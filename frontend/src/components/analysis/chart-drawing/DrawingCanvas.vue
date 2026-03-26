@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAnalysisStore } from '@/stores/analysisStore';
 import type { CellData } from '@/stores/analysisStore';
 import * as echarts from 'echarts';
+import JSZip from 'jszip';
 
 declare global {
     interface Window {
@@ -18,6 +19,8 @@ const analysisStore = useAnalysisStore();
 
 const chartType = computed(() => route.query.type as string);
 const taskId = computed(() => route.query.taskId as string);
+const compareSlot = computed(() => (route.query.compareSlot as 'A' | 'B' | undefined));
+const isCompareReturn = computed(() => route.query.returnTo === 'compareResult' && !!compareSlot.value);
 const config = computed(() => {
     try {
         return JSON.parse(route.query.config as string);
@@ -34,6 +37,10 @@ const chartInstance = ref<echarts.ECharts | null>(null);
 const chartContainer = ref<HTMLDivElement | null>(null);
 const trajectory3dImageUrl = ref<string | null>(null);
 const trajectory3dLoading = ref(false);
+const scatterBatchMode = ref(false);
+const scatterBatchFrames = ref<number[]>([]);
+const scatterBatchIndex = ref(0);
+const scatterBatchExporting = ref(false);
 const baseFontSize = ref(Number(sessionStorage.getItem('drawingBaseFontSize') || 14));
 const legendFontSize = ref(Number(sessionStorage.getItem('drawingLegendFontSize') || 12));
 const titleFontSize = ref(Number(sessionStorage.getItem('drawingTitleFontSize') || 16));
@@ -107,6 +114,11 @@ const chartTitle = computed(() => {
 const isSquareChart = computed(
     () => chartType.value === 'scatter' || (chartType.value === 'trajectory' && config.value?.trajectoryType !== '3d')
 );
+const isTallChart = computed(() => chartType.value === 'timeSeries' || chartType.value === 'histogram');
+
+function getChartFontScale() {
+    return isTallChart.value ? 1.12 : 1;
+}
 
 function getTitleTextStyle() {
     return {
@@ -118,16 +130,25 @@ function getTitleTextStyle() {
 }
 
 function getAxisLabelStyle() {
+    const scaled = Math.round(baseFontSize.value * getChartFontScale());
     return {
-        fontSize: baseFontSize.value,
+        fontSize: scaled,
         fontFamily: 'Arial, Helvetica, sans-serif',
         color: '#374151',
     };
 }
 
-function getAxisNameStyle() {
+function getDenseAxisLabelStyle() {
     return {
-        fontSize: baseFontSize.value,
+        ...getAxisLabelStyle(),
+        interval: 0,
+    };
+}
+
+function getAxisNameStyle() {
+    const scaled = Math.round((baseFontSize.value + 1) * getChartFontScale());
+    return {
+        fontSize: scaled,
         fontWeight: 600,
         fontFamily: 'Arial, Helvetica, sans-serif',
         color: '#111827',
@@ -135,8 +156,9 @@ function getAxisNameStyle() {
 }
 
 function getLegendTextStyle() {
+    const scaled = Math.round((legendFontSize.value + 1) * getChartFontScale());
     return {
-        fontSize: legendFontSize.value,
+        fontSize: scaled,
         fontFamily: 'Arial, Helvetica, sans-serif',
         color: '#4b5563',
     };
@@ -171,6 +193,103 @@ function getFeatureLabel(feature: string): string {
     if (feature === 'area') return '面积 (μm²)';
     if (feature === 'speed' || feature === 'migration_speed') return '速度 (μm/帧)';
     return feature;
+}
+
+function isScatterSingleMode() {
+    return chartType.value === 'scatter' && (config.value?.frameMode || 'single') !== 'quad';
+}
+
+function getScatterFrameNumbers(): number[] {
+    const frames = new Set<number>();
+    filteredCells.value.forEach((cell) => {
+        cell.frames.forEach((f: any) => {
+            const n = Number(f.frame_number);
+            if (Number.isFinite(n)) frames.add(n);
+        });
+    });
+    return Array.from(frames).sort((a, b) => a - b);
+}
+
+function getCurrentScatterFrame(): number {
+    if (scatterBatchMode.value && scatterBatchFrames.value.length > 0) {
+        return scatterBatchFrames.value[scatterBatchIndex.value] ?? scatterBatchFrames.value[0] ?? 1;
+    }
+    return Number(config.value?.selectedFrame || 1);
+}
+
+function enableScatterBatchMode() {
+    if (!isScatterSingleMode()) return;
+    const frames = getScatterFrameNumbers();
+    if (!frames.length) return;
+    scatterBatchFrames.value = frames;
+
+    const current = getCurrentScatterFrame();
+    const idx = frames.findIndex((f) => f === current);
+    scatterBatchIndex.value = idx >= 0 ? idx : 0;
+    scatterBatchMode.value = true;
+    renderChart();
+}
+
+function prevScatterFrame() {
+    if (!scatterBatchMode.value || scatterBatchFrames.value.length === 0) return;
+    if (scatterBatchIndex.value <= 0) return;
+    scatterBatchIndex.value -= 1;
+    renderChart();
+}
+
+function nextScatterFrame() {
+    if (!scatterBatchMode.value || scatterBatchFrames.value.length === 0) return;
+    if (scatterBatchIndex.value >= scatterBatchFrames.value.length - 1) return;
+    scatterBatchIndex.value += 1;
+    renderChart();
+}
+
+async function exportAllScatterFramesZip() {
+    if (!isScatterSingleMode() || !chartInstance.value || scatterBatchExporting.value) return;
+    const frames = getScatterFrameNumbers();
+    if (!frames.length) return;
+
+    scatterBatchExporting.value = true;
+    const prevMode = scatterBatchMode.value;
+    const prevFrames = [...scatterBatchFrames.value];
+    const prevIndex = scatterBatchIndex.value;
+
+    try {
+        scatterBatchMode.value = true;
+        scatterBatchFrames.value = frames;
+        const zip = new JSZip();
+        const folder = zip.folder(`scatter-${taskId.value || 'task'}`);
+
+        for (let i = 0; i < frames.length; i += 1) {
+            scatterBatchIndex.value = i;
+            chartInstance.value.setOption(buildOption(), true);
+            await nextTick();
+            const dataUrl = chartInstance.value.getDataURL({
+                type: 'png',
+                pixelRatio: 2,
+                backgroundColor: '#ffffff',
+            });
+            const base64 = dataUrl.split(',')[1];
+            if (folder && base64) {
+                const frameNo = frames[i] ?? 0;
+                folder.file(`frame_${String(frameNo).padStart(4, '0')}.png`, base64, { base64: true });
+            }
+        }
+
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `scatter-batch-${taskId.value || 'task'}.zip`;
+        link.click();
+        URL.revokeObjectURL(url);
+    } finally {
+        scatterBatchMode.value = prevMode;
+        scatterBatchFrames.value = prevFrames;
+        scatterBatchIndex.value = prevIndex;
+        scatterBatchExporting.value = false;
+        renderChart();
+    }
 }
 
 function getSymmetricBounds(points: Array<[number, number]>, defaultHalf = 200): { min: number; max: number } {
@@ -405,6 +524,9 @@ function buildTimeSeriesOption(): echarts.EChartsOption {
             nameTextStyle: getAxisNameStyle(),
             axisLine: getAcademicAxisLine(),
             splitLine: getAcademicSplitLine(),
+            splitNumber: 14,
+            minorTick: { show: true },
+            minorSplitLine: { show: true, lineStyle: { color: '#e5e7eb', width: 1, opacity: 1 } },
         },
         yAxis: {
             type: 'value',
@@ -430,7 +552,7 @@ function buildHistogramOption(): echarts.EChartsOption {
         : [1, 25, 50, 75];
     const frameRange = Array.isArray(config.value?.frameRange) ? config.value.frameRange as [number, number] : undefined;
     const probabilityType = (config.value?.probabilityType || 'probability') as 'probability' | 'count';
-    const binCount = Math.max(1, Number(config.value?.binCount || 10));
+    const binCount = Math.max(1, Number(config.value?.binCount || 14));
 
     let valuesBySeries: Array<{ name: string; values: number[] }> = [];
     if (statMode === 'average') {
@@ -576,10 +698,11 @@ function buildHistogramOption(): echarts.EChartsOption {
             data: labels,
             name: featureLabel,
             nameGap: 34,
-            axisLabel: getAxisLabelStyle(),
+            axisLabel: getDenseAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             axisLine: getAcademicAxisLine(),
             splitLine: getAcademicSplitLine(),
+            axisTick: { alignWithLabel: true },
         },
         yAxis: {
             type: 'value',
@@ -609,8 +732,8 @@ function buildScatterOption(): echarts.EChartsOption {
         }))
     );
 
-    const frameMode = config.value?.frameMode || 'single';
-    const selectedFrame = Number(config.value?.selectedFrame || 1);
+    const frameMode = (config.value?.frameMode || 'single') === 'quad' ? 'quad' : 'single';
+    const selectedFrame = getCurrentScatterFrame();
     const selectedFrames = Array.isArray(config.value?.selectedFrames)
         ? config.value.selectedFrames
             .map((v: any) => Number(v))
@@ -633,13 +756,51 @@ function buildScatterOption(): echarts.EChartsOption {
 
     if (frameMode === 'quad') {
         title = `${chartTitle.value} - 四帧对比`;
-        series = selectedFrames.slice(0, 4).map((frameNo: number, idx: number) => {
+        const quadFrames = selectedFrames.slice(0, 4);
+        const quadPoints = allPoints.filter((p) => quadFrames.includes(p.frame));
+        const quadBounds = getDataBounds(quadPoints.map((p) => [p.x, p.y] as [number, number]), 240);
+        const grid = [
+            { left: '8%', top: '14%', width: '36%', height: '32%', containLabel: false },
+            { left: '56%', top: '14%', width: '36%', height: '32%', containLabel: false },
+            { left: '8%', top: '56%', width: '36%', height: '32%', containLabel: false },
+            { left: '56%', top: '56%', width: '36%', height: '32%', containLabel: false },
+        ];
+
+        const xAxis = quadFrames.map((_: number, idx: number) => ({
+            type: 'value' as const,
+            gridIndex: idx,
+            min: quadBounds.xMin,
+            max: quadBounds.xMax,
+            name: '',
+            axisLabel: getAxisLabelStyle(),
+            nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
+            scale: true,
+        }));
+
+        const yAxis = quadFrames.map((_: number, idx: number) => ({
+            type: 'value' as const,
+            gridIndex: idx,
+            min: quadBounds.yMin,
+            max: quadBounds.yMax,
+            name: '',
+            axisLabel: getAxisLabelStyle(),
+            nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
+            scale: true,
+        }));
+
+        const quadSeries = quadFrames.map((frameNo: number, idx: number) => {
             const framePoints = allPoints.filter((p) => p.frame === frameNo);
             return {
                 name: `Frame ${frameNo}`,
                 type: 'scatter' as const,
                 symbolSize: Number(config.value?.pointSize || 8),
                 itemStyle: { color: academicPalette[idx % academicPalette.length], opacity: 0.8 },
+                xAxisIndex: idx,
+                yAxisIndex: idx,
                 data: framePoints.map((p) => ({
                     cellId: p.cellId,
                     frame: p.frame,
@@ -647,22 +808,54 @@ function buildScatterOption(): echarts.EChartsOption {
                 })),
             };
         });
-    } else if (frameMode === 'sequence') {
-        title = `${chartTitle.value} - 序列帧`;
-        series = selectedFrames.map((frameNo: number, idx: number) => {
-            const framePoints = allPoints.filter((p) => p.frame === frameNo);
-            return {
-                name: `Frame ${frameNo}`,
-                type: 'scatter' as const,
-                symbolSize: Number(config.value?.pointSize || 8),
-                itemStyle: { color: academicPalette[idx % academicPalette.length], opacity: 0.8 },
-                data: framePoints.map((p) => ({
-                    cellId: p.cellId,
-                    frame: p.frame,
-                    value: [p.x, p.y, p.value],
-                })),
-            };
-        });
+
+        return {
+            color: academicPalette,
+            animation: false,
+            backgroundColor: '#ffffff',
+            title: { text: title, textStyle: getTitleTextStyle() },
+            tooltip: {
+                textStyle: getTooltipTextStyle(),
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                borderColor: '#d1d5db',
+                borderWidth: 1,
+                formatter: (params: any) => {
+                    const d = params.data;
+                    return `Cell: ${d.cellId}<br/>Frame: ${d.frame}<br/>X: ${Number(d.value[0] ?? 0).toFixed(2)} μm<br/>Y: ${Number(d.value[1] ?? 0).toFixed(2)} μm`;
+                },
+            },
+            graphic: quadFrames.map((f: number, idx: number) => ({
+                type: 'text',
+                left: idx % 2 === 0 ? '8%' : '56%',
+                top: idx < 2 ? '10%' : '52%',
+                style: {
+                    text: `Frame ${f}`,
+                    fill: '#334155',
+                    fontSize: legendFontSize.value,
+                    fontWeight: 600,
+                },
+            })),
+            grid,
+            xAxis,
+            yAxis,
+            visualMap: useColorMap
+                ? {
+                    type: 'continuous',
+                    dimension: 2,
+                    seriesIndex: quadSeries.map((_: any, idx: number) => idx),
+                    min: getVisualMapRange().min,
+                    max: getVisualMapRange().max,
+                    calculable: true,
+                    text: ['高', '低'],
+                    orient: 'vertical',
+                    right: 8,
+                    top: 'middle',
+                    textStyle: getAxisLabelStyle(),
+                    inRange: { color: ['#f7fbff', '#2171b5'] },
+                }
+                : undefined,
+            series: quadSeries,
+        };
     } else {
         const points = allPoints.filter((p) => p.frame === selectedFrame);
         const showTrajectory = !!config.value?.showTrajectory;
@@ -1138,6 +1331,52 @@ function handleExportImage() {
     if (!ok) return;
 }
 
+async function convertBlobUrlToDataUrl(blobUrl: string): Promise<string | null> {
+    try {
+        const res = await fetch(blobUrl);
+        const blob = await res.blob();
+        return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch {
+        return null;
+    }
+}
+
+async function applyToCompareSlot() {
+    if (!isCompareReturn.value || !compareSlot.value) return;
+    const exported = exportChartImage({
+        type: 'png',
+        pixelRatio: 4,
+        backgroundColor: '#ffffff',
+    });
+    if (!exported) return;
+
+    const imageDataUrl = isPython3dMode() && exported.startsWith('blob:')
+        ? await convertBlobUrlToDataUrl(exported)
+        : exported;
+    if (!imageDataUrl) return;
+
+    const payload = {
+        slot: compareSlot.value,
+        taskId: taskId.value || '',
+        chartType: chartType.value || '',
+        chartLabel: `${route.query.compareTaskName || ''} · ${chartTitle.value}`,
+        imageDataUrl,
+        updatedAt: Date.now(),
+    };
+    sessionStorage.setItem(`compareChartSlot_${compareSlot.value}`, JSON.stringify(payload));
+
+    router.push({ name: 'compareResult' });
+}
+
+async function handleBatchExport() {
+    await exportAllScatterFramesZip();
+}
+
 function handleResize() {
     chartInstance.value?.resize();
 }
@@ -1149,14 +1388,29 @@ function goBack() {
             name: 'cellTracking',
             state: { activeTab: 'chart' },
         });
+    } else if (returnTo === 'compareResult') {
+        router.push({ name: 'compareResult' });
     } else {
         router.back();
     }
 }
 
+function goToFreePlot() {
+    router.push({
+        name: 'freePlot',
+        query: {
+            taskId: taskId.value || '',
+            returnTo: route.query.returnTo as string || 'drawingCanvas',
+        },
+    });
+}
+
 watch(
     [filteredCells, chartType, config],
     async () => {
+        if (chartType.value !== 'scatter' || (config.value?.frameMode || 'single') === 'quad') {
+            scatterBatchMode.value = false;
+        }
         if (isPython3dMode()) {
             await loadTrajectory3dImage();
             return;
@@ -1238,6 +1492,27 @@ onUnmounted(() => {
                 <button class="btn-export" @click="handleExportImage" :disabled="loading || !!error || filteredCells.length === 0">
                     导出图片
                 </button>
+                <button class="btn-export" @click="goToFreePlot" :disabled="loading || !!error || !taskId">
+                    自由绘图
+                </button>
+                <button v-if="isCompareReturn" class="btn-export" @click="applyToCompareSlot" :disabled="loading || !!error || filteredCells.length === 0">
+                    应用到对比{{ compareSlot }}
+                </button>
+                <template v-if="isScatterSingleMode() && !isPython3dMode()">
+                    <button class="btn-export" @click="enableScatterBatchMode" :disabled="loading || !!error || filteredCells.length === 0">
+                        批量生成
+                    </button>
+                    <button class="btn-export" @click="prevScatterFrame" :disabled="!scatterBatchMode || scatterBatchIndex <= 0">
+                        ←
+                    </button>
+                    <span v-if="scatterBatchMode" class="batch-indicator">{{ (scatterBatchIndex + 1) }}/{{ scatterBatchFrames.length }}</span>
+                    <button class="btn-export" @click="nextScatterFrame" :disabled="!scatterBatchMode || scatterBatchIndex >= scatterBatchFrames.length - 1">
+                        →
+                    </button>
+                    <button class="btn-export" @click="handleBatchExport" :disabled="!scatterBatchMode || scatterBatchExporting">
+                        {{ scatterBatchExporting ? '导出中...' : '批量导出' }}
+                    </button>
+                </template>
             </div>
         </div>
 
@@ -1256,7 +1531,13 @@ onUnmounted(() => {
             <div
                 v-else
                 ref="chartContainer"
-                :class="['chart-container', { 'chart-container-square': isSquareChart }]"
+                :class="[
+                    'chart-container',
+                    {
+                        'chart-container-square': isSquareChart,
+                        'chart-container-tall': isTallChart,
+                    },
+                ]"
             ></div>
         </div>
     </div>
@@ -1324,6 +1605,13 @@ onUnmounted(() => {
     width: 88px;
 }
 
+.batch-indicator {
+    min-width: 56px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
 .main-content {
     flex: 1;
     padding: 20px;
@@ -1343,13 +1631,22 @@ onUnmounted(() => {
 }
 
 .chart-container {
-    width: 100%;
+    width: min(100%, 1400px);
     height: calc(100vh - 140px);
     min-height: 520px;
     max-height: 860px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
+    margin: 0 auto;
+}
+
+.chart-container-tall {
+    width: min(100%, 1100px);
+    height: auto;
+    aspect-ratio: 5 / 4;
+    min-height: min(620px, calc(100vh - 180px));
+    max-height: min(900px, calc(100vh - 140px));
 }
 
 .chart-container-square {

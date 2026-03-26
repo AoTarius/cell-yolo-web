@@ -10,6 +10,7 @@ import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
 import ImportView from '../views/import/ImportView.vue'
 import DrawingCanvas from '@/components/analysis/chart-drawing/DrawingCanvas.vue'
+import FreePlotView from '../views/analysis/FreePlotView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -72,6 +73,11 @@ const router = createRouter({
       path: '/drawing-canvas',
       name: 'drawingCanvas',
       component: DrawingCanvas
+    },
+    {
+      path: '/free-plot',
+      name: 'freePlot',
+      component: FreePlotView,
     },
   ],
 })
