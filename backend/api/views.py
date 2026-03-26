@@ -3,6 +3,7 @@ import json
 import uuid
 import threading
 import bcrypt
+import io
 from pathlib import Path
 from datetime import datetime
 
@@ -13,6 +14,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from django.db import models
+from collections import defaultdict
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
 
 from .models import Cell, Task
 from django.http import JsonResponse
@@ -1987,6 +1994,90 @@ def get_cells_by_task(request, task_id):
         return JsonResponse({"success": True, "data": data}, status=200)
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+class Trajectory3DImageView(APIView):
+    """使用后端 Python 生成 3D 轨迹图（PNG）"""
+
+    def get(self, request, task_id):
+        try:
+            task_obj = Task.objects.filter(task_id=task_id, is_deleted=False).first()
+            if not task_obj:
+                return JsonResponse({"success": False, "error": "Task not found"}, status=404)
+
+            track_ids_param = (request.GET.get('track_ids') or '').strip()
+            track_ids = []
+            if track_ids_param:
+                for token in track_ids_param.split(','):
+                    token = token.strip()
+                    if token.isdigit():
+                        track_ids.append(int(token))
+
+            cells_qs = Cell.objects.filter(task=task_obj.id, is_deleted=False)
+            if track_ids:
+                cells_qs = cells_qs.filter(track_id__in=track_ids)
+            cells_qs = cells_qs.order_by('track_id', 'frame')
+
+            grouped_tracks = defaultdict(list)
+            for cell in cells_qs:
+                metrics = cell.metrics_json or {}
+                center = metrics.get('center') or {}
+                cx = center.get('cx')
+                cy = center.get('cy')
+
+                x = float(cx) if cx is not None else float(cell.bb_left + cell.bb_width / 2)
+                y = float(cy) if cy is not None else float(cell.bb_top + cell.bb_height / 2)
+                z = float(cell.frame)
+                grouped_tracks[int(cell.track_id)].append((x, y, z))
+
+            if not grouped_tracks:
+                return JsonResponse({"success": False, "error": "No trajectory data"}, status=404)
+
+            fig = plt.figure(figsize=(10, 7), dpi=160)
+            ax = fig.add_subplot(111, projection='3d')
+            fig.patch.set_facecolor('white')
+
+            max_tracks = 80
+            sorted_items = sorted(grouped_tracks.items(), key=lambda kv: len(kv[1]), reverse=True)[:max_tracks]
+            colors = plt.cm.tab20(np.linspace(0, 1, max(2, len(sorted_items))))
+
+            for idx, (track_id, points) in enumerate(sorted_items):
+                xs = [p[0] for p in points]
+                ys = [p[1] for p in points]
+                zs = [p[2] for p in points]
+                ax.plot(xs, ys, zs, color=colors[idx % len(colors)], linewidth=1.2, alpha=0.9)
+
+            ax.set_title('3D Cell Trajectories', fontsize=12)
+            ax.set_xlabel('X Position (μm)', fontsize=10, labelpad=8)
+            ax.set_ylabel('Y Position (μm)', fontsize=10, labelpad=8)
+            ax.set_zlabel('Time (frame)', fontsize=10, labelpad=8)
+
+            ax.grid(True, linestyle='--', linewidth=0.6, alpha=0.35)
+            ax.xaxis.pane.set_facecolor((1, 1, 1, 1))
+            ax.yaxis.pane.set_facecolor((1, 1, 1, 1))
+            ax.zaxis.pane.set_facecolor((1, 1, 1, 1))
+
+            plt.tight_layout()
+
+            # 同时落盘保存一份，便于后续复用/审计
+            output_base_path = Path(task_obj.user.output_base_path)
+            plot_dir = output_base_path / 'tasks' / task_id / 'plots'
+            plot_dir.mkdir(parents=True, exist_ok=True)
+            saved_png_path = plot_dir / 'trajectory_3d.png'
+            fig.savefig(saved_png_path, format='png', facecolor='white', bbox_inches='tight')
+
+            buffer = io.BytesIO()
+            fig.savefig(buffer, format='png', facecolor='white', bbox_inches='tight')
+            plt.close(fig)
+            buffer.seek(0)
+
+            response = HttpResponse(buffer.getvalue(), content_type='image/png')
+            response['Cache-Control'] = 'no-store, max-age=0'
+            response['X-Trajectory-Image-Path'] = str(saved_png_path)
+            return response
+
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
 # 获取单个细胞详细数据接口

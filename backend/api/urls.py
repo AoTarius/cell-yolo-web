@@ -39,4 +39,5 @@ urlpatterns = [
 
     # 帧图片接口
     path('frame/<str:task_id>/<int:frame_number>/', views.FrameImageView.as_view(), name='frame_image'),
+    path('trajectory-3d/<str:task_id>/', views.Trajectory3DImageView.as_view(), name='trajectory_3d_image'),
 ]

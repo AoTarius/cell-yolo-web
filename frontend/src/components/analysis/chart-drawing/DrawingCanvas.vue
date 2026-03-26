@@ -5,7 +5,12 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAnalysisStore } from '@/stores/analysisStore';
 import type { CellData } from '@/stores/analysisStore';
 import * as echarts from 'echarts';
-import 'echarts-gl';
+
+declare global {
+    interface Window {
+        __drawingCanvasDebugApi?: DrawingCanvasDebugApi;
+    }
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -27,8 +32,13 @@ const cells = ref<CellData[]>([]);
 const filteredCells = ref<CellData[]>([]);
 const chartInstance = ref<echarts.ECharts | null>(null);
 const chartContainer = ref<HTMLDivElement | null>(null);
+const trajectory3dImageUrl = ref<string | null>(null);
+const trajectory3dLoading = ref(false);
 const baseFontSize = ref(Number(sessionStorage.getItem('drawingBaseFontSize') || 14));
 const legendFontSize = ref(Number(sessionStorage.getItem('drawingLegendFontSize') || 12));
+const titleFontSize = ref(Number(sessionStorage.getItem('drawingTitleFontSize') || 16));
+
+const academicPalette = ['#0173B2', '#DE8F05', '#029E73', '#D55E00', '#CC78BC', '#CA9161', '#56B4E9', '#949494'];
 
 type DrawingChartType = 'timeSeries' | 'histogram' | 'scatter' | 'trajectory';
 
@@ -57,9 +67,30 @@ interface ExportChartImageOptions {
     filename?: string;
 }
 
-declare global {
-    interface Window {
-        __drawingCanvasDebugApi?: DrawingCanvasDebugApi;
+function isPython3dMode() {
+    return chartType.value === 'trajectory' && config.value?.trajectoryType === '3d';
+}
+
+async function loadTrajectory3dImage() {
+    if (!taskId.value) return;
+
+    trajectory3dLoading.value = true;
+    try {
+        const trackIds = filteredCells.value
+            .map((c) => Number(c.cell_id))
+            .filter((v) => Number.isFinite(v));
+        const query = trackIds.length ? `?track_ids=${trackIds.join(',')}` : '';
+        const resp = await fetch(`/api/trajectory-3d/${taskId.value}/${query}`);
+        if (!resp.ok) {
+            throw new Error(`3D轨迹图生成失败: HTTP ${resp.status}`);
+        }
+
+        const blob = await resp.blob();
+        const oldUrl = trajectory3dImageUrl.value;
+        trajectory3dImageUrl.value = URL.createObjectURL(blob);
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
+    } finally {
+        trajectory3dLoading.value = false;
     }
 }
 
@@ -78,23 +109,68 @@ const isSquareChart = computed(
 );
 
 function getTitleTextStyle() {
-    return { fontSize: baseFontSize.value + 4 };
+    return {
+        fontSize: titleFontSize.value,
+        fontWeight: 500,
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        color: '#1f2937',
+    };
 }
 
 function getAxisLabelStyle() {
-    return { fontSize: baseFontSize.value };
+    return {
+        fontSize: baseFontSize.value,
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        color: '#374151',
+    };
 }
 
 function getAxisNameStyle() {
-    return { fontSize: baseFontSize.value };
+    return {
+        fontSize: baseFontSize.value,
+        fontWeight: 600,
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        color: '#111827',
+    };
 }
 
 function getLegendTextStyle() {
-    return { fontSize: legendFontSize.value };
+    return {
+        fontSize: legendFontSize.value,
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        color: '#4b5563',
+    };
 }
 
 function getTooltipTextStyle() {
-    return { fontSize: baseFontSize.value };
+    return {
+        fontSize: baseFontSize.value,
+        fontFamily: 'Arial, Helvetica, sans-serif',
+    };
+}
+
+function getAcademicGrid(right = '8%') {
+    return {
+        left: '12%',
+        right,
+        top: '14%',
+        bottom: '14%',
+        containLabel: false,
+    };
+}
+
+function getAcademicAxisLine() {
+    return { lineStyle: { color: '#475569', width: 1 } };
+}
+
+function getAcademicSplitLine() {
+    return { show: true, lineStyle: { color: '#d1d5db', width: 1, opacity: 1 } };
+}
+
+function getFeatureLabel(feature: string): string {
+    if (feature === 'area') return '面积 (μm²)';
+    if (feature === 'speed' || feature === 'migration_speed') return '速度 (μm/帧)';
+    return feature;
 }
 
 function getSymmetricBounds(points: Array<[number, number]>, defaultHalf = 200): { min: number; max: number } {
@@ -288,7 +364,8 @@ function buildHistogramBins(
 
 function buildTimeSeriesOption(): echarts.EChartsOption {
     const feature = config.value?.yAxisFeature || 'area';
-    const series = filteredCells.value.slice(0, 30).map((cell) => {
+    const featureLabel = getFeatureLabel(feature);
+    const series = filteredCells.value.slice(0, 30).map((cell, idx) => {
         const data = [...cell.frames]
             .sort((a, b) => a.frame_number - b.frame_number)
             .map((f: any) => [f.frame_number, getFrameFeatureValue(f, feature)]);
@@ -298,22 +375,53 @@ function buildTimeSeriesOption(): echarts.EChartsOption {
             type: 'line' as const,
             showSymbol: !!config.value?.showDataPoints,
             smooth: config.value?.lineType === 'smooth',
+            lineStyle: {
+                width: 1.2,
+                color: academicPalette[idx % academicPalette.length],
+            },
             data,
         };
     });
 
     return {
-        title: { text: `${chartTitle.value} - ${feature}`, textStyle: getTitleTextStyle() },
-        tooltip: { trigger: 'axis', textStyle: getTooltipTextStyle() },
+        color: academicPalette,
+        animation: false,
+        backgroundColor: '#ffffff',
+        title: { text: `${chartTitle.value} - ${featureLabel}`, textStyle: getTitleTextStyle() },
+        tooltip: {
+            trigger: 'axis',
+            textStyle: getTooltipTextStyle(),
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            borderColor: '#d1d5db',
+            borderWidth: 1,
+        },
         legend: { type: 'scroll', textStyle: getLegendTextStyle() },
-        xAxis: { type: 'value', name: '帧号', axisLabel: getAxisLabelStyle(), nameTextStyle: getAxisNameStyle() },
-        yAxis: { type: 'value', name: feature, axisLabel: getAxisLabelStyle(), nameTextStyle: getAxisNameStyle() },
+        grid: getAcademicGrid(),
+        xAxis: {
+            type: 'value',
+            name: '帧号',
+            nameGap: 30,
+            axisLabel: getAxisLabelStyle(),
+            nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
+        },
+        yAxis: {
+            type: 'value',
+            name: featureLabel,
+            nameGap: 44,
+            axisLabel: getAxisLabelStyle(),
+            nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
+        },
         series,
     };
 }
 
 function buildHistogramOption(): echarts.EChartsOption {
     const feature = config.value?.xAxisFeature || 'area';
+    const featureLabel = getFeatureLabel(feature);
     const statMode = config.value?.statMode || 'average';
     const frameMode = config.value?.frameMode || 'single';
     const selectedFrame = Number(config.value?.selectedFrame || 1);
@@ -369,6 +477,7 @@ function buildHistogramOption(): echarts.EChartsOption {
         name: entry.name,
         type: 'bar' as const,
         barMaxWidth: frameMode === 'single' ? 32 : 20,
+        itemStyle: { opacity: 0.85 },
         data: buildHistogramBins(entry.values, min, max, binCount, probabilityType),
     }));
 
@@ -386,9 +495,11 @@ function buildHistogramOption(): echarts.EChartsOption {
             type: 'category' as const,
             gridIndex: idx,
             data: labels,
-            name: idx >= 2 ? feature : '',
+            name: idx >= 2 ? featureLabel : '',
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
         }));
 
         const yAxis = quadSeries.map((_, idx) => ({
@@ -397,11 +508,13 @@ function buildHistogramOption(): echarts.EChartsOption {
             name: idx % 2 === 0 ? (probabilityType === 'probability' ? '概率' : '数量') : '',
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
         }));
 
         return {
             title: {
-                text: `${chartTitle.value} - ${feature} (四宫格)`,
+                text: `${chartTitle.value} - ${featureLabel} (四宫格)`,
                 textStyle: getTitleTextStyle(),
             },
             tooltip: {
@@ -442,14 +555,41 @@ function buildHistogramOption(): echarts.EChartsOption {
     }
 
     return {
+        color: academicPalette,
+        animation: false,
+        backgroundColor: '#ffffff',
         title: {
             text: `${chartTitle.value} - ${feature} (${statMode === 'average' ? '平均模式' : '按帧模式'})`,
             textStyle: getTitleTextStyle(),
         },
         legend: histogramSeries.length > 1 ? { type: 'scroll', textStyle: getLegendTextStyle() } : undefined,
-        tooltip: { trigger: 'axis', textStyle: getTooltipTextStyle() },
-        xAxis: { type: 'category', data: labels, name: feature, axisLabel: getAxisLabelStyle(), nameTextStyle: getAxisNameStyle() },
-        yAxis: { type: 'value', name: probabilityType === 'probability' ? '概率' : '数量', axisLabel: getAxisLabelStyle(), nameTextStyle: getAxisNameStyle() },
+        tooltip: {
+            trigger: 'axis',
+            textStyle: getTooltipTextStyle(),
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            borderColor: '#d1d5db',
+            borderWidth: 1,
+        },
+        grid: getAcademicGrid(),
+        xAxis: {
+            type: 'category',
+            data: labels,
+            name: featureLabel,
+            nameGap: 34,
+            axisLabel: getAxisLabelStyle(),
+            nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
+        },
+        yAxis: {
+            type: 'value',
+            name: probabilityType === 'probability' ? '概率' : '数量',
+            nameGap: 40,
+            axisLabel: getAxisLabelStyle(),
+            nameTextStyle: getAxisNameStyle(),
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
+        },
         series: histogramSeries,
     };
 }
@@ -493,12 +633,13 @@ function buildScatterOption(): echarts.EChartsOption {
 
     if (frameMode === 'quad') {
         title = `${chartTitle.value} - 四帧对比`;
-        series = selectedFrames.slice(0, 4).map((frameNo: number) => {
+        series = selectedFrames.slice(0, 4).map((frameNo: number, idx: number) => {
             const framePoints = allPoints.filter((p) => p.frame === frameNo);
             return {
                 name: `Frame ${frameNo}`,
                 type: 'scatter' as const,
                 symbolSize: Number(config.value?.pointSize || 8),
+                itemStyle: { color: academicPalette[idx % academicPalette.length], opacity: 0.8 },
                 data: framePoints.map((p) => ({
                     cellId: p.cellId,
                     frame: p.frame,
@@ -508,12 +649,13 @@ function buildScatterOption(): echarts.EChartsOption {
         });
     } else if (frameMode === 'sequence') {
         title = `${chartTitle.value} - 序列帧`;
-        series = selectedFrames.map((frameNo: number) => {
+        series = selectedFrames.map((frameNo: number, idx: number) => {
             const framePoints = allPoints.filter((p) => p.frame === frameNo);
             return {
                 name: `Frame ${frameNo}`,
                 type: 'scatter' as const,
                 symbolSize: Number(config.value?.pointSize || 8),
+                itemStyle: { color: academicPalette[idx % academicPalette.length], opacity: 0.8 },
                 data: framePoints.map((p) => ({
                     cellId: p.cellId,
                     frame: p.frame,
@@ -545,6 +687,7 @@ function buildScatterOption(): echarts.EChartsOption {
                         lineStyle: {
                             width: 1,
                             opacity: 0.45,
+                            color: '#64748b',
                         },
                         data: trail,
                     };
@@ -558,6 +701,10 @@ function buildScatterOption(): echarts.EChartsOption {
                 type: 'scatter' as const,
                 name: `Frame ${selectedFrame}`,
                 symbolSize: Number(config.value?.pointSize || 8),
+                itemStyle: {
+                    color: useColorMap ? undefined : academicPalette[0],
+                    opacity: 0.8,
+                },
                 data: points.map((p) => ({
                     cellId: p.cellId,
                     frame: p.frame,
@@ -582,37 +729,47 @@ function buildScatterOption(): echarts.EChartsOption {
         .map(({ idx }) => idx);
 
     return {
+        color: academicPalette,
+        animation: false,
+        backgroundColor: '#ffffff',
         title: { text: title, textStyle: getTitleTextStyle() },
         legend: undefined,
         tooltip: {
             textStyle: getTooltipTextStyle(),
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            borderColor: '#d1d5db',
+            borderWidth: 1,
             formatter: (params: any) => {
                 const d = params.data;
                 const colorInfo = useColorMap
                     ? `<br/>${config.value?.colorBy}: ${Number(d.value?.[2] ?? 0).toFixed(3)}`
                     : '';
-                return `Cell: ${d.cellId}<br/>Frame: ${d.frame}<br/>X: ${d.value[0]}<br/>Y: ${d.value[1]}${colorInfo}`;
+                return `Cell: ${d.cellId}<br/>Frame: ${d.frame}<br/>X: ${Number(d.value[0] ?? 0).toFixed(2)} μm<br/>Y: ${Number(d.value[1] ?? 0).toFixed(2)} μm${colorInfo}`;
             },
         },
-        grid: { left: '8%', right: '8%', top: '8%', bottom: '8%', containLabel: true },
+        grid: getAcademicGrid(useColorMap ? '18%' : '8%'),
         xAxis: {
             type: 'value',
-            name: 'X',
+            name: 'X 位置 (μm)',
+            nameGap: 30,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             min: scatterBounds.xMin,
             max: scatterBounds.xMax,
-            splitLine: { show: true, lineStyle: { opacity: 0.18 } },
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
             scale: true,
         },
         yAxis: {
             type: 'value',
-            name: 'Y',
+            name: 'Y 位置 (μm)',
+            nameGap: 38,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             min: scatterBounds.yMin,
             max: scatterBounds.yMax,
-            splitLine: { show: true, lineStyle: { opacity: 0.18 } },
+            axisLine: getAcademicAxisLine(),
+            splitLine: getAcademicSplitLine(),
             scale: true,
         },
         visualMap: useColorMap
@@ -628,6 +785,7 @@ function buildScatterOption(): echarts.EChartsOption {
                 right: 16,
                 top: 'middle',
                 textStyle: getAxisLabelStyle(),
+                inRange: { color: ['#f7fbff', '#2171b5'] },
             }
             : undefined,
         series,
@@ -638,99 +796,10 @@ function buildTrajectoryOption(): echarts.EChartsOption {
     const trajectoryType = config.value?.trajectoryType || 'normal';
 
     if (trajectoryType === '3d') {
-        const elev = Number(config.value?.viewElev ?? 20);
-        const azim = Number(config.value?.viewAzim ?? 120);
-        const distance = Number(config.value?.viewDistance ?? 180);
-        const colorMap = config.value?.colorMap || 'track';
-
-        const palette = [
-            '#e15759', '#4e79a7', '#59a14f', '#f28e2b', '#af7aa1', '#76b7b2', '#edc948', '#ff9da7',
-            '#9c755f', '#bab0ab', '#2ca02c', '#17becf', '#bcbd22', '#1f77b4', '#d62728', '#9467bd',
-        ];
-
-        const series3D = filteredCells.value.slice(0, 80).map((cell, idx) => {
-            const sortedFrames = [...cell.frames].sort((a, b) => a.frame_number - b.frame_number);
-            const data = sortedFrames.map((f: any) => {
-                const x = Number(f.position?.x ?? 0);
-                const y = Number(f.position?.y ?? 0);
-                const frameNo = Number(f.frame_number ?? 0);
-                const speed = Number(f.velocity?.speed ?? 0);
-                // [x, y, z, colorValue, frame, speed]
-                return [x, y, frameNo, colorMap === 'speed' ? speed : frameNo, frameNo, speed];
-            });
-
-            return {
-                name: cell.cell_id,
-                type: 'line3D',
-                coordinateSystem: 'cartesian3D',
-                data,
-                lineStyle: {
-                    width: Math.max(1, Number(config.value?.lineWidth || 2)),
-                    opacity: 0.88,
-                    color: colorMap === 'cell_id' ? palette[idx % palette.length] : undefined,
-                },
-            };
-        });
-
-        const option3D: any = {
-            title: {
-                text: `${chartTitle.value} (3D)`,
-                textStyle: getTitleTextStyle(),
-            },
-            legend: undefined,
-            tooltip: {
-                textStyle: getTooltipTextStyle(),
-                formatter: (params: any) => {
-                    const d = params?.data || [];
-                    return `${params.seriesName}<br/>X: ${Number(d[0] ?? 0).toFixed(2)}<br/>Y: ${Number(d[1] ?? 0).toFixed(2)}<br/>Frame: ${Number(d[4] ?? 0)}<br/>Speed: ${Number(d[5] ?? 0).toFixed(3)}`;
-                },
-            },
-            grid3D: {
-                boxWidth: 160,
-                boxDepth: 120,
-                boxHeight: 90,
-                axisLine: { lineStyle: { color: '#6f7682' } },
-                axisLabel: { color: '#2c2f36', fontSize: Math.max(10, baseFontSize.value - 1) },
-                axisPointer: {
-                    show: true,
-                },
-                viewControl: {
-                    projection: 'perspective',
-                    alpha: elev,
-                    beta: azim,
-                    distance,
-                    rotateSensitivity: 1,
-                    zoomSensitivity: 0.8,
-                    panSensitivity: 0.8,
-                },
-                light: {
-                    main: { intensity: 1.1, shadow: true },
-                    ambient: { intensity: 0.45 },
-                },
-            },
-            xAxis3D: {
-                type: 'value',
-                name: 'X Position (μm)',
-                axisLabel: getAxisLabelStyle(),
-                nameTextStyle: getAxisNameStyle(),
-            },
-            yAxis3D: {
-                type: 'value',
-                name: 'Y Position (μm)',
-                axisLabel: getAxisLabelStyle(),
-                nameTextStyle: getAxisNameStyle(),
-            },
-            zAxis3D: {
-                type: 'value',
-                name: 'Time (frame)',
-                axisLabel: getAxisLabelStyle(),
-                nameTextStyle: getAxisNameStyle(),
-            },
-            visualMap: undefined,
-            series: series3D,
+        return {
+            title: { text: '3D 轨迹图由后端 Python 渲染', textStyle: getTitleTextStyle() },
+            series: [],
         };
-
-        return option3D as echarts.EChartsOption;
     }
 
     const colorMap = config.value?.colorMap || 'time';
@@ -739,7 +808,7 @@ function buildTrajectoryOption(): echarts.EChartsOption {
     const showEndPoint = !!config.value?.showEndPoint;
     const fadeEffect = !!config.value?.fadeEffect;
 
-    const series = filteredCells.value.slice(0, 50).map((cell) => {
+    const series = filteredCells.value.slice(0, 50).map((cell, idx) => {
         const sortedFrames = [...cell.frames].sort((a, b) => a.frame_number - b.frame_number);
         const first = sortedFrames[0];
         const baseX = trajectoryType === 'normalized'
@@ -777,6 +846,7 @@ function buildTrajectoryOption(): echarts.EChartsOption {
             lineStyle: {
                 width: lineWidth,
                 opacity: fadeEffect ? 0.7 : 1,
+                color: academicPalette[idx % academicPalette.length],
             },
             encode: { x: 0, y: 1 },
             data,
@@ -904,6 +974,9 @@ function buildTrajectoryOption(): echarts.EChartsOption {
     }));
 
     return {
+        animation: false,
+        backgroundColor: '#ffffff',
+        color: academicPalette,
         title: {
             text: isNormalized ? 'Normalized Cell Trajectories' : chartTitle.value,
             textStyle: getTitleTextStyle(),
@@ -911,6 +984,9 @@ function buildTrajectoryOption(): echarts.EChartsOption {
         tooltip: {
             trigger: 'item',
             textStyle: getTooltipTextStyle(),
+            backgroundColor: 'rgba(255,255,255,0.95)',
+            borderColor: '#d1d5db',
+            borderWidth: 1,
             formatter: (params: any) => {
                 if (String(params?.seriesName || '').startsWith('__')) return '';
                 const d = params.data || [];
@@ -918,25 +994,29 @@ function buildTrajectoryOption(): echarts.EChartsOption {
             },
         },
         legend: undefined,
-        grid: { left: '8%', right: '8%', top: '8%', bottom: '8%', containLabel: true },
+        grid: getAcademicGrid(),
         xAxis: {
             type: 'value',
-            name: isNormalized ? 'Normalized X (μm)' : 'X',
+            name: isNormalized ? 'Normalized X (μm)' : 'X 位置 (μm)',
+            nameGap: 30,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             min: isNormalized ? (trajectoryBounds as { min: number; max: number }).min : (trajectoryBounds as { xMin: number }).xMin,
             max: isNormalized ? (trajectoryBounds as { min: number; max: number }).max : (trajectoryBounds as { xMax: number }).xMax,
-            splitLine: { show: false },
+            axisLine: getAcademicAxisLine(),
+            splitLine: isNormalized ? { show: false } : getAcademicSplitLine(),
             scale: true,
         },
         yAxis: {
             type: 'value',
-            name: isNormalized ? 'Normalized Y (μm)' : 'Y',
+            name: isNormalized ? 'Normalized Y (μm)' : 'Y 位置 (μm)',
+            nameGap: 38,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             min: isNormalized ? (trajectoryBounds as { min: number; max: number }).min : (trajectoryBounds as { yMin: number }).yMin,
             max: isNormalized ? (trajectoryBounds as { min: number; max: number }).max : (trajectoryBounds as { yMax: number }).yMax,
-            splitLine: { show: false },
+            axisLine: getAcademicAxisLine(),
+            splitLine: isNormalized ? { show: false } : getAcademicSplitLine(),
             scale: true,
         },
         visualMap: undefined,
@@ -960,13 +1040,18 @@ function buildOption(): echarts.EChartsOption {
 }
 
 function renderChart() {
+    if (isPython3dMode()) return;
     if (!chartContainer.value || !filteredCells.value.length) return;
 
     if (!chartInstance.value) {
         chartInstance.value = echarts.init(chartContainer.value);
     }
 
-    chartInstance.value.setOption(buildOption(), true);
+    try {
+        chartInstance.value.setOption(buildOption(), true);
+    } catch (err: any) {
+        throw err;
+    }
 }
 
 async function loadData() {
@@ -991,6 +1076,10 @@ async function loadData() {
         }
 
         filteredCells.value = tempFiltered;
+
+        if (isPython3dMode()) {
+            await loadTrajectory3dImage();
+        }
     } catch (err: any) {
         error.value = `数据加载失败: ${err.message || err}`;
     } finally {
@@ -1003,6 +1092,9 @@ async function loadData() {
 }
 
 function exportChartImage(options?: ExportChartImageOptions): string | null {
+    if (isPython3dMode()) {
+        return trajectory3dImageUrl.value;
+    }
     if (!chartInstance.value) return null;
 
     return chartInstance.value.getDataURL({
@@ -1013,6 +1105,17 @@ function exportChartImage(options?: ExportChartImageOptions): string | null {
 }
 
 function downloadChartImage(options?: ExportChartImageOptions): boolean {
+    if (isPython3dMode()) {
+        if (!trajectory3dImageUrl.value) return false;
+        const ext = 'png';
+        const filename = options?.filename || `trajectory-3d-${taskId.value || 'unknown'}.${ext}`;
+        const link = document.createElement('a');
+        link.href = trajectory3dImageUrl.value;
+        link.download = filename;
+        link.click();
+        return true;
+    }
+
     const dataUrl = exportChartImage(options);
     if (!dataUrl) return false;
 
@@ -1054,6 +1157,10 @@ function goBack() {
 watch(
     [filteredCells, chartType, config],
     async () => {
+        if (isPython3dMode()) {
+            await loadTrajectory3dImage();
+            return;
+        }
         await nextTick();
         renderChart();
     },
@@ -1067,11 +1174,19 @@ watch(loading, async (isLoading) => {
     }
 });
 
-watch([baseFontSize, legendFontSize], async ([base, legend]) => {
+let fontChangeTimer: ReturnType<typeof setTimeout> | null = null;
+watch([baseFontSize, legendFontSize, titleFontSize], async ([base, legend, title]) => {
     sessionStorage.setItem('drawingBaseFontSize', String(base));
     sessionStorage.setItem('drawingLegendFontSize', String(legend));
-    await nextTick();
-    renderChart();
+    sessionStorage.setItem('drawingTitleFontSize', String(title));
+
+    if (fontChangeTimer) {
+        clearTimeout(fontChangeTimer);
+    }
+    fontChangeTimer = setTimeout(async () => {
+        await nextTick();
+        renderChart();
+    }, 120);
 });
 
 onMounted(async () => {
@@ -1093,6 +1208,9 @@ onUnmounted(() => {
     if (window.__drawingCanvasDebugApi) {
         delete window.__drawingCanvasDebugApi;
     }
+    if (trajectory3dImageUrl.value) {
+        URL.revokeObjectURL(trajectory3dImageUrl.value);
+    }
 });
 </script>
 
@@ -1112,6 +1230,11 @@ onUnmounted(() => {
                     <input v-model.number="legendFontSize" type="range" min="10" max="20" step="1" />
                     <span>{{ legendFontSize }}</span>
                 </div>
+                <div class="font-control">
+                    <label>标题</label>
+                    <input v-model.number="titleFontSize" type="range" min="12" max="24" step="1" />
+                    <span>{{ titleFontSize }}</span>
+                </div>
                 <button class="btn-export" @click="handleExportImage" :disabled="loading || !!error || filteredCells.length === 0">
                     导出图片
                 </button>
@@ -1125,6 +1248,11 @@ onUnmounted(() => {
                 <button class="btn-back" @click="loadData">重试</button>
             </div>
             <div v-else-if="filteredCells.length === 0" class="state">无可绘制数据</div>
+            <div v-else-if="isPython3dMode()" class="python-3d-wrap">
+                <div v-if="trajectory3dLoading" class="state">正在生成 3D 轨迹图...</div>
+                <img v-else-if="trajectory3dImageUrl" class="python-3d-image" :src="trajectory3dImageUrl" alt="3D轨迹图" />
+                <div v-else class="state error">3D 轨迹图生成失败</div>
+            </div>
             <div
                 v-else
                 ref="chartContainer"
@@ -1230,5 +1358,25 @@ onUnmounted(() => {
     aspect-ratio: 1 / 1;
     min-height: 0;
     margin: 0 auto;
+}
+
+.python-3d-wrap {
+    width: 100%;
+    height: calc(100vh - 140px);
+    min-height: 520px;
+    max-height: 860px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.python-3d-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 </style>

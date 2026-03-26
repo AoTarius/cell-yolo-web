@@ -1,3 +1,5 @@
+declare module 'echarts-gl';
+
 declare module 'echarts-gl/charts' {
   export const Line3DChart: any;
   export const Lines3DChart: any;
