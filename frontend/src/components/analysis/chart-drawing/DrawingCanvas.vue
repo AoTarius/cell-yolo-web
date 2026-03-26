@@ -1395,16 +1395,6 @@ function goBack() {
     }
 }
 
-function goToFreePlot() {
-    router.push({
-        name: 'freePlot',
-        query: {
-            taskId: taskId.value || '',
-            returnTo: route.query.returnTo as string || 'drawingCanvas',
-        },
-    });
-}
-
 watch(
     [filteredCells, chartType, config],
     async () => {
@@ -1491,9 +1481,6 @@ onUnmounted(() => {
                 </div>
                 <button class="btn-export" @click="handleExportImage" :disabled="loading || !!error || filteredCells.length === 0">
                     导出图片
-                </button>
-                <button class="btn-export" @click="goToFreePlot" :disabled="loading || !!error || !taskId">
-                    自由绘图
                 </button>
                 <button v-if="isCompareReturn" class="btn-export" @click="applyToCompareSlot" :disabled="loading || !!error || filteredCells.length === 0">
                     应用到对比{{ compareSlot }}

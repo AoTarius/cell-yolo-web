@@ -171,6 +171,21 @@ function generateScatter() {
 function generateTrajectory() {
   goToDrawingCanvas('trajectory', trajectoryConfig);
 }
+
+function goToFreePlot() {
+  if (!selectedTaskId.value) {
+    alert('请先选择一个分析任务');
+    return;
+  }
+
+  router.push({
+    name: 'freePlot',
+    query: {
+      taskId: String(selectedTaskId.value),
+      returnTo: 'cellTracking',
+    },
+  });
+}
 </script>
 
 <template>
@@ -180,6 +195,7 @@ function generateTrajectory() {
       <p class="subtitle">
         当前任务: {{ selectedTaskId ? analysisStore.selectedRecord?.video_name : '未选择' }}
       </p>
+      <button class="btn-free-plot" @click="goToFreePlot">自由绘图</button>
     </div>
 
     <div class="container">
@@ -626,19 +642,42 @@ function generateTrajectory() {
 }
 
 .header {
-  margin-bottom: 32px;
-  text-align: center;
+  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: min(1060px, 100%);
+}
+
+.btn-free-plot {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-blue);
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-free-plot:hover {
+  filter: brightness(1.05);
 }
 
 .header h2 {
   color: var(--text-primary);
-  font-size: 28px;
-  margin-bottom: 8px;
+  font-size: 26px;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .subtitle {
   color: var(--text-secondary);
   font-size: 14px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .container {
@@ -650,7 +689,7 @@ function generateTrajectory() {
   background-color: var(--bg-card);
   border: 2px solid var(--border-color);
   border-radius: 12px;
-  max-width: 800px;
+  width: min(1060px, 100%);
 }
 
 .card {
@@ -945,9 +984,21 @@ function generateTrajectory() {
 
 /* 响应式 */
 @media (max-width: 640px) {
+  .content {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .header {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
   .container {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(4, auto);
+    overflow: visible;
   }
 
   .modal-content {

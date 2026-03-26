@@ -40,4 +40,8 @@ urlpatterns = [
     # 帧图片接口
     path('frame/<str:task_id>/<int:frame_number>/', views.FrameImageView.as_view(), name='frame_image'),
     path('trajectory-3d/<str:task_id>/', views.Trajectory3DImageView.as_view(), name='trajectory_3d_image'),
+    path('free-plot/warmup/', views.FreePlotWarmupView.as_view(), name='free_plot_warmup'),
+    path('free-plot/examples/', views.FreePlotExamplesView.as_view(), name='free_plot_examples'),
+    path('free-plot/examples/<str:example_name>/', views.FreePlotExamplesView.as_view(), name='free_plot_example_detail'),
+    path('free-plot/run/', views.FreePlotRunView.as_view(), name='free_plot_run'),
 ]
