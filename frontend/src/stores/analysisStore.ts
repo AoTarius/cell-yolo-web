@@ -4,20 +4,20 @@ import axios from 'axios'
 
 export type AnalysisStatus = 'uploading' | 'processing' | 'completed' | 'failed'
 
-// 位置信息
+// ==========================================
+// 类型定义（保持原有）
+// ==========================================
 export interface Position {
   x: number
   y: number
 }
 
-// 速度信息
 export interface Velocity {
-  vx: number // X方向速度分量
-  vy: number // Y方向速度分量
-  speed: number // 速度大小
+  vx: number
+  vy: number
+  speed: number
 }
 
-// 边界框信息
 export interface BoundingBox {
   x: number
   y: number
@@ -25,150 +25,148 @@ export interface BoundingBox {
   height: number
 }
 
-// 单帧细胞数据
 export interface CellFrameData {
-  frame_number: number // 帧号
-  position: Position // 中心位置
-  area: number // 细胞面积
-  velocity: Velocity // 速度向量
-  bounding_box: BoundingBox // 边界框
+  frame_number: number
+  position: Position
+  area: number
+  velocity: Velocity
+  bounding_box: BoundingBox
 }
 
-// 细胞完整数据（符合需求文档 6.3.1）
 export interface CellData {
-  cell_id: string // 细胞ID
-  first_frame: number // 首次出现帧号
-  last_frame: number // 最后出现帧号
-  frame_count: number // 存活帧数
-  avg_width: number // 平均宽度
-  avg_height: number // 平均高度
-  avg_conf: number // 平均置信度
-  avg_velocity: number // 平均速度
-  frames: CellFrameData[] // 每一帧的数据
-  // 扩展字段
-  rawMetrics?: any[] // 原始 metrics_json 数据（用于展示形状和运动特征）
-  avgVisibility?: number // 平均可见性
-  cellClass?: number // 细胞类别
+  cell_id: string
+  first_frame: number
+  last_frame: number
+  frame_count: number
+  avg_width: number
+  avg_height: number
+  avg_conf: number
+  avg_velocity: number
+  frames: CellFrameData[]
+  rawMetrics?: any[]
+  avgVisibility?: number
+  cellClass?: number
 }
 
-// 处理结果数据
 export interface ProcessResult {
-  output_video_path: string // 标注视频路径
-  cell_count: number // 细胞总数
-  total_frames: number // 总帧数
-  video_duration: number // 视频时长（秒）
-  model_name: string // 使用的模型名称
-  cells: CellData[] // 细胞列表数据
+  output_video_path: string
+  cell_count: number
+  total_frames: number
+  video_duration: number
+  model_name: string
+  cells: CellData[]
 }
 
-// 分析记录（符合需求文档 6.3.2）
 export interface AnalysisRecord {
-  task_id: string // 任务ID
-  task_name?: string // 任务名称（用户自定义）
-  video_name: string // 视频文件名
-  video_path: string // 原始视频路径
-  status: AnalysisStatus // 任务状态
-  progress: number // 处理进度 (0-100)
-  start_time: Date // 开始时间
-  end_time?: Date // 结束时间
-  result?: ProcessResult // 处理结果
-  model_name?: string // 模型名称（来自数据库，不是result.json）
-  // 进度详情字段
-  stage?: string // 当前阶段
-  message?: string // 详细消息
-  currentFrame?: number // 当前帧数
-  totalFrames?: number // 总帧数
+  task_id: string
+  task_name?: string
+  video_name: string
+  video_path: string
+  status: AnalysisStatus
+  progress: number
+  start_time: Date
+  end_time?: Date
+  result?: ProcessResult
+  model_name?: string
+  stage?: string
+  message?: string
+  currentFrame?: number
+  totalFrames?: number
 }
 
+// ==========================================
+// Store 定义
+// ==========================================
 export const useAnalysisStore = defineStore('analysis', () => {
-  // 所有分析记录
+  // ==========================================
+  // 状态
+  // ==========================================
   const records = ref<AnalysisRecord[]>([])
-
-  // 当前选中的分析记录ID
   const selectedId = ref<string | null>(null)
-
-  // 排序条件
   const sortConditions = ref<Array<{ id: string; field: string; direction: string }>>([
-    {
-      id: '1',
-      field: 'createdAt',
-      direction: 'desc'
-    }
+    { id: '1', field: 'createdAt', direction: 'desc' }
   ])
+  const selectedCellId = ref<string | null>(null)
+  const compareRecords = ref<AnalysisRecord[]>([])
 
-  // 当前选中的记录
+  // 缓存机制
+  const cellsCache = new Map<string, CellData[]>()
+  const cellDetailCache = new Map<string, CellData>()
+
+  // ==========================================
+  // 图表专用缓存（新增）
+  // ==========================================
+  const chartDataCache = ref<Map<string, {
+    cells: CellData[],
+    filteredCells: CellData[],
+    config: any,
+    timestamp: number
+  }>>(new Map())
+
+  const CACHE_TTL = 5 * 60 * 1000 // 5分钟
+
+  // ==========================================
+  // 计算属性
+  // ==========================================
   const selectedRecord = computed(() => {
     if (!selectedId.value) return null
     return records.value.find((r) => r.task_id === selectedId.value) || null
   })
 
-  // 当前选中的细胞ID（用于显示细胞详情）
-  const selectedCellId = ref<string | null>(null)
-
-  // 当前选中的细胞数据
   const selectedCellData = computed(() => {
     if (!selectedCellId.value || !selectedRecord.value?.result?.cells) {
       return null
     }
-    return (
-      selectedRecord.value.result.cells.find((cell) => cell.cell_id === selectedCellId.value) ||
-      null
-    )
+    return selectedRecord.value.result.cells.find(
+      (cell) => cell.cell_id === selectedCellId.value
+    ) || null
   })
 
-  // 缓存机制
-  const cellsCache = new Map<string, CellData[]>()  // taskId -> 细胞列表
-  const cellDetailCache = new Map<string, CellData>()  // cellId -> 细胞详情
-
-  // 对比模式相关状态
-  const compareRecords = ref<AnalysisRecord[]>([])
-
-  // 选择记录
+  // ==========================================
+  // 基础操作函数（保持原有）
+  // ==========================================
   function selectRecord(id: string) {
     selectedId.value = id
-    selectedCellId.value = null // 重置细胞选择
-    // 切换任务时，清空缓存
+    selectedCellId.value = null
     clearCellsCache()
+    clearChartDataCache() // 同时清空图表缓存
   }
 
-  // 清空细胞列表缓存
   function clearCellsCache() {
     cellsCache.clear()
   }
 
-  // 清空细胞详情缓存
   function clearCellDetailCache() {
     cellDetailCache.clear()
   }
 
-  // 清空所有缓存
   function clearAllCaches() {
     cellsCache.clear()
     cellDetailCache.clear()
+    clearChartDataCache()
   }
 
-  // 设置排序条件
+  function clearChartDataCache() {
+    chartDataCache.value.clear()
+  }
+
   function setSortConditions(conditions: Array<{ id: string; field: string; direction: string }>) {
     sortConditions.value = conditions
   }
 
-  // 清除选中状态
   function clearSelection() {
     selectedId.value = null
     selectedCellId.value = null
   }
 
-  // 选择细胞（显示细胞详情）
   function selectCell(cellId: string) {
     selectedCellId.value = cellId
   }
 
-  // 返回结果列表（关闭细胞详情）
   function backToResultList() {
     selectedCellId.value = null
   }
 
-  // 跳转到对比结果页面
   function goToCompareResult(recordA: AnalysisRecord | undefined, recordB: AnalysisRecord | undefined, router: any) {
     if (!recordA || !recordB) {
       console.error('缺少对比记录')
@@ -178,16 +176,16 @@ export const useAnalysisStore = defineStore('analysis', () => {
     router.push({ name: 'compareResult' })
   }
 
-  // 返回对比列表
   function backToCompareList(router: any) {
     compareRecords.value = []
     router.push({ name: 'compare' })
   }
 
-  // 加载历史任务
+  // ==========================================
+  // 历史任务加载（保持原有）
+  // ==========================================
   async function loadHistoryTasks() {
     try {
-      // 从 userStore 获取当前登录用户
       const { useUserStore } = await import('./userStore')
       const userStore = useUserStore()
 
@@ -205,16 +203,11 @@ export const useAnalysisStore = defineStore('analysis', () => {
       })
       const historyTasks = response.data.tasks || []
 
-      // 转换后端数据为前端格式
       const convertedRecords: AnalysisRecord[] = historyTasks.map((task: any) => {
-        // 从数据库获取的模型名（最新）
         const modelNameFromDB = task.model_display_name || ''
-        // 获取任务名称（用户自定义的名称）
         const taskNameFromDB = task.task_name || null
 
-        // 根据任务状态决定转换方式
         if (task.status === 'processing') {
-          // 处理中的任务
           return {
             task_id: task.task_id,
             task_name: taskNameFromDB,
@@ -226,7 +219,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
             model_name: modelNameFromDB,
           }
         } else {
-          // 已完成的任务
           const result: ProcessResult = {
             output_video_path: task.result?.annotated_video_path || '',
             cell_count: task.result?.cell_count || 0,
@@ -251,18 +243,17 @@ export const useAnalysisStore = defineStore('analysis', () => {
         }
       })
 
-      // 只显示历史任务
       records.value = convertedRecords
     } catch (error) {
       console.error('加载历史任务失败:', error)
-      // 加载失败时显示空列表
       records.value = []
     }
   }
 
-  // 添加新记录（模拟上传）
+  // ==========================================
+  // 记录管理（保持原有）
+  // ==========================================
   function addRecord(videoName: string, _videoFile: File) {
-    // videoFile 参数保留用于后续实现真实上传功能
     const taskId = `task_${Date.now()}`
     const newRecord: AnalysisRecord = {
       task_id: taskId,
@@ -275,7 +266,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     records.value.unshift(newRecord)
     selectedId.value = newRecord.task_id
 
-    // 模拟处理进度更新
     const progressInterval = setInterval(() => {
       const record = records.value.find((r) => r.task_id === taskId)
       if (record && record.progress < 100) {
@@ -283,7 +273,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
       }
     }, 300)
 
-    // 模拟处理过程（3秒后完成）
     setTimeout(() => {
       clearInterval(progressInterval)
       const record = records.value.find((r) => r.task_id === taskId)
@@ -297,43 +286,28 @@ export const useAnalysisStore = defineStore('analysis', () => {
           output_video_path: `/outputs/${videoName.replace(/\.[^/.]+$/, '')}_annotated.mp4`,
           cell_count: cellCount,
           total_frames: totalFrames,
-          video_duration: totalFrames / 30, // 假设 30fps
-          model_name: 'best_split.pt', // 模拟数据使用默认模型
-          cells: [], // 空数组，实际数据由后端提供
+          video_duration: totalFrames / 30,
+          model_name: 'best_split.pt',
+          cells: [],
         }
       }
     }, 3000)
   }
 
-  // 添加上传后的记录（用于 API 集成）
   function addUploadedRecord(record: AnalysisRecord) {
     records.value.unshift(record)
     selectedId.value = record.task_id
   }
 
-  // 更新任务状态（用于 API 集成）
-  function updateTaskStatus(
-    taskId: string,
-    updates: {
-      status?: AnalysisStatus
-      progress?: number
-    }
-  ) {
+  function updateTaskStatus(taskId: string, updates: { status?: AnalysisStatus; progress?: number }) {
     const record = records.value.find((r) => r.task_id === taskId)
     if (record) {
-      if (updates.status !== undefined) {
-        record.status = updates.status
-      }
-      if (updates.progress !== undefined) {
-        record.progress = updates.progress
-      }
-      if (updates.status === 'completed') {
-        record.end_time = new Date()
-      }
+      if (updates.status !== undefined) record.status = updates.status
+      if (updates.progress !== undefined) record.progress = updates.progress
+      if (updates.status === 'completed') record.end_time = new Date()
     }
   }
 
-  // 更新任务结果（用于 API 集成）
   function updateTaskResult(taskId: string, result: ProcessResult) {
     const record = records.value.find((r) => r.task_id === taskId)
     if (record) {
@@ -344,23 +318,12 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
-  // 删除记录
   async function deleteRecord(taskId: string) {
     try {
-      // 调用后端 API 删除任务
       await axios.delete(`/api/delete/${taskId}/`)
-
-      // 从前端列表中移除记录
       const index = records.value.findIndex((r) => r.task_id === taskId)
-      if (index !== -1) {
-        records.value.splice(index, 1)
-      }
-
-      // 如果删除的是当前选中的记录，清空选中状态
-      if (selectedId.value === taskId) {
-        selectedId.value = null
-      }
-
+      if (index !== -1) records.value.splice(index, 1)
+      if (selectedId.value === taskId) selectedId.value = null
       return true
     } catch (error: any) {
       console.error('删除记录失败:', error)
@@ -368,66 +331,41 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
-  // 添加处理中的任务记录
   function addProcessingRecord(record: AnalysisRecord) {
     records.value.unshift(record)
   }
 
-  // 更新任务进度详情
   function updateTaskProgress(
     taskId: string,
-    updates: {
-      progress?: number
-      stage?: string
-      message?: string
-      currentFrame?: number
-      totalFrames?: number
-    }
+    updates: { progress?: number; stage?: string; message?: string; currentFrame?: number; totalFrames?: number }
   ) {
     const record = records.value.find((r) => r.task_id === taskId)
     if (record) {
-      if (updates.progress !== undefined) {
-        record.progress = updates.progress
-      }
-      if (updates.stage !== undefined) {
-        record.stage = updates.stage
-      }
-      if (updates.message !== undefined) {
-        record.message = updates.message
-      }
-      if (updates.currentFrame !== undefined) {
-        record.currentFrame = updates.currentFrame
-      }
-      if (updates.totalFrames !== undefined) {
-        record.totalFrames = updates.totalFrames
-      }
+      if (updates.progress !== undefined) record.progress = updates.progress
+      if (updates.stage !== undefined) record.stage = updates.stage
+      if (updates.message !== undefined) record.message = updates.message
+      if (updates.currentFrame !== undefined) record.currentFrame = updates.currentFrame
+      if (updates.totalFrames !== undefined) record.totalFrames = updates.totalFrames
     }
   }
 
-  // 全局轮询控制
+  // ==========================================
+  // 轮询控制（保持原有）
+  // ==========================================
   let pollIntervalId: number | null = null
 
-  // 启动全局轮询
   function startGlobalPolling() {
-    if (pollIntervalId !== null) {
-      return // 已经在轮询中
-    }
+    if (pollIntervalId !== null) return
 
     pollIntervalId = window.setInterval(async () => {
-      // 查找所有处理中的任务
       const processingTasks = records.value.filter((r) => r.status === 'processing')
+      if (processingTasks.length === 0) return
 
-      if (processingTasks.length === 0) {
-        return // 没有处理中的任务，跳过
-      }
-
-      // 并发轮询所有处理中的任务
       const pollPromises = processingTasks.map(async (task) => {
         try {
           const response = await axios.get(`/api/status/${task.task_id}/`)
           const data = response.data
 
-          // 更新任务进度
           updateTaskProgress(task.task_id, {
             progress: data.progress || 0,
             stage: data.stage || '',
@@ -436,22 +374,13 @@ export const useAnalysisStore = defineStore('analysis', () => {
             totalFrames: data.total_frames || null,
           })
 
-          // 如果任务完成，更新状态
           if (data.status === 'completed') {
             updateTaskStatus(task.task_id, { status: 'completed', progress: 100 })
-
-            // 获取完整结果
             const resultResponse = await axios.get(`/api/result/${task.task_id}/`)
             const result = resultResponse.data
-
-            // 更新结果数据
             const record = records.value.find((r) => r.task_id === task.task_id)
             if (record) {
-              // 更新原始视频路径（如果后端返回了）
-              if (result.original_video_path) {
-                record.video_path = result.original_video_path
-              }
-              // 更新结果数据
+              if (result.original_video_path) record.video_path = result.original_video_path
               record.result = {
                 output_video_path: result.annotated_video_path || '',
                 cell_count: result.cell_count || 0,
@@ -471,10 +400,9 @@ export const useAnalysisStore = defineStore('analysis', () => {
       })
 
       await Promise.all(pollPromises)
-    }, 2000) // 每2秒轮询一次
+    }, 2000)
   }
 
-  // 停止全局轮询
   function stopGlobalPolling() {
     if (pollIntervalId !== null) {
       clearInterval(pollIntervalId)
@@ -482,13 +410,12 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
-  // 初始化时启动全局轮询
   startGlobalPolling()
 
-  // 将后端 get_cells_by_task 返回的原始帧级数据聚合为细胞级数据
-  // 用于替换从 JSON 读取的数据
+  // ==========================================
+  // 数据聚合函数（保持原有）
+  // ==========================================
   function aggregateCells(rawCells: any[]): CellData[] {
-    // 按 track_id 分组
     const cellGroups = new Map<number, any[]>()
 
     for (const cell of rawCells) {
@@ -499,30 +426,27 @@ export const useAnalysisStore = defineStore('analysis', () => {
       cellGroups.get(trackId)!.push(cell)
     }
 
-    // 对每个细胞组进行聚合计算
     const aggregatedCells: CellData[] = []
 
     for (const [trackId, cells] of cellGroups.entries()) {
-      // 计算统计值
-      const frames = cells.map(c => c.frame)
-      const widths = cells.map(c => c.bb_width)
-      const heights = cells.map(c => c.bb_height)
-      const confidences = cells.map(c => c.conf)
-      const velocities = cells.map(c => c.speed || 0)
-      const visibilities = cells.map(c => c.visibility ?? 1)
+      const frames = cells.map((c: any) => c.frame)
+      const widths = cells.map((c: any) => c.bb_width)
+      const heights = cells.map((c: any) => c.bb_height)
+      const confidences = cells.map((c: any) => c.conf)
+      const velocities = cells.map((c: any) => c.speed || 0)
+      const visibilities = cells.map((c: any) => c.visibility ?? 1)
 
       const firstFrame = Math.min(...frames)
       const lastFrame = Math.max(...frames)
       const frameCount = frames.length
-      const avgWidth = widths.reduce((a, b) => a + b, 0) / widths.length
-      const avgHeight = heights.reduce((a, b) => a + b, 0) / heights.length
-      const avgConf = confidences.reduce((a, b) => a + b, 0) / confidences.length
-      const avgVelocity = velocities.reduce((a, b) => a + b, 0) / velocities.length
-      const avgVisibility = visibilities.reduce((a, b) => a + b, 0) / visibilities.length
+      const avgWidth = widths.reduce((a: number, b: number) => a + b, 0) / widths.length
+      const avgHeight = heights.reduce((a: number, b: number) => a + b, 0) / heights.length
+      const avgConf = confidences.reduce((a: number, b: number) => a + b, 0) / confidences.length
+      const avgVelocity = velocities.reduce((a: number, b: number) => a + b, 0) / velocities.length
+      const avgVisibility = visibilities.reduce((a: number, b: number) => a + b, 0) / visibilities.length
       const cellClass = cells[0]?.class_id ?? 0
 
-      // 构建帧数据
-      const framesData: CellFrameData[] = cells.map(c => {
+      const framesData: CellFrameData[] = cells.map((c: any) => {
         const metrics = c.metrics_json || {}
         return {
           frame_number: c.frame,
@@ -545,11 +469,9 @@ export const useAnalysisStore = defineStore('analysis', () => {
         }
       })
 
-      // 收集所有原始指标
-      const rawMetrics = cells.map(c => c.metrics_json || {})
+      const rawMetrics = cells.map((c: any) => c.metrics_json || {})
 
-      // 构建聚合数据
-      const aggregatedCell: CellData = {
+      aggregatedCells.push({
         cell_id: String(trackId),
         first_frame: firstFrame,
         last_frame: lastFrame,
@@ -562,12 +484,9 @@ export const useAnalysisStore = defineStore('analysis', () => {
         rawMetrics: rawMetrics,
         avgVisibility: avgVisibility,
         cellClass: cellClass
-      }
-
-      aggregatedCells.push(aggregatedCell)
+      })
     }
 
-    // 按 cell_id 排序
     aggregatedCells.sort((a, b) => {
       const aId = parseInt(a.cell_id.replace(/\D/g, '') || '0', 10)
       const bId = parseInt(b.cell_id.replace(/\D/g, '') || '0', 10)
@@ -577,9 +496,10 @@ export const useAnalysisStore = defineStore('analysis', () => {
     return aggregatedCells
   }
 
-  // 从数据库加载细胞数据（用于替代从 JSON 读取）
+  // ==========================================
+  // 细胞数据加载（保持原有）
+  // ==========================================
   async function loadCellsByTask(taskId: string): Promise<CellData[]> {
-    // 检查缓存
     if (cellsCache.has(taskId)) {
       return cellsCache.get(taskId)!
     }
@@ -588,7 +508,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
       const response = await axios.get(`/api/cells/${taskId}/`)
       if (response.data.success && response.data.data) {
         const cells = aggregateCells(response.data.data)
-        // 存储到缓存
         cellsCache.set(taskId, cells)
         return cells
       }
@@ -599,7 +518,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
-  // 后端返回的单帧细胞数据类型
   type RawCellFrame = {
     frame: number
     track_id: number
@@ -616,13 +534,11 @@ export const useAnalysisStore = defineStore('analysis', () => {
     metrics_json: any
   }
 
-  // 将后端返回的原始数据转换为 CellData 格式
   function transformCellData(rawFrames: RawCellFrame[]): CellData {
     if (rawFrames.length === 0) {
       throw new Error('No frame data provided')
     }
 
-    // 计算聚合值
     const frames = rawFrames.map(r => r.frame)
     const widths = rawFrames.map(r => r.bb_width)
     const heights = rawFrames.map(r => r.bb_height)
@@ -640,7 +556,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
     const avgVisibility = visibilities.reduce((a, b) => a + b, 0) / visibilities.length
     const cellClass = rawFrames[0]!.class_id
 
-    // 转换帧数据
     const framesData: CellFrameData[] = rawFrames.map(r => {
       const metrics = r.metrics_json || {}
       return {
@@ -674,19 +589,14 @@ export const useAnalysisStore = defineStore('analysis', () => {
       avg_conf: avgConf,
       avg_velocity: avgVelocity,
       frames: framesData,
-      // 扩展字段
       rawMetrics: rawFrames.map(r => r.metrics_json || {}),
       avgVisibility,
       cellClass
     }
   }
 
-  // 加载单个细胞的详细数据
   async function loadCellDetail(taskId: string, trackId: string): Promise<CellData | null> {
-    // 使用 taskId_trackId 作为缓存键，确保不同任务的同名细胞不会混淆
     const cacheKey = `${taskId}_${trackId}`
-
-    // 检查缓存
     if (cellDetailCache.has(cacheKey)) {
       return cellDetailCache.get(cacheKey)!
     }
@@ -695,7 +605,6 @@ export const useAnalysisStore = defineStore('analysis', () => {
       const response = await axios.get(`/api/cells/${taskId}/${trackId}/`)
       if (response.data.success && response.data.data) {
         const cellDetail = transformCellData(response.data.data)
-        // 存储到缓存
         cellDetailCache.set(cacheKey, cellDetail)
         return cellDetail
       }
@@ -706,6 +615,157 @@ export const useAnalysisStore = defineStore('analysis', () => {
     }
   }
 
+  // ==========================================
+  // 图表专用函数（新增，全部在 store 内部）
+  // ==========================================
+
+  // 图表数据获取（带缓存）
+  async function getCellsForChart(taskId: string, forceRefresh = false): Promise<CellData[]> {
+    const cached = chartDataCache.value.get(taskId)
+    if (!forceRefresh && cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+      console.log('使用图表缓存数据')
+      return cached.cells
+    }
+
+    let cells: CellData[]
+    if (cellsCache.has(taskId)) {
+      cells = cellsCache.get(taskId)!
+    } else {
+      cells = await loadCellsByTask(taskId)
+    }
+
+    chartDataCache.value.set(taskId, {
+      cells,
+      filteredCells: cells,
+      config: null,
+      timestamp: Date.now()
+    })
+
+    return cells
+  }
+
+  // 细胞筛选函数
+  function filterCells(
+    cells: CellData[],
+    config: {
+      cellSelection: 'top' | 'range' | 'all'
+      sortBy?: string
+      topN?: number
+      cellRange?: [number, number]
+    }
+  ): CellData[] {
+    let result = [...cells]
+
+    if (config.cellSelection === 'top' && config.sortBy && config.topN) {
+      result.sort((a, b) => {
+        const aVal = getCellSortValue(a, config.sortBy!)
+        const bVal = getCellSortValue(b, config.sortBy!)
+        return bVal - aVal
+      })
+      result = result.slice(0, config.topN)
+    }
+
+    if (config.cellSelection === 'range' && config.cellRange) {
+      const [start, end] = config.cellRange
+      result = result.filter(c => {
+        const id = parseInt(c.cell_id.replace(/\D/g, '') || '0', 10)
+        return id >= start && id <= end
+      })
+    }
+
+    return result
+  }
+
+  // 提取排序值
+  function getCellSortValue(cell: CellData, sortBy: string): number {
+    switch (sortBy) {
+      case 'tracking_duration':
+      case 'frame_count':
+        return cell.frame_count
+      case 'area':
+        return cell.frames.reduce((s, f) => s + f.area, 0) / cell.frames.length
+      case 'speed':
+      case 'velocity':
+        return cell.avg_velocity
+      case 'circularity':
+        return cell.rawMetrics?.reduce((s, m) => s + (m.shape?.circularity || 0), 0) / (cell.rawMetrics?.length || 1) || 0
+      case 'aspect_ratio':
+        return cell.rawMetrics?.reduce((s, m) => s + (m.shape?.aspect_ratio || 0), 0) / (cell.rawMetrics?.length || 1) || 0
+      case 'perimeter':
+        return cell.rawMetrics?.reduce((s, m) => s + (m.shape?.perimeter || 0), 0) / (cell.rawMetrics?.length || 1) || 0
+      case 'distance':
+        return cell.rawMetrics?.reduce((s, m) => s + (m.motion?.distance || 0), 0) / (cell.rawMetrics?.length || 1) || 0
+      case 'migration_speed':
+        return cell.avg_velocity
+      case 'mean_square_displacement':
+        return cell.rawMetrics?.reduce((s, m) => s + (m.motion?.mean_square_displacement || 0), 0) / (cell.rawMetrics?.length || 1) || 0
+      default:
+        return 0
+    }
+  }
+
+function extractFeatureValue(cell: CellData, feature: string, frameIndex?: number): number {
+  // 指定帧模式
+  if (frameIndex !== undefined) {
+    if (frameIndex < 0 || frameIndex >= cell.frames.length) {
+      console.warn(`帧索引 ${frameIndex} 超出范围 [0, ${cell.frames.length - 1}]`)
+      return 0
+    }
+
+    const frame = cell.frames[frameIndex]
+    if (!frame) {
+      console.warn(`帧 ${frameIndex} 数据不存在`)
+      return 0
+    }
+
+    const metrics = cell.rawMetrics?.[frameIndex]
+
+    switch (feature) {
+      case 'area': 
+        return frame.area ?? 0
+      case 'speed': 
+        return frame.velocity?.speed ?? 0
+      case 'perimeter': 
+        return metrics?.shape?.perimeter ?? 0
+      case 'circularity': 
+        return metrics?.shape?.circularity ?? 0
+      case 'aspect_ratio': 
+        return metrics?.shape?.aspect_ratio ?? 0
+      case 'distance': 
+        return metrics?.motion?.distance ?? 0
+      case 'migration_speed': 
+        // 优先使用 metrics 中的值，回退到 frame.velocity.speed
+        return metrics?.motion?.migration_speed ?? frame.velocity?.speed ?? 0
+      case 'mean_square_displacement': 
+        return metrics?.motion?.mean_square_displacement ?? 0
+      default: 
+        return 0
+    }
+  }
+  
+  // 平均模式（原有代码）...
+  switch (feature) {
+    case 'area':
+      return cell.frames.length > 0 
+        ? cell.frames.reduce((s, f) => s + (f.area ?? 0), 0) / cell.frames.length 
+        : 0
+    case 'speed':
+    case 'migration_speed':
+      return cell.avg_velocity ?? 0
+    case 'perimeter':
+    case 'circularity':
+    case 'aspect_ratio':
+    case 'distance':
+    case 'mean_square_displacement':
+      return getCellSortValue(cell, feature)
+    default:
+      return 0
+  }
+}
+
+  // ==========================================
+  // 导出（新增图表函数）
+  // ==========================================
   return {
     records,
     selectedId,
@@ -737,5 +797,12 @@ export const useAnalysisStore = defineStore('analysis', () => {
     clearCellsCache,
     clearCellDetailCache,
     clearAllCaches,
+    // 图表专用导出
+    chartDataCache,
+    getCellsForChart,
+    filterCells,
+    extractFeatureValue,
+    clearChartDataCache,
+    getCellSortValue,
   }
 })

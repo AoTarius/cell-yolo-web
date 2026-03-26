@@ -12,7 +12,12 @@ export default defineConfig({
     vueDevTools(),
     tailwindcss()
   ],
+  optimizeDeps: {
+    include: ['echarts'],
+    exclude: ['echarts-gl']
+  },
   resolve: {
+    dedupe: ['echarts'],
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },

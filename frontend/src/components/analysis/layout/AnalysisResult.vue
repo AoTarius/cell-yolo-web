@@ -11,7 +11,7 @@ import VideoComparison from '../video-comparison/VideoComparison.vue'
 import CellDetails from '../cell-details/CellDetails.vue'
 import ChartDrawing from '../chart-drawing/ChartDrawing.vue'
 import FrameAnalysis from '../frame-analysis/FrameAnalysis.vue'
-
+import { onMounted } from 'vue'
 type TabType = 'video' | 'cell' | 'chart' | 'frame'
 
 const props = defineProps<{
@@ -21,13 +21,37 @@ const props = defineProps<{
 const store = useAnalysisStore()
 const api = useAnalysisApi()
 const { showToast } = useToast()
+const previousTaskId = ref<string | null>(null)
 
 // 当前激活的选项卡，默认为视频对比
 const activeTab = ref<TabType>('video')
 
-// 监听 record 变化，切换记录时重置为默认选项卡
-watch(() => props.record, () => {
-  activeTab.value = 'video'
+onMounted(() => {
+  // 初始化 previousTaskId
+  previousTaskId.value = props.record?.task_id || null
+
+  // 恢复选项卡状态
+  const savedTab = sessionStorage.getItem('activeTab')
+  if (savedTab) {
+    activeTab.value = savedTab as TabType
+  } else if (sessionStorage.getItem('returnToChart') === 'true') {
+    activeTab.value = 'chart'
+    sessionStorage.removeItem('returnToChart')
+  }
+})
+
+// 切换标签时保存状态
+watch(activeTab, (newTab) => {
+  sessionStorage.setItem('activeTab', newTab)
+  sessionStorage.removeItem('returnToChart')
+})
+
+// 监听 record 变化，切换任务时重置为默认选项卡
+watch(() => props.record?.task_id, (newTaskId, oldTaskId) => {
+  if (newTaskId !== oldTaskId) {
+    activeTab.value = 'video'
+    previousTaskId.value = newTaskId || null
+  }
 })
 
 const isExportingCsv = ref(false)

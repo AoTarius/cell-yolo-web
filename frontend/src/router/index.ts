@@ -9,6 +9,7 @@ import CompareResult from '../components/compare/CompareResult.vue'
 import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
 import ImportView from '../views/import/ImportView.vue'
+import DrawingCanvas from '@/components/analysis/chart-drawing/DrawingCanvas.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,6 +66,12 @@ const router = createRouter({
       path: '/import',
       name: 'import',
       component: ImportView,
+    },
+
+    {
+      path: '/drawing-canvas',
+      name: 'drawingCanvas',
+      component: DrawingCanvas
     },
   ],
 })
