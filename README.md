@@ -152,6 +152,46 @@ python3 convert.py --input /path/to/images --fps 10
 
 详细说明见: [web/libs/tif-mp4/README.md](./libs/tif-mp4/README.md)
 
+### 软删除数据清理命令
+
+位置: `web/backend/api/management/commands/purge_soft_deleted.py`
+
+清理数据库中已软删除但超过保留期的数据，避免数据无限增长。
+
+**使用方法:**
+```bash
+cd web/backend
+python manage.py purge_soft_deleted [选项]
+```
+
+**选项说明:**
+- `--days N`: 保留天数，默认为30天（只删除N天前的软删除数据）
+- `--dry-run`: 只显示将要删除的记录，不实际删除
+- `--force`: 强制删除所有软删除记录，不考虑时间限制
+
+**使用示例:**
+```bash
+# 删除30天前的软删除数据
+python manage.py purge_soft_deleted --days 30
+
+# 测试运行（不实际删除）
+python manage.py purge_soft_deleted --days 30 --dry-run
+
+# 强制删除所有软删除记录
+python manage.py purge_soft_deleted --force
+
+# 查看所有软删除记录（不删除）
+python manage.py purge_soft_deleted --force --dry-run
+```
+
+**定时任务配置:**
+建议配置定时任务定期清理软删除数据：
+
+```bash
+# 使用 crontab 每天凌晨2点执行
+0 2 * * * cd /path/to/cell-yolo/web/backend && python manage.py purge_soft_deleted --days 30 >> /var/log/cell_yolo_cleanup.log 2>&1
+```
+
 ## 🚀 快速开始
 
 详细的安装和启动步骤请参考: [QUICK-START.md](./QUICK-START.md)

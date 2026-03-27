@@ -1040,7 +1040,7 @@ class DeleteModelView(APIView):
                     FROM tasks t
                     WHERE t.model_id = (
                         SELECT id FROM models WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
-                    ) AND t.is_deleted = FALSE
+                    ) AND t.is_deleted = FALSE AND t.status IN ('pending', 'processing')
                     """
                     cursor.execute(check_tasks_sql, (user_id, model_name))
                     task_count = cursor.fetchone()
@@ -1376,14 +1376,16 @@ class DeleteTaskView(APIView):
                         )
 
                     # 软删除任务关联的细胞数据（先删除子表）
+                    # 注意：cells.task_id 是外键，指向 tasks.id (INTEGER)
                     update_cells_sql = """
                     UPDATE cells
                     SET is_deleted = TRUE, deleted_at = NOW()
                     WHERE task_id = %s AND is_deleted = FALSE
                     """
-                    cursor.execute(update_cells_sql, (task_id,))
+                    cursor.execute(update_cells_sql, (task_info['id'],))
 
                     # 软删除任务状态
+                    # 注意：task_status.task_id 是外键，指向 tasks.task_id (UUID字符串)
                     update_status_sql = """
                     UPDATE task_status
                     SET is_deleted = TRUE, deleted_at = NOW()
@@ -1392,6 +1394,7 @@ class DeleteTaskView(APIView):
                     cursor.execute(update_status_sql, (task_id,))
 
                     # 软删除任务（最后删除主表）
+                    # 注意：tasks.task_id 是 UUID 字符串
                     update_task_sql = """
                     UPDATE tasks
                     SET is_deleted = TRUE, deleted_at = NOW()
