@@ -170,12 +170,17 @@ class VideoProcessor:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding='utf-8',
+            errors='replace',
+            env={**os.environ, 'PYTHONUTF8': '1'},
             cwd=str(YOLO_SOURCE_DIR)
         )
 
         # 读取输出以更新进度
+        output_lines = []
         for line in process.stdout:
             line = line.strip()
+            output_lines.append(line)
 
             # 解析进度信息
             if line.startswith("PROGRESS:"):
@@ -206,7 +211,7 @@ class VideoProcessor:
         process.wait()
 
         if process.returncode != 0:
-            error_output = process.stderr.read()
+            error_output = "\n".join(output_lines[-50:])
             raise RuntimeError(f"YOLO 处理失败: {error_output}")
 
         if progress_callback:
