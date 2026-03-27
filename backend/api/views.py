@@ -1034,6 +1034,23 @@ class DeleteModelView(APIView):
                     model_filename = model_record['model_path']
                     model_base_path = model_record['model_base_path']
 
+                    # 检查是否有任务正在使用该模型
+                    check_tasks_sql = """
+                    SELECT COUNT(*) as task_count
+                    FROM tasks t
+                    WHERE t.model_id = (
+                        SELECT id FROM models WHERE user_id = %s AND model_name = %s AND is_deleted = FALSE
+                    ) AND t.is_deleted = FALSE
+                    """
+                    cursor.execute(check_tasks_sql, (user_id, model_name))
+                    task_count = cursor.fetchone()
+
+                    if task_count['task_count'] > 0:
+                        return Response(
+                            {'error': f'无法删除：有 {task_count["task_count"]} 个任务正在使用该模型'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
                     # 删除数据库记录（软删除）
                     delete_sql = """
                     UPDATE models
@@ -1358,13 +1375,31 @@ class DeleteTaskView(APIView):
                             status=status.HTTP_400_BAD_REQUEST
                         )
 
-                    # 软删除任务
-                    update_sql = """
+                    # 软删除任务关联的细胞数据（先删除子表）
+                    update_cells_sql = """
+                    UPDATE cells
+                    SET is_deleted = TRUE, deleted_at = NOW()
+                    WHERE task_id = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(update_cells_sql, (task_id,))
+
+                    # 软删除任务状态
+                    update_status_sql = """
+                    UPDATE task_status
+                    SET is_deleted = TRUE, deleted_at = NOW()
+                    WHERE task_id = %s AND is_deleted = FALSE
+                    """
+                    cursor.execute(update_status_sql, (task_id,))
+
+                    # 软删除任务（最后删除主表）
+                    update_task_sql = """
                     UPDATE tasks
                     SET is_deleted = TRUE, deleted_at = NOW()
-                    WHERE task_id = %s
+                    WHERE task_id = %s AND is_deleted = FALSE
                     """
-                    cursor.execute(update_sql, (task_id,))
+                    cursor.execute(update_task_sql, (task_id,))
+
+                    # 提交事务
                     connection.commit()
 
                     # 删除任务目录
@@ -2739,6 +2774,8 @@ class ImportDataPackageView(APIView):
                     with connection.cursor() as cursor:
                         if new_task_id:
                             cursor.execute("UPDATE tasks SET is_deleted = TRUE, deleted_at = NOW() WHERE task_id = %s", (new_task_id,))
+                        if new_task_id:
+                            cursor.execute("UPDATE task_status SET is_deleted = TRUE, deleted_at = NOW() WHERE task_id = %s", (new_task_id,))
                         if new_video_id:
                             cursor.execute("UPDATE videos SET is_deleted = TRUE, deleted_at = NOW() WHERE id = %s", (new_video_id,))
                         connection.commit()
