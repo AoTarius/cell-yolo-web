@@ -52,9 +52,8 @@ const timeSeriesConfig = reactive({
   sortBy: 'tracking_duration',
   topN: 10,
   cellRange: [1, 50] as [number, number],
-  showAverage: false,
   lineType: 'smooth' as 'smooth' | 'line',
-  showDataPoints: true,
+  showDataPoints: false,
 });
 
 // ==========================================
@@ -307,10 +306,6 @@ function goToFreePlot() {
           <div class="form-section">
             <h4>显示选项</h4>
             <div class="form-item checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" v-model="timeSeriesConfig.showAverage">
-                <span>显示群体平均线</span>
-              </label>
               <label class="checkbox-label">
                 <input type="checkbox" v-model="timeSeriesConfig.showDataPoints">
                 <span>显示数据点标记</span>
