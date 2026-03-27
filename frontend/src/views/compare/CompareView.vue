@@ -33,6 +33,11 @@ function handleConfirm() {
   }
 }
 
+// 点击返回主页按钮
+function handleBackToMain() {
+  router.push('/')
+}
+
 // 暴露方法给 Sidebar 调用
 defineExpose({
   addRecordToCompare
@@ -44,11 +49,28 @@ defineExpose({
     <Sidebar :compare-mode="true" @select-record="addRecordToCompare" />
 
     <main class="main-panel">
+      <div class="compare-topbar">
+        <button class="btn-back" @click="handleBackToMain">
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            ></path>
+          </svg>
+          返回主页
+        </button>
+      </div>
       <div class="compare-content">
         <div class="compare-header">
           <h1>对比分析</h1>
           <p class="compare-description">从左侧历史栏选择两条历史条目进行对比分析</p>
-          <p class="compare-description">再次点击【对比分析】快速退出对比模式</p>
         </div>
 
         <div class="compare-items">
@@ -153,6 +175,49 @@ defineExpose({
 </template>
 
 <style scoped>
+.compare-topbar {
+  height: 60px;
+  padding: 3rem 2rem;
+  display: flex;
+  align-items: center;
+}
+
+.btn-back {
+  padding: 0.5rem 1rem;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+:global(:root:not(.dark)) .btn-back {
+  background: var(--bg-card-light);
+  color: var(--text-primary-light);
+  border-color: var(--border-color-light);
+}
+
+.btn-back:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+:global(:root:not(.dark)) .btn-back:hover {
+  background: var(--bg-main-light);
+  border-color: var(--text-disabled-light);
+}
+
+.btn-back svg {
+  width: 16px;
+  height: 16px;
+}
+
 .compare-view {
   display: flex;
   height: 100vh;
@@ -170,8 +235,8 @@ defineExpose({
 .main-panel {
   flex: 1;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
-  align-items: center;
 }
 
 .compare-content {

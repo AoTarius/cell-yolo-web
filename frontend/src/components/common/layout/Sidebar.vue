@@ -1906,7 +1906,6 @@ const isSorting = computed(() => {
 }
 
 .btn-logout:hover {
-  background: var(--danger-bg);
   border-color: var(--danger-light);
   color: var(--danger-light);
   transform: translateY(-1px);
