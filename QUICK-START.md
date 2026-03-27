@@ -82,7 +82,38 @@ DB_NAME=cell_tracking
 - 在记事本中编辑 `.env` 文件时，注意选择"所有文件"类型
 - 路径中使用正斜杠 `/` 或双反斜杠 `\\`
 
-### 第四步：初始化数据库
+### 第四步：安装 Python 依赖
+
+进入 backend 目录并安装所需的 Python 库：
+
+```bash
+pip install -r requirements.txt
+```
+
+需要安装的主要依赖包括：
+- Django >= 4.2.28
+- djangorestframework >= 3.15.0
+- django-cors-headers >= 4.4.0
+- python-dotenv >= 1.0.0
+- **channels >= 4.0.0** (WebSocket 支持)
+- **opencv-python >= 4.8.0** (视频处理)
+- **numpy >= 1.24.0** (数值计算)
+- **torch >= 1.7.0** (PyTorch)
+- **torchvision >= 0.8.1** (PyTorch 视觉库)
+- **psutil** (系统工具)
+- **tqdm** (进度条)
+- **scipy** (科学计算)
+- **PyYAML** (配置解析)
+- **requests** (HTTP 请求)
+- **Pillow** (图像处理)
+- **matplotlib** (绘图)
+
+**注意**: ultralytics 和 deep_sort_pytorch 已作为本地库包含在 `web/libs/ultralytics` 目录中，无需额外安装。项目会自动通过以下方式配置 Python 路径：
+1. `.pth` 文件（在 Conda 环境的 site-packages 中）
+2. `backend/settings.py` 中的 sys.path 配置
+3. VSCode 的 `.vscode/settings.json` 配置
+
+### 第五步：初始化数据库
 
 #### 1. 创建数据库
 运行数据库初始化脚本，创建数据库：
@@ -97,6 +128,8 @@ python init_db.py
 ✓ 成功连接到 MySQL 服务器 (localhost:3306)
 ✓ 数据库 'cell_tracking' 创建成功或已存在
 ```
+
+==这一步的报错是正常情况，后续会进行补齐==
 
 #### 2. 执行 Django 迁移
 
@@ -145,6 +178,25 @@ python init_data.py
 ==================================================
 ✓ 初始化完成！
 ==================================================
+==================================================
+初始化 导入model
+==================================================
+✓ 导入model 创建成功 (ID: 1)
+==================================================
+✓ 初始化完成！
+==================================================
+```
+
+虽然已经使用 `init_db.py` 初始化了数据库表结构，但仍需执行 Django 迁移以确保 Django 管理后台等功能正常工作：
+```bash
+cd ../backend
+python manage.py migrate
+```
+
+初始化数据库基本信息
+```bash
+cd ../scripts
+python init_data.py
 ```
 
 **注意**：如果脚本运行失败，请检查：
@@ -159,53 +211,6 @@ python init_data.py
 2. `.env` 文件中的密码是否正确
 3. MySQL root 用户权限设置
 
-### 第五步：安装 Python 依赖
-
-进入 backend 目录并安装所需的 Python 库：
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-需要安装的主要依赖包括：
-- Django >= 4.2.28
-- djangorestframework >= 3.15.0
-- django-cors-headers >= 4.4.0
-- python-dotenv >= 1.0.0
-- **channels >= 4.0.0** (WebSocket 支持)
-- **opencv-python >= 4.8.0** (视频处理)
-- **numpy >= 1.24.0** (数值计算)
-- **torch >= 1.7.0** (PyTorch)
-- **torchvision >= 0.8.1** (PyTorch 视觉库)
-- **psutil** (系统工具)
-- **tqdm** (进度条)
-- **scipy** (科学计算)
-- **PyYAML** (配置解析)
-- **requests** (HTTP 请求)
-- **Pillow** (图像处理)
-- **matplotlib** (绘图)
-
-**注意**: ultralytics 和 deep_sort_pytorch 已作为本地库包含在 `web/libs/ultralytics` 目录中，无需额外安装。项目会自动通过以下方式配置 Python 路径：
-1. `.pth` 文件（在 Conda 环境的 site-packages 中）
-2. `backend/settings.py` 中的 sys.path 配置
-3. VSCode 的 `.vscode/settings.json` 配置
-
-### 第六步：配置 YOLO 模型
-
-确保 YOLO 模型文件已放置在正确位置：
-
-```bash
-# 检查模型文件是否存在
-ls backend/models/yolov8s-seg.pt
-```
-
-如果模型文件不存在，需要从项目根目录复制：
-
-```bash
-# 从项目根目录的 models 文件夹复制
-cp models/yolov8s-seg.pt backend/models/
-```
 
 ### 第六步（可选）：验证 ultralytics 本地库
 
@@ -242,20 +247,6 @@ npm install
 - Axios 1.13.5
 - **ECharts 5.x**
 
-### 第八步：执行 Django 迁移
-
-虽然已经使用 `init_db.py` 初始化了数据库表结构，但仍需执行 Django 迁移以确保 Django 管理后台等功能正常工作：
-
-```bash
-cd ../backend
-python manage.py migrate
-```
-
-（可选）创建超级用户以访问 Django 管理后台：
-
-```bash
-python manage.py createsuperuser
-```
 
 ## ▶️ 启动前后端服务
 
