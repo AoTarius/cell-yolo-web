@@ -20,15 +20,49 @@ const userStore = useUserStore()
 const currentTaskId = computed(() => props.taskId || (route.params.taskId as string))
 
 const isLoading = ref(true)
+const frameImageFailed = ref(false)
+const frameOffset = ref(0)
 
 const record = computed(() => {
   return store.records.find((r) => r.task_id === currentTaskId.value) || null
 })
 
+const normalizedProgress = computed(() => {
+  const value = Number(record.value?.progress ?? 0)
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(100, Math.round(value)))
+})
+
+const progressPieStyle = computed(() => {
+  const value = normalizedProgress.value
+  return {
+    background: `conic-gradient(var(--success) ${value * 3.6}deg, var(--bg-input) ${value * 3.6}deg 360deg)`,
+  }
+})
+
+const currentFrameNumber = computed(() => {
+  const raw = Number(record.value?.currentFrame)
+  if (!Number.isFinite(raw) || raw < 0) return null
+  return Math.floor(raw)
+})
+
+const displayFrameNumber = computed(() => {
+  if (currentFrameNumber.value === null) return null
+  return currentFrameNumber.value + frameOffset.value
+})
+
+const frameImageUrl = computed(() => {
+  if (!record.value || currentFrameNumber.value === null) return ''
+  const frameNumber = currentFrameNumber.value + frameOffset.value
+  if (frameNumber < 0) return ''
+  const task = encodeURIComponent(record.value.task_id)
+  return `/api/frame/${task}/${frameNumber}/?v=${frameNumber}`
+})
+
 function getStageLabel(stage: string): string {
   const stageMap: Record<string, string> = {
     'extracting': '分解视频',
-    'processing': 'YOLO 推理',
+    'processing': '模型推理',
     'packaging': '生成结果',
     'status': '状态更新',
     'complete': '完成'
@@ -80,6 +114,30 @@ watch(record, (newRecord) => {
   }
 })
 
+watch(
+  () => record.value?.task_id,
+  () => {
+    frameImageFailed.value = false
+    frameOffset.value = 0
+  }
+)
+
+watch(
+  () => record.value?.currentFrame,
+  () => {
+    frameImageFailed.value = false
+  }
+)
+
+function onFrameImageError() {
+  // 部分任务进度是 1-based，这里自动回退一帧做兼容尝试。
+  if (frameOffset.value === 0 && (currentFrameNumber.value ?? 0) > 0) {
+    frameOffset.value = -1
+    return
+  }
+  frameImageFailed.value = true
+}
+
 // 查看结果
 function viewResult() {
   if (record.value) {
@@ -129,12 +187,40 @@ function goBack() {
         <p class="video-name" v-if="record">{{ record.video_name }}</p>
       </div>
 
-      <!-- 进度条 -->
-      <div class="progress-section">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${record?.progress || 0}%` }"></div>
-        </div>
-        <p class="progress-text">{{ record?.progress || 0 }}%</p>
+      <!-- 可视化总览 -->
+      <div class="dashboard-grid" v-if="record">
+        <section class="dashboard-card">
+          <div class="card-title">处理进度</div>
+          <div class="progress-pie" :style="progressPieStyle">
+            <div class="pie-inner">
+              <div class="pie-value">{{ normalizedProgress }}%</div>
+              <div class="pie-stage">{{ getStageLabel(record.stage || '') }}</div>
+            </div>
+          </div>
+          <p class="pie-note" v-if="record.currentFrame !== null && record.totalFrames !== null">
+            帧进度 {{ record.currentFrame }} / {{ record.totalFrames }}
+          </p>
+        </section>
+
+        <section class="dashboard-card">
+          <div class="card-title">当前分析帧</div>
+          <div class="frame-preview">
+            <img
+              v-if="frameImageUrl && !frameImageFailed"
+              :src="frameImageUrl"
+              alt="current frame"
+              class="frame-image"
+              @error="onFrameImageError"
+            />
+            <div v-else class="frame-empty">
+              <p>当前阶段暂无可预览帧</p>
+              <p class="frame-empty-sub">进入模型推理阶段后将按帧自动刷新</p>
+            </div>
+          </div>
+          <p class="frame-note" v-if="displayFrameNumber !== null">
+            当前显示：第 {{ displayFrameNumber }} 帧
+          </p>
+        </section>
       </div>
 
       <!-- 当前状态信息 -->
@@ -173,7 +259,7 @@ function goBack() {
           </div>
           <div class="step-content">
             <p class="step-title">视频处理中</p>
-            <p class="step-desc">使用 YOLOv8 进行细胞分割...</p>
+            <p class="step-desc">使用分割模型进行细胞识别与轮廓提取...</p>
           </div>
         </div>
 
@@ -195,7 +281,7 @@ function goBack() {
           </div>
           <div class="step-content">
             <p class="step-title">轨迹跟踪</p>
-            <p class="step-desc">使用 DeepSORT 追踪细胞运动...</p>
+            <p class="step-desc">使用多目标跟踪算法追踪细胞运动...</p>
           </div>
         </div>
 
@@ -261,9 +347,10 @@ function goBack() {
 .main-panel {
   flex: 1;
   display: flex;
-  overflow: hidden;
-  align-items: center;
+  overflow: auto;
+  align-items: flex-start;
   justify-content: center;
+  padding: 1rem;
 }
 
 .main-panel.has-sidebar {
@@ -276,10 +363,11 @@ function goBack() {
 }
 
 .progress-container {
-  max-width: 600px;
+  max-width: 1120px;
   width: 100%;
   text-align: center;
-  padding: 2rem;
+  padding: 1.25rem;
+  max-height: calc(100vh - 2rem);
   overflow-y: auto;
 }
 
@@ -359,40 +447,124 @@ function goBack() {
   color: var(--text-muted-light);
 }
 
-.progress-section {
-  margin-bottom: 2rem;
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.progress-bar {
-  height: 12px;
-  background: var(--bg-input);
-  border-radius: 6px;
-  overflow: hidden;
-  margin-bottom: 0.75rem;
-  transition: background 0.3s;
+.dashboard-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: left;
 }
 
-:global(:root:not(.dark)) .progress-bar {
-  background: var(--bg-input-light);
+:global(:root:not(.dark)) .dashboard-card {
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
 }
 
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--success), var(--success-hover));
-  transition: width 0.3s ease;
-  border-radius: 6px;
-}
-
-.progress-text {
-  font-size: 1.25rem;
+.card-title {
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--success);
-  margin: 0;
-  transition: color 0.3s;
+  color: var(--text-muted);
+  margin-bottom: 0.9rem;
 }
 
-:global(:root:not(.dark)) .progress-text {
-  color: var(--success-light);
+:global(:root:not(.dark)) .card-title {
+  color: var(--text-muted-light);
+}
+
+.progress-pie {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  padding: 10px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  transition: background 0.3s ease;
+}
+
+.pie-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+:global(:root:not(.dark)) .pie-inner {
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+}
+
+.pie-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--success);
+  line-height: 1;
+}
+
+.pie-stage {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.pie-note,
+.frame-note {
+  margin: 0.9rem 0 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+:global(:root:not(.dark)) .pie-note,
+:global(:root:not(.dark)) .frame-note {
+  color: var(--text-muted-light);
+}
+
+.frame-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 250px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: #0f172a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.frame-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.frame-empty {
+  color: #cbd5e1;
+  text-align: center;
+  padding: 1rem;
+}
+
+.frame-empty p {
+  margin: 0;
+}
+
+.frame-empty-sub {
+  margin-top: 0.4rem !important;
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
 .status-info {
@@ -620,5 +792,29 @@ function goBack() {
 :global(:root:not(.dark)) .btn-secondary:hover {
   background: var(--bg-input-light);
   border-color: var(--border-hover-light);
+}
+
+@media (max-width: 980px) {
+  .main-panel {
+    padding: 0.6rem;
+  }
+
+  .progress-container {
+    padding: 0.9rem;
+    max-height: calc(100vh - 1.2rem);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-pie {
+    width: 148px;
+    height: 148px;
+  }
+
+  .frame-preview {
+    max-height: 220px;
+  }
 }
 </style>

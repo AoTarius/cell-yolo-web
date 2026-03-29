@@ -889,11 +889,69 @@ const isSorting = computed(() => {
   border-right: 1px solid var(--border-secondary);
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+
+  /* 蓝色系 - 新建分析 */
+  --blue-primary: #4f74b8;
+  --blue-dark: #3f5fa1;
+  --blue-light: #6d8fc9;
+  --blue-bg: #334b80;
+  --blue-text: #ffffff;
+
+  /* 青色系 - 管理模型 */
+  --cyan-primary: #3d8692;
+  --cyan-dark: #2f6c77;
+  --cyan-light: #53a3af;
+  --cyan-bg: #285b64;
+  --cyan-text: #ffffff;
+
+  /* 紫色系 - 对比分析 */
+  --violet-primary: #7f6ab1;
+  --violet-dark: #695493;
+  --violet-light: #9784c6;
+  --violet-bg: #56467b;
+  --violet-text: #ffffff;
+
+  /* 绿色系 - 导入分析 */
+  --emerald-primary: #4c8b72;
+  --emerald-dark: #3c705c;
+  --emerald-light: #63a188;
+  --emerald-bg: #335f4f;
+  --emerald-text: #ffffff;
 }
 
 .sidebar.collapsed {
   width: 70px;
   align-items: center;
+}
+
+:global(:root:not(.dark)) .sidebar {
+  /* 蓝色系 - 新建分析 */
+  --blue-primary: #4d78c7;
+  --blue-dark: #3b61a8;
+  --blue-light: #6d95de;
+  --blue-bg: #d9e4f2;
+  --blue-text: #ffffff;
+
+  /* 青色系 - 管理模型 */
+  --cyan-primary: #3e99ad;
+  --cyan-dark: #2f7d90;
+  --cyan-light: #61b5c7;
+  --cyan-bg: #d8e9ec;
+  --cyan-text: #ffffff;
+
+  /* 紫色系 - 对比分析 */
+  --violet-primary: #8368c8;
+  --violet-dark: #6b55a6;
+  --violet-light: #a089de;
+  --violet-bg: #e5e0ee;
+  --violet-text: #ffffff;
+
+  /* 绿色系 - 导入分析 */
+  --emerald-primary: #47a37f;
+  --emerald-dark: #358364;
+  --emerald-light: #67be9c;
+  --emerald-bg: #d9ece3;
+  --emerald-text: #ffffff;
 }
 
 .sidebar-header {
@@ -982,105 +1040,201 @@ const isSorting = computed(() => {
 .btn-new-analysis {
   width: 100%;
   padding: 0.75rem 0.5rem;
-  background: var(--accent-blue);
-  color: var(--text-primary);
-  border: var(--border-color) 1px solid;
-  border-radius: 6px;
+  background: var(--blue-primary);
+  color: var(--blue-text);
+  border: 2px solid var(--blue-dark);
+  border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  transition: background 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 0 var(--blue-dark);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.14);
 }
 
 .btn-new-analysis:hover {
-  background: var(--accent-blue-hover);
+  background: var(--blue-light);
+  border-color: var(--blue-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--blue-dark), 0 6px 12px rgba(37, 99, 235, 0.25);
+}
+
+.btn-new-analysis:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 var(--blue-dark);
+}
+
+:global(:root:not(.dark)) .btn-new-analysis {
+  background: var(--blue-primary);
+  border-color: var(--blue-dark);
+  box-shadow: 0 2px 0 var(--blue-dark);
+}
+
+:global(:root:not(.dark)) .btn-new-analysis:hover {
+  background: var(--blue-dark);
+  border-color: var(--blue-dark);
+  box-shadow: 0 4px 0 #1e40af, 0 6px 12px rgba(37, 99, 235, 0.3);
 }
 
 .btn-new-analysis .icon {
-  font-size: 1.1rem;
-  font-weight: 300;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }
 
 .btn-upload-model {
   width: 100%;
   padding: 0.75rem 0.5rem;
-  background: var(--btn-upload);
-  color: var(--text-primary);
-  border: var(--border-color) 1px solid;
-  border-radius: 6px;
+  background: var(--cyan-primary);
+  color: var(--cyan-text);
+  border: 2px solid var(--cyan-dark);
+  border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  transition: background 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 0 var(--cyan-dark);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.14);
 }
 
 .btn-upload-model:hover {
-  background: var(--btn-upload-hover);
+  background: var(--cyan-light);
+  border-color: var(--cyan-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--cyan-dark), 0 6px 12px rgba(8, 145, 178, 0.25);
+}
+
+.btn-upload-model:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 var(--cyan-dark);
+}
+
+:global(:root:not(.dark)) .btn-upload-model {
+  background: var(--cyan-primary);
+  border-color: var(--cyan-dark);
+  box-shadow: 0 2px 0 var(--cyan-dark);
+}
+
+:global(:root:not(.dark)) .btn-upload-model:hover {
+  background: var(--cyan-dark);
+  border-color: var(--cyan-dark);
+  box-shadow: 0 4px 0 #155e75, 0 6px 12px rgba(8, 145, 178, 0.3);
 }
 
 .btn-upload-model .icon {
-  font-size: 1.1rem;
-  font-weight: 300;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }
 
 .btn-compare {
   width: 100%;
   padding: 0.75rem 0.5rem;
-  background: var(--accent-purple);
-  color: var(--text-primary);
-  border: var(--border-color) 1px solid;
-  border-radius: 6px;
+  background: var(--violet-primary);
+  color: var(--violet-text);
+  border: 2px solid var(--violet-dark);
+  border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  transition: background 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 0 var(--violet-dark);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.14);
 }
 
 .btn-compare:hover {
-  background: var(--accent-purple-hover);
+  background: var(--violet-light);
+  border-color: var(--violet-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--violet-dark), 0 6px 12px rgba(124, 58, 237, 0.25);
+}
+
+.btn-compare:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 var(--violet-dark);
+}
+
+:global(:root:not(.dark)) .btn-compare {
+  background: var(--violet-primary);
+  border-color: var(--violet-dark);
+  box-shadow: 0 2px 0 var(--violet-dark);
+}
+
+:global(:root:not(.dark)) .btn-compare:hover {
+  background: var(--violet-dark);
+  border-color: var(--violet-dark);
+  box-shadow: 0 4px 0 #5b21b6, 0 6px 12px rgba(124, 58, 237, 0.3);
 }
 
 .btn-compare .icon {
-  font-size: 1.1rem;
-  font-weight: 300;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }
 
 .btn-export {
   width: 100%;
   padding: 0.75rem 0.5rem;
-  background: var(--accent-green);
-  color: var(--text-primary);
-  border: var(--border-color) 1px solid;
-  border-radius: 6px;
+  background: var(--emerald-primary);
+  color: var(--emerald-text);
+  border: 2px solid var(--emerald-dark);
+  border-radius: 8px;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  transition: background 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 0 var(--emerald-dark);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.14);
 }
 
 .btn-export:hover {
-  background: var(--accent-green-hover);
+  background: var(--emerald-light);
+  border-color: var(--emerald-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 var(--emerald-dark), 0 6px 12px rgba(5, 150, 105, 0.25);
+}
+
+.btn-export:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 var(--emerald-dark);
+}
+
+:global(:root:not(.dark)) .btn-export {
+  background: var(--emerald-primary);
+  border-color: var(--emerald-dark);
+  box-shadow: 0 2px 0 var(--emerald-dark);
+}
+
+:global(:root:not(.dark)) .btn-export:hover {
+  background: var(--emerald-dark);
+  border-color: var(--emerald-dark);
+  box-shadow: 0 4px 0 #065f46, 0 6px 12px rgba(5, 150, 105, 0.3);
 }
 
 .btn-export .icon {
-  font-size: 1.1rem;
-  font-weight: 300;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }
 
 .sidebar-content {
@@ -1153,6 +1307,11 @@ const isSorting = computed(() => {
 .btn-filter .filter-icon {
   width: 14px;
   height: 14px;
+  color: #60a5fa;
+}
+
+:global(:root:not(.dark)) .btn-filter .filter-icon {
+  color: #2563eb;
 }
 
 .btn-sort {
@@ -1196,6 +1355,11 @@ const isSorting = computed(() => {
 .btn-sort .sort-icon {
   width: 14px;
   height: 14px;
+  color: #a78bfa;
+}
+
+:global(:root:not(.dark)) .btn-sort .sort-icon {
+  color: #6d28d9;
 }
 
 .records-list {
@@ -1233,18 +1397,25 @@ const isSorting = computed(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
+  gap: 0.5rem;
 }
 
 .record-name {
+  flex: 1;
+  min-width: 0;
   font-weight: 500;
   font-size: 0.95rem;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .status-dot {
@@ -1284,6 +1455,9 @@ const isSorting = computed(() => {
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   font-weight: 500;
+  white-space: nowrap;
+  word-break: keep-all;
+  writing-mode: horizontal-tb;
 }
 
 .status-completed {
@@ -1350,6 +1524,11 @@ const isSorting = computed(() => {
 .model-icon {
   width: 12px;
   height: 12px;
+  color: #2563eb;
+}
+
+:global(:root:not(.dark)) .model-icon {
+  color: #1d4ed8;
 }
 
 .record-footer {
@@ -1390,6 +1569,11 @@ const isSorting = computed(() => {
 .btn-delete svg {
   width: 16px;
   height: 16px;
+  color: #ef4444;
+}
+
+:global(:root:not(.dark)) .btn-delete svg {
+  color: #b91c1c;
 }
 
 /* 任务操作按钮组 */
@@ -1430,6 +1614,11 @@ const isSorting = computed(() => {
 .btn-rename svg {
   width: 16px;
   height: 16px;
+  color: #3b82f6;
+}
+
+:global(:root:not(.dark)) .btn-rename svg {
+  color: #1d4ed8;
 }
 
 /* 重命名对话框样式 */
@@ -1854,6 +2043,11 @@ const isSorting = computed(() => {
   width: 20px;
   height: 20px;
   transition: all 0.3s ease;
+  color: #d97706;
+}
+
+:global(:root:not(.dark)) .theme-icon {
+  color: #b45309;
 }
 
 /* 设置按钮 */
@@ -1886,6 +2080,11 @@ const isSorting = computed(() => {
   width: 20px;
   height: 20px;
   transition: all 0.3s ease;
+  color: #3b82f6;
+}
+
+:global(:root:not(.dark)) .settings-icon {
+  color: #1d4ed8;
 }
 
 /* 登出按钮 */
@@ -1914,6 +2113,11 @@ const isSorting = computed(() => {
 .btn-logout svg {
   width: 18px;
   height: 18px;
+  color: #f43f5e;
+}
+
+:global(:root:not(.dark)) .btn-logout svg {
+  color: #9f1239;
 }
 
 /* 折叠状态下按钮的样式 */

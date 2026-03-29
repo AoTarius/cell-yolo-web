@@ -10,3 +10,16 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* Hide caret in non-editable page text to avoid fake editing cursor on click. */
+body {
+  caret-color: transparent;
+}
+
+/* Keep caret visible for actual editable fields and editors. */
+input,
+textarea,
+[contenteditable='true'],
+[contenteditable='plaintext-only'] {
+  caret-color: auto;
+}

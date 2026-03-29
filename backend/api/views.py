@@ -742,11 +742,23 @@ class FrameImageView(APIView):
 
                 output_base_path = Path(task_info['output_base_path'])
 
-                # 构建帧图片路径：{output_base_path}/tasks/{task_id}/output/t{frame_number:04d}.png
-                frame_filename = f"t{frame_number:04d}.png"
-                frame_path = output_base_path / 'tasks' / task_id / 'output' / frame_filename
+                task_root = output_base_path / 'tasks' / task_id
 
-                if not frame_path.exists():
+                def build_candidates(num: int):
+                    filename = f"t{num:04d}.png"
+                    return [
+                        task_root / 'output' / filename,
+                        task_root / 'frames' / filename,
+                    ]
+
+                candidate_paths = build_candidates(frame_number)
+                # 兼容部分进度计数与文件命名存在 1 帧偏差的情况
+                if frame_number > 0:
+                    candidate_paths.extend(build_candidates(frame_number - 1))
+
+                frame_path = next((p for p in candidate_paths if p.exists()), None)
+
+                if frame_path is None:
                     return HttpResponseNotFound(f'帧 {frame_number} 不存在')
 
                 # 返回图片文件
@@ -2276,7 +2288,7 @@ class FreePlotWarmupView(APIView):
 
 
 class FreePlotExamplesView(APIView):
-    """自由绘图案例列表与内容读取接口"""
+    """自由绘图模板列表与内容读取接口"""
 
     @staticmethod
     def _examples_dir() -> Path:
