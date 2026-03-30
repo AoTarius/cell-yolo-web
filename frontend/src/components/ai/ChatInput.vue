@@ -1,45 +1,37 @@
 <template>
-  <div class="flex gap-3 items-end">
+  <div class="ai-input-container">
     <!-- 输入框 -->
-    <div class="flex-1 relative">
+    <div class="ai-input-wrapper">
       <textarea
         ref="textareaRef"
         v-model="inputContent"
         @keydown="handleKeyDown"
         @input="autoResize"
+        @focus="isFocused = true"
+        @blur="isFocused = false"
         placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
-        class="w-full px-4 py-3 rounded-xl border resize-none transition-all"
-        :style="{
-          height: computedHeight,
-          background: 'var(--ai-input-bg)',
-          color: 'var(--ai-input-text)',
-          border: '1px solid var(--ai-input-border)',
-          outline: 'none'
-        }"
+        class="ai-textarea"
+        :class="{ 'ai-textarea-focused': isFocused }"
+        :style="{ height: computedHeight }"
         :disabled="aiStore.isLoading"
         rows="1"
       ></textarea>
-      
+
       <!-- 字数统计 -->
       <div
-        class="absolute bottom-2 right-2 text-xs transition-colors"
-        :style="{ color: inputContent.length > 2800 ? 'var(--danger-light)' : 'var(--text-muted)' }"
+        class="ai-char-count"
+        :class="{ 'ai-char-count-warning': inputContent.length > 2800 }"
       >
         {{ inputContent.length }} / 3000
       </div>
     </div>
-    
+
     <!-- 发送/停止按钮 -->
     <button
       @click="handleSend"
       :disabled="!canSend"
-      class="px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center min-w-[60px]"
-      :style="{
-        background: aiStore.isLoading ? 'var(--danger)' : 'var(--accent-blue)',
-        color: 'white',
-        opacity: canSend ? 1 : 0.5,
-        cursor: canSend ? 'pointer' : 'not-allowed'
-      }"
+      class="ai-send-btn"
+      :class="{ 'ai-send-btn-loading': aiStore.isLoading, 'ai-send-btn-disabled': !canSend }"
       :title="aiStore.isLoading ? '停止生成' : '发送消息'"
     >
       <template v-if="aiStore.isLoading">
@@ -62,6 +54,7 @@ const aiStore = useAIStore()
 const textareaRef = ref<HTMLTextAreaElement>()
 const inputContent = ref('')
 const textareaHeight = ref(50)
+const isFocused = ref(false)
 const minRows = 1
 const maxRows = 5
 const rowHeight = 50
@@ -73,7 +66,7 @@ const computedHeight = computed(() => `${textareaHeight.value}px`)
 const autoResize = () => {
   const textarea = textareaRef.value
   if (!textarea) return
-  
+
   const newHeight = Math.min(
     Math.max(textarea.scrollHeight, rowHeight),
     rowHeight * maxRows
@@ -91,7 +84,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 // 是否可以发送
 const canSend = computed(() => {
-  return inputContent.value.trim().length > 0 && 
+  return inputContent.value.trim().length > 0 &&
          inputContent.value.length <= 3000 &&
          !aiStore.isLoading
 })
@@ -99,11 +92,11 @@ const canSend = computed(() => {
 // 发送消息
 const handleSend = async () => {
   if (!canSend.value) return
-  
+
   const content = inputContent.value.trim()
   inputContent.value = ''
   textareaHeight.value = rowHeight
-  
+
   // 添加用户消息
   aiStore.addMessage({
     id: Date.now().toString(),
@@ -111,7 +104,7 @@ const handleSend = async () => {
     content,
     timestamp: new Date()
   })
-  
+
   // 添加临时AI消息
   aiStore.addMessage({
     id: 'streaming',
@@ -119,9 +112,9 @@ const handleSend = async () => {
     content: '',
     timestamp: new Date()
   })
-  
+
   aiStore.isLoading = true
-  
+
   try {
     // 流式获取AI回复
     const finalContent = await sendChatMessageStream(
@@ -132,7 +125,7 @@ const handleSend = async () => {
         aiStore.updateMessage('streaming', partialContent)
       }
     )
-    
+
     // 替换临时消息为正式消息
     const messages = aiStore.messages
     const streamingIndex = messages.findIndex(m => m.id === 'streaming')
@@ -160,3 +153,83 @@ watch(inputContent, () => {
   }
 })
 </script>
+
+<style scoped>
+.ai-input-container {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ai-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.ai-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ai-input-border);
+  background: var(--ai-input-bg);
+  color: var(--ai-input-text);
+  resize: none;
+  transition: all 0.2s;
+  outline: none;
+  font-family: inherit;
+}
+
+.ai-textarea::placeholder {
+  color: var(--ai-input-placeholder);
+}
+
+.ai-textarea-focused {
+  border-color: var(--ai-input-focus);
+}
+
+.ai-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ai-char-count {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.ai-char-count-warning {
+  color: var(--danger-light);
+}
+
+.ai-send-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  border: none;
+  background: var(--accent-blue);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.75rem;
+  transition: all 0.2s;
+}
+
+.ai-send-btn-loading {
+  background: var(--danger);
+}
+
+.ai-send-btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-send-btn:not(.ai-send-btn-disabled):hover {
+  opacity: 0.9;
+}
+</style>

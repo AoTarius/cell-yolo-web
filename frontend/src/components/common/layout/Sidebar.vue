@@ -844,8 +844,24 @@ const isSorting = computed(() => {
             </svg>
           </button>
         </template>
-        <!-- 折叠状态下显示主题切换按钮和设置按钮 -->
+        <!-- 折叠状态下显示AI对话、主题切换、设置、退出登录按钮 -->
         <template v-else>
+          <button class="btn-ai-chat btn-collapsed" title="AI助手" @click="handleAIChat">
+            <svg
+              class="ai-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              ></path>
+            </svg>
+          </button>
           <button class="btn-theme-toggle btn-collapsed" title="切换主题" @click="toggleTheme">
             <svg
               class="theme-icon"
@@ -891,6 +907,21 @@ const isSorting = computed(() => {
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              ></path>
+            </svg>
+          </button>
+          <button class="btn-logout btn-collapsed" title="退出登录" @click="handleLogout">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               ></path>
             </svg>
           </button>
@@ -1964,6 +1995,7 @@ const isSorting = computed(() => {
 .sidebar.collapsed .info-panel {
   padding: 12px;
   height: auto;
+  min-height: 100%;
   border-top: none;
   display: flex;
   flex-direction: column;
@@ -1979,9 +2011,10 @@ const isSorting = computed(() => {
 }
 
 .sidebar.collapsed .info-content {
-  justify-content: center;
   flex-direction: column;
   gap: 12px;
+  height: 100%;
+  display: flex;
 }
 
 /* 连接状态 */
@@ -2089,8 +2122,8 @@ const isSorting = computed(() => {
 }
 
 .btn-ai-chat:hover {
-  background: linear-gradient(135deg, rgba(88, 166, 255, 0.3), rgba(88, 166, 255, 0.5));
-  border-color: rgba(88, 166, 255, 0.5);
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
   transform: translateY(-1px);
 }
 
@@ -2179,10 +2212,41 @@ const isSorting = computed(() => {
   color: #9f1239;
 }
 
-/* 折叠状态下按钮的样式 */
-.btn-collapsed {
+/* AI对话按钮 */
+.btn-ai-chat {
   width: 36px;
   height: 36px;
-  margin: 0 auto;
+  border-radius: 8px;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
+
+.btn-ai-chat:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.btn-ai-chat:active {
+  transform: scale(0.95);
+}
+
+.btn-ai-chat .ai-icon {
+  width: 20px;
+  height: 20px;
+  color: #3b82f6;
+}
+
+:global(:root:not(.dark)) .btn-ai-chat .ai-icon {
+  color: #1d4ed8;
+}
+
+
 </style>

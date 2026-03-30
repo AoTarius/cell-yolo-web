@@ -1,33 +1,26 @@
 <template>
-  <div class="space-y-4">
+  <div class="ai-messages-container">
     <!-- 消息列表 -->
     <div
       v-for="(message, index) in aiStore.messages"
       :key="message.id"
-      :class="['flex gap-3', message.role === 'user' ? 'flex-row-reverse' : 'flex-row']"
-      class="message-enter"
+      :class="['ai-message', message.role === 'user' ? 'ai-message-user' : 'ai-message-assistant']"
     >
       <!-- 头像 -->
       <div
-        class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-        :style="{ background: message.role === 'user' ? 'var(--ai-user-avatar)' : 'var(--ai-assistant-avatar)' }"
+        :class="['ai-avatar', message.role === 'user' ? 'ai-avatar-user' : 'ai-avatar-assistant']"
       >
-        <component :is="message.role === 'user' ? User : Bot" :size="20" style="color: white" />
+        <component :is="message.role === 'user' ? User : Bot" :size="20" />
       </div>
 
       <!-- 消息内容 -->
       <div
-        class="max-w-2xl px-4 py-3 rounded-2xl"
-        :style="{
-          background: message.role === 'user' ? 'var(--ai-user-bg)' : 'var(--ai-assistant-bg)',
-          color: message.role === 'user' ? 'var(--ai-user-text)' : 'var(--ai-assistant-text)',
-          borderRadius: message.role === 'user' ? '12px 12px 0 12px' : '12px 12px 12px 0'
-        }"
+        :class="['ai-message-content', message.role === 'user' ? 'ai-message-content-user' : 'ai-message-content-assistant']"
       >
         <!-- Markdown渲染 -->
         <div
           v-if="message.content"
-          class="prose prose-invert prose-sm max-w-none markdown-content"
+          class="markdown-content"
           v-html="renderMarkdown(message.content)"
         ></div>
 
@@ -37,10 +30,10 @@
     </div>
 
     <!-- 空状态提示 -->
-    <div v-if="aiStore.messages.length === 0" class="text-center py-12" style="color: var(--text-muted)">
-      <Bot :size="48" class="mx-auto mb-4" style="opacity: 0.5" />
-      <p class="text-lg">开始与AI助手对话吧！</p>
-      <p class="text-sm mt-2">输入你的问题，细胞分析专家会为你解答</p>
+    <div v-if="aiStore.messages.length === 0" class="ai-empty-state">
+      <Bot :size="48" class="ai-empty-icon" />
+      <p class="ai-empty-title">开始与AI助手对话吧！</p>
+      <p class="ai-empty-desc">输入你的问题，细胞分析专家会为你解答</p>
     </div>
   </div>
 </template>
@@ -53,8 +46,8 @@ import TypingIndicator from './TypingIndicator.vue'
 
 // 配置marked选项
 marked.setOptions({
-  breaks: true, // 支持GitHub风格的换行
-  gfm: true,    // 启用GitHub Flavored Markdown
+  breaks: true,
+  gfm: true,
 })
 
 const aiStore = useAIStore()
@@ -71,9 +64,27 @@ const renderMarkdown = (content: string) => {
 </script>
 
 <style scoped>
-/* 简单的淡入动画 */
-.message-enter {
+/* 消息容器 */
+.ai-messages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* 消息项 */
+.ai-message {
+  display: flex;
+  gap: 0.75rem;
   animation: fadeIn 0.3s ease-out;
+  border-bottom: var(--ai-border-color) 1px solid;
+}
+
+.ai-message-user {
+  flex-direction: row-reverse;
+}
+
+.ai-message-assistant {
+  flex-direction: row;
 }
 
 @keyframes fadeIn {
@@ -85,6 +96,68 @@ const renderMarkdown = (content: string) => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 头像 */
+.ai-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+
+.ai-avatar-user {
+  background: var(--ai-user-avatar);
+}
+
+.ai-avatar-assistant {
+  background: var(--ai-assistant-avatar);
+}
+
+/* 消息内容 */
+.ai-message-content {
+  max-width: 32rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  color: inherit;
+}
+
+.ai-message-content-user {
+  background: var(--ai-user-bg);
+  color: var(--ai-user-text);
+  border-radius: 0.75rem 0.75rem 0 0.75rem;
+}
+
+.ai-message-content-assistant {
+  background: var(--ai-assistant-bg);
+  color: var(--ai-assistant-text);
+  border-radius: 0.75rem 0.75rem 0.75rem 0;
+}
+
+/* 空状态 */
+.ai-empty-state {
+  text-align: center;
+  padding: 3rem 0;
+  color: var(--text-muted);
+}
+
+.ai-empty-icon {
+  margin: 0 auto 1rem;
+  opacity: 0.5;
+}
+
+.ai-empty-title {
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.ai-empty-desc {
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
 }
 
 /* Markdown样式 */

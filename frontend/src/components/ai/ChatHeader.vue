@@ -1,25 +1,18 @@
 <template>
-  <div class="flex items-center justify-between px-6 py-4" style="border-bottom: 1px solid var(--ai-header-border); background: var(--ai-header-bg)">
+  <div class="ai-header">
     <!-- 左侧：AI信息 -->
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: var(--ai-assistant-avatar)">
-        <Bot :size="24" style="color: white" />
+    <div class="ai-header-left">
+      <div class="ai-avatar ai-avatar-assistant">
+        <Bot :size="24" />
       </div>
-      <div>
-        <h2 class="text-lg font-semibold" style="color: var(--text-primary)">AI助手</h2>
-        <p class="text-sm" style="color: var(--text-muted)">细胞分析专家</p>
+      <div class="ai-header-info">
+        <h2 class="ai-title">AI助手</h2>
+        <p class="ai-subtitle">细胞分析专家</p>
       </div>
     </div>
 
     <!-- 右侧：关闭按钮 -->
-    <button
-      @click="closeChat"
-      class="transition-colors p-2 rounded-lg"
-      style="color: var(--text-muted)"
-      title="关闭对话框"
-      @mouseover="$el.style.color = 'var(--text-primary)'; $el.style.background = 'var(--bg-hover)'"
-      @mouseout="$el.style.color = 'var(--text-muted)'; $el.style.background = 'transparent'"
-    >
+    <button class="ai-close-btn" @click="closeChat" title="关闭对话框">
       <X :size="24" />
     </button>
   </div>
@@ -35,3 +28,71 @@ const closeChat = () => {
   aiStore.closeChat()
 }
 </script>
+
+<style scoped>
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--ai-header-border);
+  background: var(--ai-header-bg);
+  border-bottom: var(--ai-border-color) 1px solid;
+}
+
+.ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ai-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.ai-avatar-assistant {
+  background: var(--ai-assistant-avatar);
+}
+
+.ai-header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.ai-subtitle {
+  font-size: 0.875rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.ai-close-btn {
+  transition: all 0.2s;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: var(--ai-border-color) 1px solid;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+</style>

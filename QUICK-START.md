@@ -64,7 +64,7 @@ cd backend
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，将以下内容添加进去（将 `your_password` 替换为你的 MySQL root 密码）：
+编辑 `.env` 文件，将以下内容添加进去（将 `your_password` 替换为你的 MySQL root 密码, 将`DEEPSEEK_API_KEY`替换为你的 Deepseek API 密钥）：
 
 ```env
 SECRET_KEY=django-insecure-changeme-in-production
@@ -76,6 +76,9 @@ DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=cell_tracking
+
+DEEPSEEK_API_KEY= your_deepseek_api_key  # DeepSeek API密钥（请替换为实际密钥）
+DEEPSEEK_API_BASE=https://api.deepseek.com/v1
 ```
 
 **Windows 用户注意事项**：
