@@ -124,6 +124,7 @@ const renderMarkdown = (content: string) => {
   padding: 0.75rem 1rem;
   border-radius: 1rem;
   color: inherit;
+  margin-bottom: 1rem;
 }
 
 .ai-message-content-user {
