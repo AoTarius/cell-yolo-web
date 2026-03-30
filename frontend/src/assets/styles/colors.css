@@ -62,6 +62,24 @@
   --danger-light: #f87171;     /* 危险色浅色（错误文字、删除hover） */
   --danger-bg: rgba(220, 38, 38, 0.1); /* 危险色背景（警告框、危险图标背景） */
 
+  /* ========== 深色模式 - AI对话专用 ========== */
+  --ai-dialog-bg: #161b22;          /* AI对话框背景 */
+  --ai-header-bg: #1e2329;          /* AI对话框顶部背景 */
+  --ai-header-border: #30363d;      /* AI对话框顶部边框 */
+  --ai-user-bg: rgba(16, 185, 129, 0.2);  /* 用户消息背景 */
+  --ai-user-text: #a7f3d0;          /* 用户消息文字 */
+  --ai-user-avatar: #10b981;        /* 用户头像背景 */
+  --ai-assistant-bg: rgba(88, 166, 255, 0.2);  /* AI消息背景 */
+  --ai-assistant-text: #bfdbfe;     /* AI消息文字 */
+  --ai-assistant-avatar: #3b82f6;   /* AI头像背景 */
+  --ai-input-bg: #21262d;           /* 输入框背景 */
+  --ai-input-border: #30363d;       /* 输入框边框 */
+  --ai-input-focus: #58a6ff;        /* 输入框focus颜色 */
+  --ai-input-text: #c9d1d9;         /* 输入框文字 */
+  --ai-input-placeholder: #8b949e;  /* 输入框占位符 */
+  --ai-typing-dot: #60a5fa;         /* 输入动画圆点 */
+  --ai-ctrl-border-color: #8fa0b4;  /* AI对话控制按钮边框色 */
+
   /* ========== 深色模式 - 特殊色 ========== */
   --upload-hover-bg: #0d1520;  /* 上传区域hover背景 */
   --upload-success-bg: #e8f5e9; /* 上传成功背景 */
@@ -151,6 +169,24 @@
   --danger-hover: #f87171;     /* 危险色hover */
   --danger-light: rgb(247, 85, 85);     /* 危险色浅色（错误文字、删除hover） */
   --danger-bg: rgba(193, 44, 44, 0.739); /* 危险色背景（警告框、危险图标背景） */
+
+  /* ========== 浅色模式 - AI对话专用 ========== */
+  --ai-dialog-bg: #ffffff;          /* AI对话框背景 */
+  --ai-header-bg: #f8f9fa;          /* AI对话框顶部背景 */
+  --ai-header-border: #e9ecef;      /* AI对话框顶部边框 */
+  --ai-user-bg: rgba(16, 185, 129, 0.15);  /* 用户消息背景 */
+  --ai-user-text: #065f46;          /* 用户消息文字 */
+  --ai-user-avatar: #10b981;        /* 用户头像背景 */
+  --ai-assistant-bg: rgba(59, 130, 246, 0.15);  /* AI消息背景 */
+  --ai-assistant-text: #1e40af;     /* AI消息文字 */
+  --ai-assistant-avatar: #3b82f6;   /* AI头像背景 */
+  --ai-input-bg: #ffffff;           /* 输入框背景 */
+  --ai-input-border: #e9ecef;       /* 输入框边框 */
+  --ai-input-focus: #3b82f6;        /* 输入框focus颜色 */
+  --ai-input-text: #333333;         /* 输入框文字 */
+  --ai-input-placeholder: #999999;  /* 输入框占位符 */
+  --ai-typing-dot: #60a5fa;         /* 输入动画圆点 */
+  --ai-ctrl-border-color: #30363d;  /* AI对话控制按钮边框色 */
 
   /* ========== 浅色模式 - 特殊色 ========== */
   --upload-hover-bg: #e3f2fd;  /* 上传区域hover背景 */

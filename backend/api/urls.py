@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import ai
 
 urlpatterns = [
     path('test/', views.test_api, name='test_api'),
@@ -44,4 +45,8 @@ urlpatterns = [
     path('free-plot/examples/', views.FreePlotExamplesView.as_view(), name='free_plot_examples'),
     path('free-plot/examples/<str:example_name>/', views.FreePlotExamplesView.as_view(), name='free_plot_example_detail'),
     path('free-plot/run/', views.FreePlotRunView.as_view(), name='free_plot_run'),
+
+    # AI对话接口
+    path('ai/chat/stream/', ai.chat_stream, name='ai_chat_stream'),
+    path('ai/roles/', ai.get_ai_roles, name='ai_roles'),
 ]

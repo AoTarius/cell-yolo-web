@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
 import Toast from '@/components/common/feedback/Toast.vue'
+import AIChatDialog from '@/components/common/dialog/AIChatDialog.vue'
 </script>
 
 <template>
   <RouterView />
   <Toast />
+  <AIChatDialog />
 </template>
 
 <style scoped>

@@ -3,6 +3,7 @@ import { ref, onMounted, nextTick, computed, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAnalysisStore, type AnalysisRecord } from '@/stores/analysisStore'
 import { useUserStore } from '@/stores/userStore'
+import { useAIStore } from '@/stores/aiStore'
 import { useToast } from '@/composables/useToast'
 import { authApi } from '@/api/authApi'
 import ConfirmDialog from '../dialog/ConfirmDialog.vue'
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 
 const store = useAnalysisStore()
 const userStore = useUserStore()
+const aiStore = useAIStore()
 const router = useRouter()
 const route = useRoute()
 const { showToast } = useToast()
@@ -327,6 +329,10 @@ function handleSettings() {
     outputPath.value = userStore.currentUser.output_base_path || 'output'
   }
   showSettingsDialog.value = true
+}
+
+function handleAIChat() {
+  aiStore.openChat()
 }
 
 async function handleSettingsSave(savedModelPath: string, savedOutputPath: string) {
@@ -758,6 +764,22 @@ const isSorting = computed(() => {
     <div class="info-panel">
       <div class="info-content">
         <template v-if="!isCollapsed">
+          <button class="btn-ai-chat" title="AI助手" @click="handleAIChat">
+            <svg
+              class="ai-icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              ></path>
+            </svg>
+          </button>
           <button class="btn-theme-toggle" title="切换主题" @click="toggleTheme">
             <svg
               class="theme-icon"
@@ -2048,6 +2070,43 @@ const isSorting = computed(() => {
 
 :global(:root:not(.dark)) .theme-icon {
   color: #b45309;
+}
+
+/* AI助手按钮 */
+.btn-ai-chat {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-record-hover);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-ai-chat:hover {
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.3), rgba(88, 166, 255, 0.5));
+  border-color: rgba(88, 166, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-ai-chat:active {
+  transform: scale(0.95);
+}
+
+.ai-icon {
+  width: 20px;
+  height: 20px;
+  transition: all 0.3s ease;
+  color: #58a6ff;
+}
+
+:global(:root:not(.dark)) .ai-icon {
+  color: #0366d6;
 }
 
 /* 设置按钮 */

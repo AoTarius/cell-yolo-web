@@ -190,3 +190,8 @@ CHANNEL_LAYERS = {
 #         },
 #     },
 # }
+
+
+# AI对话配置
+DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY', '')
+DEEPSEEK_API_BASE = os.getenv('DEEPSEEK_API_BASE', 'https://api.deepseek.com/v1')
