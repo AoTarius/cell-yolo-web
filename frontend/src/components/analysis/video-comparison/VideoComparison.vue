@@ -23,11 +23,12 @@ const annotatedVideoError = ref(false)
 watch(() => props.record.task_id, () => {
   currentPlaybackRate.value = 1
   showRateMenu.value = false
+  const nativeRate = getNativePlaybackRate(1)
   if (originalVideoRef.value) {
-    originalVideoRef.value.playbackRate = 1
+    originalVideoRef.value.playbackRate = nativeRate
   }
   if (annotatedVideoRef.value) {
-    annotatedVideoRef.value.playbackRate = 1
+    annotatedVideoRef.value.playbackRate = nativeRate
   }
 })
 
@@ -50,9 +51,17 @@ function toggleVideoLayout() {
 }
 
 // 播放速率选项
-const playbackRates = [0.25, 0.5, 0.75, 1, 1.5, 2]
+const playbackRates = [0.25, 0.5, 1, 2]
 const currentPlaybackRate = ref(1)
 const showRateMenu = ref(false)
+
+function getNativePlaybackRate(displayRate: number): number {
+  if (displayRate === 2) return 1
+  if (displayRate === 1) return 0.5
+  if (displayRate === 0.5) return 0.25
+  if (displayRate === 0.25) return 0.125
+  return 1
+}
 
 // 切换速率菜单显示
 function toggleRateMenu() {
@@ -62,11 +71,12 @@ function toggleRateMenu() {
 // 设置播放速率
 function setPlaybackRate(rate: number) {
   currentPlaybackRate.value = rate
+  const nativeRate = getNativePlaybackRate(rate)
   if (originalVideoRef.value) {
-    originalVideoRef.value.playbackRate = rate
+    originalVideoRef.value.playbackRate = nativeRate
   }
   if (annotatedVideoRef.value) {
-    annotatedVideoRef.value.playbackRate = rate
+    annotatedVideoRef.value.playbackRate = nativeRate
   }
   showRateMenu.value = false
 }

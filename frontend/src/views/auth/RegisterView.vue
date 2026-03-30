@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authApi, type User } from '@/api/authApi'
 
@@ -11,6 +11,20 @@ const password = ref('')
 const confirmPassword = ref('')
 const modelBasePath = ref('')
 const outputBasePath = ref('')
+const showPathSettings = ref(false)
+
+const hasCustomPaths = computed(() => {
+  return !!modelBasePath.value.trim() || !!outputBasePath.value.trim()
+})
+
+const pathStatusText = computed(() => {
+  if (hasCustomPaths.value) {
+    return '当前：已自定义路径'
+  }
+
+  const userSegment = username.value.trim() || '{用户名}'
+  return `当前：使用默认路径（项目根目录/.user-storage/${userSegment}/...）`
+})
 
 // 加载状态
 const isLoading = ref(false)
@@ -48,8 +62,8 @@ async function handleSubmit(event: Event) {
   errorMessage.value = ''
 
   // 验证输入
-  if (!username.value.trim() || !password.value || !modelBasePath.value.trim() || !outputBasePath.value.trim()) {
-    errorMessage.value = '所有字段都不能为空'
+  if (!username.value.trim() || !password.value) {
+    errorMessage.value = '用户名和密码不能为空'
     return
   }
 
@@ -72,8 +86,8 @@ async function handleSubmit(event: Event) {
     const response = await authApi.register(
       username.value.trim(),
       password.value,
-      modelBasePath.value.trim(),
-      outputBasePath.value.trim()
+      modelBasePath.value.trim() || undefined,
+      outputBasePath.value.trim() || undefined
     )
 
     if (response.status === 'success' && response.user) {
@@ -163,16 +177,34 @@ function goToLogin() {
           <i></i>
         </div>
 
-        <div class="input-box">
-          <input type="text" v-model="modelBasePath" required :disabled="isLoading">
-          <span>模型存储路径(如: /path/to/models)</span>
-          <i></i>
-        </div>
+        <div class="path-settings">
+          <button
+            type="button"
+            class="path-settings-toggle"
+            :disabled="isLoading"
+            @click="showPathSettings = !showPathSettings"
+          >
+            {{ showPathSettings ? '收起路径设置（可选）' : '展开路径设置（可选）' }}
+          </button>
+          <p class="path-settings-status">
+            {{ pathStatusText }}
+          </p>
+          <p v-if="!showPathSettings" class="path-settings-hint">
+            默认会在项目根目录下为当前用户自动创建被 gitignore 忽略的存储目录。
+          </p>
+          <template v-if="showPathSettings">
+            <div class="input-box path-input-box">
+              <input type="text" v-model="modelBasePath" :disabled="isLoading">
+              <span>模型存储路径（留空使用默认）</span>
+              <i></i>
+            </div>
 
-        <div class="input-box">
-          <input type="text" v-model="outputBasePath" required :disabled="isLoading">
-          <span>任务存储路径(如: /path/to/outputs)</span>
-          <i></i>
+            <div class="input-box path-input-box">
+              <input type="text" v-model="outputBasePath" :disabled="isLoading">
+              <span>任务存储路径（留空使用默认）</span>
+              <i></i>
+            </div>
+          </template>
         </div>
 
         <div class="links">
@@ -364,6 +396,51 @@ function goToLogin() {
 .register-card .input-box input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.path-settings {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.path-settings-toggle {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.path-settings-toggle:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.path-settings-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.path-settings-hint {
+  margin: 10px 4px 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.path-settings-status {
+  margin: 10px 4px 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.path-input-box {
+  margin-top: 18px;
 }
 
 /* 链接 */

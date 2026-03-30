@@ -83,8 +83,8 @@ export const authApi = {
   async register(
     username: string,
     password: string,
-    modelBasePath: string,
-    outputBasePath: string
+    modelBasePath?: string,
+    outputBasePath?: string
   ): Promise<{
     status: string
     message: string

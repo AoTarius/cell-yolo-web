@@ -6,6 +6,7 @@ import bcrypt
 import io
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 from django.conf import settings
 from django.http import JsonResponse, FileResponse, HttpResponseNotFound, HttpResponse
@@ -868,6 +869,12 @@ class TaskListView(APIView):
 
                 # 如果任务完成，读取 JSON 结果
                 for task in tasks:
+                    raw_model_name = str(task.get('model_display_name') or '').strip()
+                    if raw_model_name:
+                        model_file_name = raw_model_name.replace('\\', '/').split('/')[-1]
+                        normalized_model_name = Path(model_file_name).stem or model_file_name
+                        task['model_display_name'] = normalized_model_name
+
                     if task['status'] == 'completed':
                         try:
                             output_base_sql = "SELECT output_base_path FROM users WHERE id = %s AND is_deleted = FALSE"
@@ -947,17 +954,57 @@ class ModelListView(APIView):
                 cursor.execute(models_sql, (user_id,))
                 model_records = cursor.fetchall()
 
-                # 构建模型列表，使用绝对路径
+                # 构建模型列表：优先匹配真实文件；即便文件暂不可达，也保留数据库记录避免前端误显示“暂无模型”
                 models = []
                 models_dir = Path(model_base_path)
 
                 for record in model_records:
-                    model_file = models_dir / record['model_path']
-                    if model_file.exists():
+                    model_name = (record.get('model_name') or '').strip()
+                    raw_model_path = str(record.get('model_path') or '').strip()
+
+                    candidate_paths = []
+                    if raw_model_path:
+                        raw_path = Path(raw_model_path)
+                        if raw_path.is_absolute():
+                            candidate_paths.append(raw_path)
+                        else:
+                            candidate_paths.append(models_dir / raw_path)
+
+                    if model_name:
+                        candidate_paths.append(models_dir / f"{model_name}.pt")
+                        candidate_paths.append(models_dir / model_name)
+
+                    matched_file = next((p for p in candidate_paths if p.exists() and p.is_file()), None)
+
+                    if matched_file:
+                        try:
+                            relative_path = str(matched_file.relative_to(models_dir))
+                        except Exception:
+                            relative_path = str(matched_file)
+
                         models.append({
-                            'name': record['model_name'],
+                            'name': model_name or matched_file.stem,
+                            'size_mb': round(matched_file.stat().st_size / (1024 * 1024), 2),
+                            'path': relative_path
+                        })
+                    else:
+                        # 回退：文件不存在或路径不一致时，仍返回记录，前端可见模型名称
+                        fallback_path = raw_model_path or (f"{model_name}.pt" if model_name else '')
+                        models.append({
+                            'name': model_name or Path(fallback_path).stem or '未命名模型',
+                            'size_mb': 0,
+                            'path': fallback_path
+                        })
+
+                # 兜底：若数据库记录无法构成可见列表，则扫描模型目录中的 .pt 文件
+                if not models and models_dir.exists() and models_dir.is_dir():
+                    for model_file in models_dir.glob('*.pt'):
+                        if not model_file.is_file():
+                            continue
+                        models.append({
+                            'name': model_file.stem,
                             'size_mb': round(model_file.stat().st_size / (1024 * 1024), 2),
-                            'path': str(model_file.relative_to(models_dir))
+                            'path': str(model_file.name)
                         })
                 # 按名称排序
                 models.sort(key=lambda x: x['name'])
@@ -1912,6 +1959,21 @@ class UpdateUserPathsView(APIView):
 class RegisterView(APIView):
     """用户注册接口"""
 
+    @staticmethod
+    def _resolve_storage_paths(username: str, model_base_path: Optional[str], output_base_path: Optional[str]):
+        project_root = Path(__file__).resolve().parents[2]
+        default_user_root = project_root / '.user-storage' / username
+
+        final_model_path = (model_base_path or '').strip() or str(default_user_root / 'models')
+        final_output_path = (output_base_path or '').strip() or str(default_user_root / 'outputs')
+
+        return final_model_path, final_output_path
+
+    @staticmethod
+    def _ensure_storage_dirs(model_base_path: str, output_base_path: str):
+        os.makedirs(model_base_path, exist_ok=True)
+        os.makedirs(output_base_path, exist_ok=True)
+
     def post(self, request):
         """创建新用户"""
         try:
@@ -1922,10 +1984,24 @@ class RegisterView(APIView):
             output_base_path = data.get('output_base_path')
 
             # 验证必填字段
-            if not username or not password or not model_base_path or not output_base_path:
+            if not username or not password:
                 return Response(
-                    {'error': '用户名、密码、模型存储路径和任务存储路径不能为空'},
+                    {'error': '用户名和密码不能为空'},
                     status=status.HTTP_400_BAD_REQUEST
+                )
+
+            model_base_path, output_base_path = self._resolve_storage_paths(
+                username,
+                model_base_path,
+                output_base_path,
+            )
+
+            try:
+                self._ensure_storage_dirs(model_base_path, output_base_path)
+            except Exception as e:
+                return Response(
+                    {'error': f'创建默认存储目录失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
             # 验证密码长度
@@ -2738,20 +2814,57 @@ class ImportDataPackageView(APIView):
                 else:
                     fps = 10
 
-                # 16. 插入tasks表
+                # 16. 根据数据包中的模型名称查找或创建模型记录
+                raw_model_name = str(result_data.get('model_name') or '').strip()
+                raw_model_path = str(result_data.get('model_path') or '').strip()
+                model_name_source = raw_model_name or raw_model_path
+                model_file_name = model_name_source.replace('\\', '/').split('/')[-1] if model_name_source else ''
+                imported_model_name = Path(model_file_name).stem if model_file_name else ''
+                imported_model_name = imported_model_name or '导入模型'
+                imported_model_path = raw_model_path or model_file_name or imported_model_name
+
+                with connection.cursor() as cursor:
+                    model_sql = """
+                    SELECT id, is_deleted FROM models
+                    WHERE user_id = %s AND model_name = %s
+                    LIMIT 1
+                    """
+                    cursor.execute(model_sql, (user_id, imported_model_name))
+                    existing_model = cursor.fetchone()
+
+                    if existing_model:
+                        model_id = existing_model['id']
+                        if existing_model.get('is_deleted'):
+                            revive_sql = """
+                            UPDATE models
+                            SET is_deleted = FALSE, deleted_at = NULL, model_path = %s, updated_at = NOW()
+                            WHERE id = %s
+                            """
+                            cursor.execute(revive_sql, (imported_model_path, model_id))
+                            connection.commit()
+                    else:
+                        insert_model_sql = """
+                        INSERT INTO models (user_id, model_name, model_path, created_at, updated_at, is_deleted, deleted_at)
+                        VALUES (%s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                        """
+                        cursor.execute(insert_model_sql, (user_id, imported_model_name, imported_model_path))
+                        connection.commit()
+                        model_id = cursor.lastrowid
+
+                # 17. 插入tasks表
                 with connection.cursor() as cursor:
                     insert_task_sql = """
                     INSERT INTO tasks (user_id, video_id, model_id, task_id, task_name, status, conf, imgsz, fps, annotated_video_name, error_message, created_at, updated_at, is_deleted, deleted_at)
-                    VALUES (%s, %s, 1, %s, '新 导入任务', 'completed', 0.3, 1024, %s, 'tracking_result.mp4', '', NOW(), NOW(), FALSE, NULL)
+                    VALUES (%s, %s, %s, %s, '新 导入任务', 'completed', 0.3, 1024, %s, 'tracking_result.mp4', '', NOW(), NOW(), FALSE, NULL)
                     """
-                    cursor.execute(insert_task_sql, (user_id, new_video_id, new_task_id, fps))
+                    cursor.execute(insert_task_sql, (user_id, new_video_id, model_id, new_task_id, fps))
                     connection.commit()
 
-                # 17. 使用process_and_save方法导入Cell数据
+                # 18. 使用process_and_save方法导入Cell数据
                 from .services.preprocess_data import process_and_save
                 process_and_save(new_task_dir / 'result.json', new_task_id)
 
-                # 18. 创建TaskStatus记录
+                # 19. 创建TaskStatus记录
                 with connection.cursor() as cursor:
                     insert_status_sql = """
                     INSERT INTO task_status (task_id, status, progress, stage, current_frame, total_frames, error_message, created_at, updated_at, is_deleted, deleted_at)

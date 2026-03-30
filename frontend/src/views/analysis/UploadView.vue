@@ -27,6 +27,14 @@ const selectedModel = ref('')  // 改为空字符串，表示未选择
 const isLoadingModels = ref(false)
 const hasModels = computed(() => models.value.length > 0)  // 判断是否有可用模型
 
+function isImportedTaskModelName(name: string): boolean {
+  const raw = (name || '').trim()
+  if (!raw) return true
+  const normalized = raw.replace(/\\/g, '/')
+  // 约定：导入任务遗留模型通常为路径或带文件后缀的名称，不作为“我自己的可用模型”
+  return normalized.includes('/') || /^[a-zA-Z]:/.test(raw) || /\.pt$/i.test(raw)
+}
+
 // 模型参数
 const modelParams = ref({
   conf: 0.3,
@@ -60,7 +68,8 @@ async function loadModels() {
 
     const username = userStore.currentUser.username
     const data = await analysisApi.getModels(username)
-    models.value = data.models
+    const rawModels = Array.isArray(data?.models) ? data.models : []
+    models.value = rawModels.filter((model: { name: string }) => !isImportedTaskModelName(model.name))
     // 始终默认为空，让用户手动选择
     selectedModel.value = ''
   } catch (error) {

@@ -129,6 +129,15 @@ function getTitleTextStyle() {
     };
 }
 
+function getCenteredTitle(text: string) {
+    return {
+        text,
+        left: 'center' as const,
+        top: '2%' as const,
+        textStyle: getTitleTextStyle(),
+    };
+}
+
 function getAxisLabelStyle() {
     const scaled = Math.round(baseFontSize.value * getChartFontScale());
     return {
@@ -178,6 +187,16 @@ function getAcademicGrid(right = '8%') {
         top: '14%',
         bottom: '14%',
         containLabel: false,
+    };
+}
+
+function getBottomCenterLegend() {
+    return {
+        type: 'scroll' as const,
+        left: 'center' as const,
+        bottom: '2%' as const,
+        orient: 'horizontal' as const,
+        textStyle: getLegendTextStyle(),
     };
 }
 
@@ -506,7 +525,7 @@ function buildTimeSeriesOption(): echarts.EChartsOption {
         color: academicPalette,
         animation: false,
         backgroundColor: '#ffffff',
-        title: { text: `${chartTitle.value} - ${featureLabel}`, textStyle: getTitleTextStyle() },
+        title: getCenteredTitle(`${chartTitle.value} - ${featureLabel}`),
         tooltip: {
             trigger: 'axis',
             textStyle: getTooltipTextStyle(),
@@ -514,12 +533,16 @@ function buildTimeSeriesOption(): echarts.EChartsOption {
             borderColor: '#d1d5db',
             borderWidth: 1,
         },
-        legend: { type: 'scroll', textStyle: getLegendTextStyle() },
-        grid: getAcademicGrid(),
+        legend: getBottomCenterLegend(),
+        grid: {
+            ...getAcademicGrid(),
+            bottom: '20%',
+        },
         xAxis: {
             type: 'value',
             name: '帧号',
-            nameGap: 30,
+            nameLocation: 'middle',
+            nameGap: 40,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             axisLine: getAcademicAxisLine(),
@@ -531,7 +554,8 @@ function buildTimeSeriesOption(): echarts.EChartsOption {
         yAxis: {
             type: 'value',
             name: featureLabel,
-            nameGap: 44,
+            nameLocation: 'middle',
+            nameGap: 58,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             axisLine: getAcademicAxisLine(),
@@ -635,10 +659,7 @@ function buildHistogramOption(): echarts.EChartsOption {
         }));
 
         return {
-            title: {
-                text: `${chartTitle.value} - ${featureLabel} (四宫格)`,
-                textStyle: getTitleTextStyle(),
-            },
+            title: getCenteredTitle(`${chartTitle.value} - ${featureLabel} (四宫格)`),
             tooltip: {
                 trigger: 'axis',
                 textStyle: getTooltipTextStyle(),
@@ -680,11 +701,8 @@ function buildHistogramOption(): echarts.EChartsOption {
         color: academicPalette,
         animation: false,
         backgroundColor: '#ffffff',
-        title: {
-            text: `${chartTitle.value} - ${feature} (${statMode === 'average' ? '平均模式' : '按帧模式'})`,
-            textStyle: getTitleTextStyle(),
-        },
-        legend: histogramSeries.length > 1 ? { type: 'scroll', textStyle: getLegendTextStyle() } : undefined,
+        title: getCenteredTitle(`${chartTitle.value} - ${feature} (${statMode === 'average' ? '平均模式' : '按帧模式'})`),
+        legend: histogramSeries.length > 1 ? getBottomCenterLegend() : undefined,
         tooltip: {
             trigger: 'axis',
             textStyle: getTooltipTextStyle(),
@@ -692,22 +710,32 @@ function buildHistogramOption(): echarts.EChartsOption {
             borderColor: '#d1d5db',
             borderWidth: 1,
         },
-        grid: getAcademicGrid(),
+        grid: histogramSeries.length > 1
+            ? {
+                ...getAcademicGrid(),
+                bottom: '22%',
+            }
+            : getAcademicGrid(),
         xAxis: {
             type: 'category',
             data: labels,
             name: featureLabel,
-            nameGap: 34,
-            axisLabel: getDenseAxisLabelStyle(),
+            nameLocation: 'middle',
+            nameGap: 48,
             nameTextStyle: getAxisNameStyle(),
             axisLine: getAcademicAxisLine(),
             splitLine: getAcademicSplitLine(),
             axisTick: { alignWithLabel: true },
+            axisLabel: {
+                ...getDenseAxisLabelStyle(),
+                rotate: 35,
+            },
         },
         yAxis: {
             type: 'value',
             name: probabilityType === 'probability' ? '概率' : '数量',
-            nameGap: 40,
+            nameLocation: 'middle',
+            nameGap: 56,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             axisLine: getAcademicAxisLine(),
@@ -925,7 +953,7 @@ function buildScatterOption(): echarts.EChartsOption {
         color: academicPalette,
         animation: false,
         backgroundColor: '#ffffff',
-        title: { text: title, textStyle: getTitleTextStyle() },
+        title: getCenteredTitle(title),
         legend: undefined,
         tooltip: {
             textStyle: getTooltipTextStyle(),
@@ -944,7 +972,8 @@ function buildScatterOption(): echarts.EChartsOption {
         xAxis: {
             type: 'value',
             name: 'X 位置 (μm)',
-            nameGap: 30,
+            nameLocation: 'middle',
+            nameGap: 40,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             min: scatterBounds.xMin,
@@ -956,7 +985,8 @@ function buildScatterOption(): echarts.EChartsOption {
         yAxis: {
             type: 'value',
             name: 'Y 位置 (μm)',
-            nameGap: 38,
+            nameLocation: 'middle',
+            nameGap: 56,
             axisLabel: getAxisLabelStyle(),
             nameTextStyle: getAxisNameStyle(),
             min: scatterBounds.yMin,
@@ -990,7 +1020,7 @@ function buildTrajectoryOption(): echarts.EChartsOption {
 
     if (trajectoryType === '3d') {
         return {
-            title: { text: '3D 轨迹图由后端 Python 渲染', textStyle: getTitleTextStyle() },
+            title: getCenteredTitle('3D 轨迹图由后端 Python 渲染'),
             series: [],
         };
     }
@@ -1088,9 +1118,9 @@ function buildTrajectoryOption(): echarts.EChartsOption {
                     z: 1,
                     lineStyle: {
                         type: 'dashed' as const,
-                        width: 1,
-                        color: '#a9acb2',
-                        opacity: 0.75,
+                        width: 1.3,
+                        color: '#5f6773',
+                        opacity: 0.95,
                     },
                     data: circleData,
                     tooltip: { show: false },
@@ -1170,10 +1200,7 @@ function buildTrajectoryOption(): echarts.EChartsOption {
         animation: false,
         backgroundColor: '#ffffff',
         color: academicPalette,
-        title: {
-            text: isNormalized ? 'Normalized Cell Trajectories' : chartTitle.value,
-            textStyle: getTitleTextStyle(),
-        },
+        title: getCenteredTitle(isNormalized ? 'Normalized Cell Trajectories' : chartTitle.value),
         tooltip: {
             trigger: 'item',
             textStyle: getTooltipTextStyle(),
@@ -1187,29 +1214,47 @@ function buildTrajectoryOption(): echarts.EChartsOption {
             },
         },
         legend: undefined,
-        grid: getAcademicGrid(),
+        grid: isNormalized
+            ? {
+                left: '16%',
+                right: '16%',
+                top: '16%',
+                bottom: '16%',
+                containLabel: false,
+            }
+            : getAcademicGrid(),
         xAxis: {
             type: 'value',
             name: isNormalized ? 'Normalized X (μm)' : 'X 位置 (μm)',
-            nameGap: 30,
-            axisLabel: getAxisLabelStyle(),
+            nameLocation: 'middle',
+            nameGap: 40,
             nameTextStyle: getAxisNameStyle(),
             min: isNormalized ? (trajectoryBounds as { min: number; max: number }).min : (trajectoryBounds as { xMin: number }).xMin,
             max: isNormalized ? (trajectoryBounds as { min: number; max: number }).max : (trajectoryBounds as { xMax: number }).xMax,
             axisLine: getAcademicAxisLine(),
-            splitLine: isNormalized ? { show: false } : getAcademicSplitLine(),
+            splitLine: isNormalized
+                ? { show: true, lineStyle: { color: '#9ca3af', width: 1.1, opacity: 0.95 } }
+                : getAcademicSplitLine(),
+            minorTick: isNormalized ? { show: true } : undefined,
+            minorSplitLine: isNormalized ? { show: true, lineStyle: { color: '#d1d5db', width: 1, opacity: 0.8 } } : undefined,
+            axisLabel: isNormalized ? { ...getAxisLabelStyle(), margin: 10 } : getAxisLabelStyle(),
             scale: true,
         },
         yAxis: {
             type: 'value',
             name: isNormalized ? 'Normalized Y (μm)' : 'Y 位置 (μm)',
-            nameGap: 38,
-            axisLabel: getAxisLabelStyle(),
+            nameLocation: 'middle',
+            nameGap: 56,
             nameTextStyle: getAxisNameStyle(),
             min: isNormalized ? (trajectoryBounds as { min: number; max: number }).min : (trajectoryBounds as { yMin: number }).yMin,
             max: isNormalized ? (trajectoryBounds as { min: number; max: number }).max : (trajectoryBounds as { yMax: number }).yMax,
             axisLine: getAcademicAxisLine(),
-            splitLine: isNormalized ? { show: false } : getAcademicSplitLine(),
+            splitLine: isNormalized
+                ? { show: true, lineStyle: { color: '#9ca3af', width: 1.1, opacity: 0.95 } }
+                : getAcademicSplitLine(),
+            minorTick: isNormalized ? { show: true } : undefined,
+            minorSplitLine: isNormalized ? { show: true, lineStyle: { color: '#d1d5db', width: 1, opacity: 0.8 } } : undefined,
+            axisLabel: isNormalized ? { ...getAxisLabelStyle(), margin: 10 } : getAxisLabelStyle(),
             scale: true,
         },
         visualMap: undefined,

@@ -493,7 +493,7 @@ const isSorting = computed(() => {
         <div class="action-buttons-grid">
           <button class="btn-new-analysis" @click="handleNewAnalysis">
             <span class="icon">+</span>
-            新建分析
+            新建任务
           </button>
           <button class="btn-upload-model" @click="handleModelUpload">
             <span class="icon">⚙</span>
@@ -501,11 +501,11 @@ const isSorting = computed(() => {
           </button>
           <button class="btn-compare" @click="handleCompare">
             <span class="icon">⚖</span>
-            对比分析
+            任务对比
           </button>
           <button class="btn-export" @click="handleExport">
             <span class="icon">↓</span>
-            导入分析
+            导入任务
           </button>
         </div>
       </template>

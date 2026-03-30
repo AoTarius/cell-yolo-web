@@ -4,12 +4,13 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useAnalysisStore, type CellData } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
 import { useToast } from '@/composables/useToast'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const store = useAnalysisStore()
 const api = useAnalysisApi()
 const { showToast } = useToast()
 const router = useRouter()
+const route = useRoute()
 const COMPARE_FRAME_STATE_KEY = 'compareResultFrameState'
 
 // 从store中获取对比记录
@@ -18,13 +19,16 @@ const recordB = computed(() => store.compareRecords[1])
 
 // 检查是否有有效的对比记录
 const hasValidRecords = computed(() => recordA.value && recordB.value)
+const isFrameSyncMode = computed(() => route.query.syncFrames === '1')
+const isModelCompareMode = computed(() => route.query.compareMode === 'model')
 
 // 组件挂载时，如果没有有效记录，返回对比页面
 onMounted(() => {
   if (!hasValidRecords.value) {
-    router.push({ name: 'compare' })
+    router.push({ name: isModelCompareMode.value ? 'modelUpload' : 'compare' })
   } else {
     restoreFrameState()
+    alignFrameIndexesForSync()
     // 根据恢复后的帧号加载图像
     if (recordA.value?.task_id) {
       loadImageA()
@@ -85,6 +89,34 @@ function restoreFrameState() {
   } catch {
     // ignore bad state cache
   }
+}
+
+function getSyncTotalFrames() {
+  const totalA = Number(recordA.value?.result?.total_frames || 0)
+  const totalB = Number(recordB.value?.result?.total_frames || 0)
+  if (totalA <= 0 || totalB <= 0) return 0
+  return Math.min(totalA, totalB)
+}
+
+function setSyncedFrameIndex(frameIndex: number) {
+  const syncTotal = getSyncTotalFrames()
+  if (syncTotal <= 0) return
+
+  const target = clampFrameIndex(frameIndex, syncTotal)
+  currentFrameIndexA.value = target
+  currentFrameIndexB.value = target
+  loadImageA()
+  loadImageB()
+}
+
+function alignFrameIndexesForSync() {
+  if (!isFrameSyncMode.value) return
+  const syncTotal = getSyncTotalFrames()
+  if (syncTotal <= 0) return
+
+  const aligned = clampFrameIndex(Math.min(currentFrameIndexA.value, currentFrameIndexB.value), syncTotal)
+  currentFrameIndexA.value = aligned
+  currentFrameIndexB.value = aligned
 }
 
 const isExporting = ref(false)
@@ -190,9 +222,11 @@ function loadCompareChartCache() {
     try {
       const parsed = JSON.parse(aRaw)
       if (parsed?.taskId === recordA.value?.task_id) {
+        const parsedType = (parsed.chartType || 'scatter') as CompareChartType
         chartImageA.value = parsed.imageDataUrl || ''
         chartLabelA.value = parsed.chartLabel || ''
-        chartRenderTypeA.value = parsed.chartType || 'scatter'
+        chartRenderTypeA.value = parsedType
+        chartTypeA.value = parsedType
       }
     } catch {
       // ignore bad cache
@@ -203,9 +237,11 @@ function loadCompareChartCache() {
     try {
       const parsed = JSON.parse(bRaw)
       if (parsed?.taskId === recordB.value?.task_id) {
+        const parsedType = (parsed.chartType || 'scatter') as CompareChartType
         chartImageB.value = parsed.imageDataUrl || ''
         chartLabelB.value = parsed.chartLabel || ''
-        chartRenderTypeB.value = parsed.chartType || 'scatter'
+        chartRenderTypeB.value = parsedType
+        chartTypeB.value = parsedType
       }
     } catch {
       // ignore bad cache
@@ -215,10 +251,10 @@ function loadCompareChartCache() {
 
 function goToChartDrawing(slot: 'A' | 'B') {
   const record = slot === 'A' ? recordA.value : recordB.value
-  const chartType = chartConfigType.value
+  const chartType = slot === 'A' ? chartTypeA.value : chartTypeB.value
   if (!record?.task_id) return
 
-  const config = chartConfigDraft.value
+  const config = slotConfigs.value[slot][chartType]
   router.push({
     name: 'drawingCanvas',
     query: {
@@ -259,8 +295,8 @@ function confirmChartConfigAndDraw() {
   }
 
   slotConfigs.value[chartConfigSlot.value][chartConfigType.value] = JSON.parse(JSON.stringify(chartConfigDraft.value))
+  applyChartToSlot(chartConfigSlot.value, chartConfigType.value)
   chartConfigModalVisible.value = false
-  goToChartDrawing(chartConfigSlot.value)
 }
 
 function closeChartConfigModal() {
@@ -281,6 +317,299 @@ function handleRegenerateA() {
 
 function handleRegenerateB() {
   openChartConfigModal('B')
+}
+
+function getFeatureValueByType(frame: any, chartType: CompareChartType, config: Record<string, any>) {
+  const feature = chartType === 'histogram'
+    ? (config.xAxisFeature || 'area')
+    : (config.yAxisFeature || 'area')
+
+  if (feature === 'area') return Number(frame?.area || 0)
+  if (feature === 'speed' || feature === 'migration_speed') return Number(frame?.velocity?.speed || 0)
+  return Number(frame?.area || 0)
+}
+
+function renderBasicChartImage(cells: CellData[], title: string, chartType: CompareChartType, config: Record<string, any>) {
+  const canvas = document.createElement('canvas')
+  const width = 900
+  const height = 520
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return ''
+
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, width, height)
+
+  const marginLeft = 72
+  const marginRight = 30
+  const marginTop = 60
+  const marginBottom = 56
+  const plotWidth = width - marginLeft - marginRight
+  const plotHeight = height - marginTop - marginBottom
+
+  ctx.fillStyle = '#111827'
+  ctx.font = 'bold 24px Arial'
+  ctx.fillText(title, marginLeft, 34)
+
+  ctx.strokeStyle = '#d1d5db'
+  ctx.lineWidth = 1
+  for (let i = 0; i <= 5; i++) {
+    const y = marginTop + (plotHeight / 5) * i
+    ctx.beginPath()
+    ctx.moveTo(marginLeft, y)
+    ctx.lineTo(width - marginRight, y)
+    ctx.stroke()
+  }
+
+  const palette = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#4b5563']
+
+  ctx.strokeStyle = '#9ca3af'
+  ctx.lineWidth = 1.2
+  ctx.beginPath()
+  ctx.moveTo(marginLeft, marginTop)
+  ctx.lineTo(marginLeft, marginTop + plotHeight)
+  ctx.lineTo(marginLeft + plotWidth, marginTop + plotHeight)
+  ctx.stroke()
+
+  if (chartType === 'scatter') {
+    const frameNo = Number(config.selectedFrame || 2)
+    const points = cells
+      .slice(0, 120)
+      .map((cell) => {
+        const f = cell.frames.find((x) => Number(x.frame_number) === frameNo)
+        if (!f) return null
+        return {
+          x: Number(f.position?.x ?? 0),
+          y: Number(f.position?.y ?? 0),
+        }
+      })
+      .filter((p): p is { x: number; y: number } => !!p)
+
+    if (!points.length) {
+      ctx.fillStyle = '#6b7280'
+      ctx.font = '18px Arial'
+      ctx.fillText('暂无可绘制数据', marginLeft + 20, marginTop + 40)
+      return canvas.toDataURL('image/png')
+    }
+
+    const xMin = Math.min(...points.map((p) => p.x))
+    const xMax = Math.max(...points.map((p) => p.x))
+    const yMin = Math.min(...points.map((p) => p.y))
+    const yMax = Math.max(...points.map((p) => p.y))
+    const xRange = Math.max(1, xMax - xMin)
+    const yRange = Math.max(1, yMax - yMin)
+
+    ctx.fillStyle = '#2563eb'
+    points.forEach((p) => {
+      const x = marginLeft + ((p.x - xMin) / xRange) * plotWidth
+      const y = marginTop + plotHeight - ((p.y - yMin) / yRange) * plotHeight
+      ctx.beginPath()
+      ctx.arc(x, y, 3, 0, Math.PI * 2)
+      ctx.fill()
+    })
+
+    return canvas.toDataURL('image/png')
+  }
+
+  if (chartType === 'histogram') {
+    const feature = config.xAxisFeature || 'area'
+    const values = cells
+      .slice(0, 80)
+      .map((cell) => {
+        const vals = cell.frames.map((f) => getFeatureValueByType(f, 'histogram', { xAxisFeature: feature }))
+        if (!vals.length) return null
+        return vals.reduce((s, v) => s + v, 0) / vals.length
+      })
+      .filter((v): v is number => v !== null && Number.isFinite(v))
+
+    if (!values.length) {
+      ctx.fillStyle = '#6b7280'
+      ctx.font = '18px Arial'
+      ctx.fillText('暂无可绘制数据', marginLeft + 20, marginTop + 40)
+      return canvas.toDataURL('image/png')
+    }
+
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    const binCount = Math.max(5, Number(config.binCount || 12))
+    const step = Math.max(1e-6, (max - min) / binCount)
+    const bins = Array.from({ length: binCount }, () => 0)
+    values.forEach((v) => {
+      const idx = Math.min(binCount - 1, Math.max(0, Math.floor((v - min) / step)))
+      if (bins[idx] !== undefined) {
+        bins[idx] += 1
+      }
+    })
+
+    const maxBin = Math.max(...bins, 1)
+    const barW = plotWidth / binCount
+    bins.forEach((b, i) => {
+      const h = (b / maxBin) * plotHeight
+      const x = marginLeft + i * barW + 2
+      const y = marginTop + plotHeight - h
+      ctx.fillStyle = '#2563eb'
+      ctx.fillRect(x, y, Math.max(2, barW - 4), h)
+    })
+
+    return canvas.toDataURL('image/png')
+  }
+
+  if (chartType === 'trajectory') {
+    const trajectoryType = String(config.trajectoryType || 'normal')
+    const sampled = cells.slice(0, Math.min(16, cells.length))
+    const series = sampled
+      .map((cell) => {
+        const frames = cell.frames.slice().sort((a, b) => a.frame_number - b.frame_number)
+        if (frames.length < 2) return null
+
+        const baseX = trajectoryType === 'normalized' ? Number(frames[0]?.position?.x ?? 0) : 0
+        const baseY = trajectoryType === 'normalized' ? Number(frames[0]?.position?.y ?? 0) : 0
+
+        const points = frames
+          .map((f) => ({
+            x: Number(f.position?.x ?? 0) - baseX,
+            y: Number(f.position?.y ?? 0) - baseY,
+          }))
+          .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+
+        return points.length > 1 ? { id: cell.cell_id, points } : null
+      })
+      .filter((s): s is { id: string; points: Array<{ x: number; y: number }> } => !!s)
+
+    if (!series.length) {
+      ctx.fillStyle = '#6b7280'
+      ctx.font = '18px Arial'
+      ctx.fillText('暂无可绘制轨迹数据', marginLeft + 20, marginTop + 40)
+      return canvas.toDataURL('image/png')
+    }
+
+    const xVals = series.flatMap((s) => s.points.map((p) => p.x))
+    const yVals = series.flatMap((s) => s.points.map((p) => p.y))
+    const xMin = Math.min(...xVals)
+    const xMax = Math.max(...xVals)
+    const yMin = Math.min(...yVals)
+    const yMax = Math.max(...yVals)
+    const xRange = Math.max(1, xMax - xMin)
+    const yRange = Math.max(1, yMax - yMin)
+
+    series.forEach((s, idx) => {
+      ctx.strokeStyle = palette[idx % palette.length] || '#2563eb'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      s.points.forEach((p, pointIdx) => {
+        const x = marginLeft + ((p.x - xMin) / xRange) * plotWidth
+        const y = marginTop + plotHeight - ((p.y - yMin) / yRange) * plotHeight
+        if (pointIdx === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      })
+      ctx.stroke()
+    })
+
+    return canvas.toDataURL('image/png')
+  }
+
+  const sampled = cells.slice(0, Math.min(8, cells.length))
+  const series = sampled
+    .map((cell) => {
+      const points = cell.frames
+        .slice()
+        .sort((a, b) => a.frame_number - b.frame_number)
+        .map((f) => ({ x: Number(f.frame_number), y: getFeatureValueByType(f, chartType, config) }))
+        .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+      return { id: cell.cell_id, points }
+    })
+    .filter((s) => s.points.length > 1)
+
+  if (!series.length) {
+    ctx.fillStyle = '#6b7280'
+    ctx.font = '18px Arial'
+    ctx.fillText('暂无可绘制数据', marginLeft + 20, marginTop + 40)
+    return canvas.toDataURL('image/png')
+  }
+
+  const xVals = series.flatMap((s) => s.points.map((p) => p.x))
+  const yVals = series.flatMap((s) => s.points.map((p) => p.y))
+  const xMin = Math.min(...xVals)
+  const xMax = Math.max(...xVals)
+  const yMin = Math.min(...yVals)
+  const yMax = Math.max(...yVals)
+  const xRange = Math.max(1, xMax - xMin)
+  const yRange = Math.max(1, yMax - yMin)
+
+  series.forEach((s, idx) => {
+    ctx.strokeStyle = palette[idx % palette.length] || '#2563eb'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    s.points.forEach((p, pointIdx) => {
+      const x = marginLeft + ((p.x - xMin) / xRange) * plotWidth
+      const y = marginTop + plotHeight - ((p.y - yMin) / yRange) * plotHeight
+      if (pointIdx === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    })
+    ctx.stroke()
+  })
+
+  return canvas.toDataURL('image/png')
+}
+
+function applyChartToSlot(slot: 'A' | 'B', chartType: CompareChartType) {
+  const cells = slot === 'A' ? allCellsCacheA.value : allCellsCacheB.value
+  const taskName = slot === 'A' ? (recordA.value?.task_name || '任务A') : (recordB.value?.task_name || '任务B')
+  const config = slotConfigs.value[slot][chartType]
+  const titleMap: Record<CompareChartType, string> = {
+    timeSeries: '折线图',
+    histogram: '直方图',
+    scatter: '散点图',
+    trajectory: '轨迹图',
+  }
+  const image = renderBasicChartImage(cells, `${taskName} - ${titleMap[chartType]}`, chartType, config)
+
+  if (slot === 'A') {
+    chartTypeA.value = chartType
+    chartImageA.value = image
+    chartRenderTypeA.value = chartType
+    chartLabelA.value = `${taskName} · ${titleMap[chartType]}`
+  } else {
+    chartTypeB.value = chartType
+    chartImageB.value = image
+    chartRenderTypeB.value = chartType
+    chartLabelB.value = `${taskName} · ${titleMap[chartType]}`
+  }
+
+  const record = slot === 'A' ? recordA.value : recordB.value
+  if (record?.task_id) {
+    sessionStorage.setItem(
+      `compareChartSlot_${slot}`,
+      JSON.stringify({
+        slot,
+        taskId: record.task_id,
+        chartType,
+        chartLabel: slot === 'A' ? chartLabelA.value : chartLabelB.value,
+        imageDataUrl: image,
+        updatedAt: Date.now(),
+      }),
+    )
+  }
+}
+
+watch(chartTypeA, (nextType) => {
+  if (!recordA.value?.task_id) return
+  applyChartToSlot('A', nextType)
+})
+
+watch(chartTypeB, (nextType) => {
+  if (!recordB.value?.task_id) return
+  applyChartToSlot('B', nextType)
+})
+
+function ensureDefaultCharts() {
+  if (!chartImageA.value) {
+    applyChartToSlot('A', chartTypeA.value)
+  }
+  if (!chartImageB.value) {
+    applyChartToSlot('B', chartTypeB.value)
+  }
 }
 
 // 加载图片A
@@ -425,11 +754,20 @@ onMounted(async () => {
   }
 
   loadCompareChartCache()
+  ensureDefaultCharts()
 })
 
 // ==================== 视频A的控制函数 ====================
 // 视频A下一帧
 function handleNextFrameA() {
+  if (isFrameSyncMode.value) {
+    const syncTotal = getSyncTotalFrames()
+    if (currentFrameIndexA.value < syncTotal - 1) {
+      setSyncedFrameIndex(currentFrameIndexA.value + 1)
+    }
+    return
+  }
+
   const totalFrames = recordA.value?.result?.total_frames || 0
   if (currentFrameIndexA.value < totalFrames - 1) {
     currentFrameIndexA.value++
@@ -439,6 +777,13 @@ function handleNextFrameA() {
 
 // 视频A上一帧
 function handlePrevFrameA() {
+  if (isFrameSyncMode.value) {
+    if (currentFrameIndexA.value > 0) {
+      setSyncedFrameIndex(currentFrameIndexA.value - 1)
+    }
+    return
+  }
+
   if (currentFrameIndexA.value > 0) {
     currentFrameIndexA.value--
     loadImageA()
@@ -447,6 +792,11 @@ function handlePrevFrameA() {
 
 // 视频A回到第一帧
 function handleGoToFirstFrameA() {
+  if (isFrameSyncMode.value) {
+    setSyncedFrameIndex(0)
+    return
+  }
+
   currentFrameIndexA.value = 0
   loadImageA()
 }
@@ -454,6 +804,14 @@ function handleGoToFirstFrameA() {
 // 视频A跳转到指定帧
 function handleJumpToFrameA(frameStr: string) {
   const frame = parseInt(frameStr, 10)
+  if (isFrameSyncMode.value) {
+    const syncTotal = getSyncTotalFrames()
+    if (!isNaN(frame) && frame >= 1 && frame <= syncTotal) {
+      setSyncedFrameIndex(frame - 1)
+    }
+    return
+  }
+
   const total = recordA.value?.result?.total_frames || 0
 
   if (!isNaN(frame) && frame >= 1 && frame <= total) {
@@ -465,6 +823,14 @@ function handleJumpToFrameA(frameStr: string) {
 // ==================== 视频B的控制函数 ====================
 // 视频B下一帧
 function handleNextFrameB() {
+  if (isFrameSyncMode.value) {
+    const syncTotal = getSyncTotalFrames()
+    if (currentFrameIndexB.value < syncTotal - 1) {
+      setSyncedFrameIndex(currentFrameIndexB.value + 1)
+    }
+    return
+  }
+
   const totalFrames = recordB.value?.result?.total_frames || 0
   if (currentFrameIndexB.value < totalFrames - 1) {
     currentFrameIndexB.value++
@@ -474,6 +840,13 @@ function handleNextFrameB() {
 
 // 视频B上一帧
 function handlePrevFrameB() {
+  if (isFrameSyncMode.value) {
+    if (currentFrameIndexB.value > 0) {
+      setSyncedFrameIndex(currentFrameIndexB.value - 1)
+    }
+    return
+  }
+
   if (currentFrameIndexB.value > 0) {
     currentFrameIndexB.value--
     loadImageB()
@@ -482,6 +855,11 @@ function handlePrevFrameB() {
 
 // 视频B回到第一帧
 function handleGoToFirstFrameB() {
+  if (isFrameSyncMode.value) {
+    setSyncedFrameIndex(0)
+    return
+  }
+
   currentFrameIndexB.value = 0
   loadImageB()
 }
@@ -489,6 +867,14 @@ function handleGoToFirstFrameB() {
 // 视频B跳转到指定帧
 function handleJumpToFrameB(frameStr: string) {
   const frame = parseInt(frameStr, 10)
+  if (isFrameSyncMode.value) {
+    const syncTotal = getSyncTotalFrames()
+    if (!isNaN(frame) && frame >= 1 && frame <= syncTotal) {
+      setSyncedFrameIndex(frame - 1)
+    }
+    return
+  }
+
   const total = recordB.value?.result?.total_frames || 0
 
   if (!isNaN(frame) && frame >= 1 && frame <= total) {
@@ -508,11 +894,13 @@ const totalFramesB = computed(() => recordB.value?.result?.total_frames || 0)
 
 // 处理返回对比页面
 function handleBackToCompare() {
-  store.backToCompareList(router)
+  store.compareRecords = []
+  router.push({ name: isModelCompareMode.value ? 'modelUpload' : 'compare' })
 }
 
 watch([recordA, recordB], () => {
   restoreFrameState()
+  alignFrameIndexesForSync()
   if (recordA.value?.task_id) {
     loadImageA()
   }
@@ -521,6 +909,7 @@ watch([recordA, recordB], () => {
   }
   saveFrameState()
   loadCompareChartCache()
+  ensureDefaultCharts()
 })
 </script>
 
@@ -550,6 +939,7 @@ watch([recordA, recordB], () => {
           <p class="header-subtitle">
             {{ recordA?.task_name || '未知' }} vs {{ recordB?.task_name || '未知' }}
           </p>
+          <p v-if="isFrameSyncMode" class="header-mode-tip">模型对比模式：帧同步已开启</p>
         </div>
       </div>
     </div>
@@ -854,7 +1244,8 @@ watch([recordA, recordB], () => {
               <select v-model="chartTypeA" class="chart-type-select">
                 <option v-for="opt in chartTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
-              <button class="btn-control" @click="handleRegenerateA">{{ chartImageA ? '重新绘图' : '去绘图' }}</button>
+              <button class="btn-control" @click="handleRegenerateA">重新绘图</button>
+              <button class="btn-control" @click="goToChartDrawing('A')">调整图例</button>
             </div>
             <div :class="['chart-placeholder', 'chart-placeholder-clickable', { 'chart-placeholder-has-image': !!chartImageA }]" @click="handleRegenerateA">
               <img v-if="chartImageA" :src="chartImageA" :class="['compare-chart-image', { 'compare-chart-image-wide': chartRenderTypeA === 'timeSeries' || chartRenderTypeA === 'histogram' }]" alt="任务A对比图" />
@@ -889,7 +1280,8 @@ watch([recordA, recordB], () => {
               <select v-model="chartTypeB" class="chart-type-select">
                 <option v-for="opt in chartTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
-              <button class="btn-control" @click="handleRegenerateB">{{ chartImageB ? '重新绘图' : '去绘图' }}</button>
+              <button class="btn-control" @click="handleRegenerateB">重新绘图</button>
+              <button class="btn-control" @click="goToChartDrawing('B')">调整图例</button>
             </div>
             <div :class="['chart-placeholder', 'chart-placeholder-clickable', { 'chart-placeholder-has-image': !!chartImageB }]" @click="handleRegenerateB">
               <img v-if="chartImageB" :src="chartImageB" :class="['compare-chart-image', { 'compare-chart-image-wide': chartRenderTypeB === 'timeSeries' || chartRenderTypeB === 'histogram' }]" alt="任务B对比图" />
@@ -1036,7 +1428,7 @@ watch([recordA, recordB], () => {
 
           <div class="modal-footer">
             <button class="btn-secondary" @click="closeChartConfigModal">取消</button>
-            <button class="btn-primary" @click="confirmChartConfigAndDraw">前往绘图</button>
+            <button class="btn-primary" @click="confirmChartConfigAndDraw">生成图表</button>
           </div>
         </div>
       </div>
@@ -1135,6 +1527,12 @@ watch([recordA, recordB], () => {
   color: var(--text-muted);
   margin: 0;
   transition: color 0.3s;
+}
+
+.header-mode-tip {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--accent-blue);
 }
 
 :global(:root:not(.dark)) .header-subtitle {

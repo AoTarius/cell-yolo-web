@@ -42,3 +42,6 @@ dist-ssr/
 .env
 .env.local
 .env.*.local
+
+# User local storage
+.user-storage/
