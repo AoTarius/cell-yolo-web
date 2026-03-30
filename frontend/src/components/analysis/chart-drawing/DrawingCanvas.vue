@@ -1510,7 +1510,7 @@ onUnmounted(() => {
             <h2>{{ chartTitle }}</h2>
             <div class="header-actions">
                 <div class="font-control">
-                    <label>字体</label>
+                    <label>字号x</label>
                     <input v-model.number="baseFontSize" type="range" min="10" max="22" step="1" />
                     <span>{{ baseFontSize }}</span>
                 </div>

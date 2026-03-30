@@ -120,7 +120,7 @@ const renderMarkdown = (content: string) => {
 
 /* 消息内容 */
 .ai-message-content {
-  max-width: 32rem;
+  max-width: 100%;
   padding: 0.75rem 1rem;
   border-radius: 1rem;
   color: inherit;
