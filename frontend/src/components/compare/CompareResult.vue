@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import '@/assets/styles/colors.css'
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useAnalysisStore, type CellData } from '@/stores/analysisStore'
 import { useAnalysisApi } from '@/composables/useAnalysisApi'
 import { useToast } from '@/composables/useToast'
 import { useRouter, useRoute } from 'vue-router'
+import * as echarts from 'echarts'
+import { buildOption, filterDataFields as cbFilterDataFields } from '@/lib/chartBuilder'
 
 const store = useAnalysisStore()
 const api = useAnalysisApi()
@@ -132,6 +134,8 @@ const chartLabelA = ref('')
 const chartLabelB = ref('')
 const chartRenderTypeA = ref<CompareChartType>('scatter')
 const chartRenderTypeB = ref<CompareChartType>('scatter')
+const chartImageVariantA = ref<'wide' | 'square' | ''>('')
+const chartImageVariantB = ref<'wide' | 'square' | ''>('')
 
 const featureOptions = [
   { label: '面积', value: 'area' },
@@ -192,7 +196,7 @@ function getDefaultConfigByType(type: CompareChartType) {
 
   if (type === 'trajectory') {
     return {
-      trajectoryType: 'normal',
+      trajectoryType: 'normalized',
       colorMap: 'time',
       cellSelection: 'top',
       sortBy: 'tracking_duration',
@@ -223,10 +227,23 @@ function loadCompareChartCache() {
       const parsed = JSON.parse(aRaw)
       if (parsed?.taskId === recordA.value?.task_id) {
         const parsedType = (parsed.chartType || 'scatter') as CompareChartType
-        chartImageA.value = parsed.imageDataUrl || ''
-        chartLabelA.value = parsed.chartLabel || ''
-        chartRenderTypeA.value = parsedType
-        chartTypeA.value = parsedType
+        // ignore stale 3D backend exports or blob urls for compare (compare supports normalized only)
+        const labelLower = String(parsed.chartLabel || '').toLowerCase()
+        const imgUrl = parsed.imageDataUrl || ''
+        if (parsedType === 'trajectory' && (labelLower.includes('3d') || String(imgUrl).startsWith('blob:'))) {
+          // skip using this cached image
+        } else {
+          chartImageA.value = imgUrl
+          chartLabelA.value = parsed.chartLabel || ''
+          chartRenderTypeA.value = parsedType
+          chartTypeA.value = parsedType
+        }
+        
+        // set image variant for proper display
+        const cfgA = slotConfigs.value.A?.[parsedType]
+            if (parsedType === 'timeSeries' || parsedType === 'histogram') chartImageVariantA.value = 'wide'
+            else if (parsedType === 'scatter') chartImageVariantA.value = 'square'
+            else if (parsedType === 'trajectory') chartImageVariantA.value = 'square'
       }
     } catch {
       // ignore bad cache
@@ -238,10 +255,20 @@ function loadCompareChartCache() {
       const parsed = JSON.parse(bRaw)
       if (parsed?.taskId === recordB.value?.task_id) {
         const parsedType = (parsed.chartType || 'scatter') as CompareChartType
-        chartImageB.value = parsed.imageDataUrl || ''
-        chartLabelB.value = parsed.chartLabel || ''
-        chartRenderTypeB.value = parsedType
-        chartTypeB.value = parsedType
+        const labelLower = String(parsed.chartLabel || '').toLowerCase()
+        const imgUrl = parsed.imageDataUrl || ''
+        if (parsedType === 'trajectory' && (labelLower.includes('3d') || String(imgUrl).startsWith('blob:'))) {
+          // skip stale 3D cached image
+        } else {
+          chartImageB.value = imgUrl
+          chartLabelB.value = parsed.chartLabel || ''
+          chartRenderTypeB.value = parsedType
+          chartTypeB.value = parsedType
+        }
+        const cfgB = slotConfigs.value.B?.[parsedType]
+        if (parsedType === 'timeSeries' || parsedType === 'histogram') chartImageVariantB.value = 'wide'
+        else if (parsedType === 'scatter') chartImageVariantB.value = 'square'
+        else if (parsedType === 'trajectory') chartImageVariantB.value = 'square'
       }
     } catch {
       // ignore bad cache
@@ -287,15 +314,19 @@ function confirmChartConfigAndDraw() {
   }
 
   if (chartConfigType.value === 'scatter') {
-    const arr = chartConfigFramesText.value
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isFinite(n))
-    chartConfigDraft.value.selectedFrames = arr.length ? arr : [2, 25, 50, 75]
+    // Compare should always use single-frame scatter; normalize selectedFrame
+    chartConfigDraft.value.frameMode = 'single'
+    const n = Number(chartConfigDraft.value.selectedFrame || 1)
+    chartConfigDraft.value.selectedFrame = Number.isFinite(n) ? n : 1
+  }
+
+  if (chartConfigType.value === 'trajectory') {
+    // Enforce normalized trajectories in compare flow
+    chartConfigDraft.value.trajectoryType = 'normalized'
   }
 
   slotConfigs.value[chartConfigSlot.value][chartConfigType.value] = JSON.parse(JSON.stringify(chartConfigDraft.value))
-  applyChartToSlot(chartConfigSlot.value, chartConfigType.value)
+  applyChartToSlot(chartConfigSlot.value, chartConfigType.value, true)
   chartConfigModalVisible.value = false
 }
 
@@ -553,7 +584,67 @@ function renderBasicChartImage(cells: CellData[], title: string, chartType: Comp
   return canvas.toDataURL('image/png')
 }
 
-function applyChartToSlot(slot: 'A' | 'B', chartType: CompareChartType) {
+async function renderEchartsImage(cells: CellData[], chartType: CompareChartType, config: Record<string, any>, width = 900, height = 520, opts: Record<string, any> = {}) {
+  const container = document.createElement('div')
+  container.style.width = `${width}px`
+  container.style.height = `${height}px`
+  container.style.position = 'fixed'
+  container.style.left = '-9999px'
+  container.style.top = '-9999px'
+  container.style.overflow = 'hidden'
+  document.body.appendChild(container)
+  const chart = echarts.init(container, undefined, { renderer: 'canvas' })
+  try {
+    // ensure correct pixel dimensions for rendering
+    chart.resize({ width, height })
+    // Apply same initial cell filtering as DrawingCanvas (store.filterCells)
+    const preFiltered = typeof store.filterCells === 'function' ? store.filterCells(cells, config as any) : cells
+    const filtered = cbFilterDataFields(preFiltered, chartType, config)
+    const option = buildOption(chartType, filtered, config, opts)
+    chart.setOption(option, true)
+    // give ECharts a moment to render visuals
+    await new Promise((r) => setTimeout(r, 80))
+    const pixelRatio = Number(opts.pixelRatio || 2)
+    const dataUrl = chart.getDataURL({ pixelRatio, backgroundColor: '#ffffff' })
+    return dataUrl
+  } finally {
+    try { chart.dispose() } catch {}
+    try { document.body.removeChild(container) } catch {}
+  }
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string | null> {
+  return await new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function fetch3dBlobWithRetry(taskId: string | number, query: string, attempts = 5): Promise<Blob | null> {
+  let delay = 400
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const resp = await fetch(`/api/trajectory-3d/${taskId}/${query}`)
+      if (resp.ok) {
+        const blob = await resp.blob()
+        // basic sanity check: blob size
+        if (blob && blob.size > 100) return blob
+      } else {
+        // if server returns 202 Accepted or 503, wait and retry
+        // fallthrough to wait
+      }
+    } catch (e) {
+      // ignore network error and retry
+    }
+    await new Promise((r) => setTimeout(r, delay))
+    delay = Math.min(2000, delay * 1.8)
+  }
+  return null
+}
+
+async function applyChartToSlot(slot: 'A' | 'B', chartType: CompareChartType, forceRegen = false) {
   const cells = slot === 'A' ? allCellsCacheA.value : allCellsCacheB.value
   const taskName = slot === 'A' ? (recordA.value?.task_name || '任务A') : (recordB.value?.task_name || '任务B')
   const config = slotConfigs.value[slot][chartType]
@@ -563,21 +654,71 @@ function applyChartToSlot(slot: 'A' | 'B', chartType: CompareChartType) {
     scatter: '散点图',
     trajectory: '轨迹图',
   }
-  const image = renderBasicChartImage(cells, `${taskName} - ${titleMap[chartType]}`, chartType, config)
+  let image = ''
+  const record = slot === 'A' ? recordA.value : recordB.value
+
+  // Prefer any existing exported image in sessionStorage for this slot/task/chartType
+  if (!forceRegen) {
+    try {
+      const raw = sessionStorage.getItem(`compareChartSlot_${slot}`)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.taskId === record?.task_id && parsed.chartType === chartType && parsed.imageDataUrl) {
+          image = parsed.imageDataUrl
+        }
+      }
+    } catch {
+      image = ''
+    }
+  }
+
+  // If no exported image found, attempt ECharts offscreen rendering first, otherwise fallback to canvas
+  if (!image) {
+    // Special-case: 3D trajectory may be rendered by backend Python service — try fetching it first
+    // no backend 3D fetch in compare page; always render locally with ECharts (or fallback canvas)
+    try {
+      // determine rendering size and font scale to match DrawingCanvas
+      const isSquare = chartType === 'scatter' || chartType === 'trajectory'
+      const width = isSquare ? 520 : 900
+      const height = isSquare ? 520 : 520
+      const baseFontSize = Number(sessionStorage.getItem('drawingBaseFontSize') || 14)
+      const legendFontSize = Number(sessionStorage.getItem('drawingLegendFontSize') || 12)
+      const titleFontSize = Number(sessionStorage.getItem('drawingTitleFontSize') || 16)
+
+      image = await renderEchartsImage(cells, chartType, config, width, height, {
+        baseFontSize,
+        legendFontSize,
+        titleFontSize,
+        pixelRatio: 2,
+      })
+    } catch (err) {
+      console.warn('ECharts 离屏渲染失败，退回到 canvas 渲染', err)
+      try {
+        image = renderBasicChartImage(cells, `${taskName} - ${titleMap[chartType]}`, chartType, config)
+      } catch (e) {
+        image = ''
+      }
+    }
+  }
 
   if (slot === 'A') {
     chartTypeA.value = chartType
     chartImageA.value = image
     chartRenderTypeA.value = chartType
+    if (chartType === 'timeSeries' || chartType === 'histogram') chartImageVariantA.value = 'wide'
+    else if (chartType === 'scatter') chartImageVariantA.value = 'square'
+    else if (chartType === 'trajectory') chartImageVariantA.value = 'square'
     chartLabelA.value = `${taskName} · ${titleMap[chartType]}`
   } else {
     chartTypeB.value = chartType
     chartImageB.value = image
     chartRenderTypeB.value = chartType
+    if (chartType === 'timeSeries' || chartType === 'histogram') chartImageVariantB.value = 'wide'
+    else if (chartType === 'scatter') chartImageVariantB.value = 'square'
+    else if (chartType === 'trajectory') chartImageVariantB.value = 'square'
     chartLabelB.value = `${taskName} · ${titleMap[chartType]}`
   }
 
-  const record = slot === 'A' ? recordA.value : recordB.value
   if (record?.task_id) {
     sessionStorage.setItem(
       `compareChartSlot_${slot}`,
@@ -700,7 +841,7 @@ function loadCurrentFrameCellsA() {
   // 筛选并提取当前帧数据
   currentFrameCellsA.value = allCellsCacheA.value
     .map(cell => {
-      const frameData = cell.frames.find(f => f.frame_number === currentFrameNum)
+      const frameData = cell.frames.find(f => Number(f.frame_number) === currentFrameNum)
       if (!frameData) return null
       // 返回新对象，只保留当前帧数据在 frames[0]
       return {
@@ -722,7 +863,7 @@ function loadCurrentFrameCellsB() {
   
   currentFrameCellsB.value = allCellsCacheB.value
     .map(cell => {
-      const frameData = cell.frames.find(f => f.frame_number === currentFrameNum)
+      const frameData = cell.frames.find(f => Number(f.frame_number) === currentFrameNum)
       if (!frameData) return null
       return {
         ...cell,
@@ -1183,10 +1324,10 @@ watch([recordA, recordB], () => {
                 <tbody>
                   <tr v-for="cell in currentFrameCellsA" :key="cell.cell_id">
                     <td class="cell-id">{{ cell.cell_id }}</td>
-                    <td>{{ cell.frames[0]?.position.x.toFixed(1) }}, {{ cell.frames[0]?.position.y.toFixed(1) }}</td>
-                    <td>{{ cell.frames[0]?.area.toFixed(1) }}</td>
-                    <td>{{ cell.frames[0]?.velocity.speed.toFixed(2) }}</td>
-                    <td>{{ cell.frames[0]?.velocity.vx.toFixed(2) }}, {{ cell.frames[0]?.velocity.vy.toFixed(2) }}</td>
+                    <td>{{ (cell.frames[0]?.position?.x ?? 0).toFixed(1) }}, {{ (cell.frames[0]?.position?.y ?? 0).toFixed(1) }}</td>
+                    <td>{{ (cell.frames[0]?.area ?? 0).toFixed(1) }}</td>
+                    <td>{{ (cell.frames[0]?.velocity?.speed ?? 0).toFixed(2) }}</td>
+                    <td>{{ (cell.frames[0]?.velocity?.vx ?? 0).toFixed(2) }}, {{ (cell.frames[0]?.velocity?.vy ?? 0).toFixed(2) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1222,10 +1363,10 @@ watch([recordA, recordB], () => {
                 <tbody>
                   <tr v-for="cell in currentFrameCellsB" :key="cell.cell_id">
                     <td class="cell-id">{{ cell.cell_id }}</td>
-                    <td>{{ cell.frames[0]?.position.x.toFixed(1) }}, {{ cell.frames[0]?.position.y.toFixed(1) }}</td>
-                    <td>{{ cell.frames[0]?.area.toFixed(1) }}</td>
-                    <td>{{ cell.frames[0]?.velocity.speed.toFixed(2) }}</td>
-                    <td>{{ cell.frames[0]?.velocity.vx.toFixed(2) }}, {{ cell.frames[0]?.velocity.vy.toFixed(2) }}</td>
+                    <td>{{ (cell.frames[0]?.position?.x ?? 0).toFixed(1) }}, {{ (cell.frames[0]?.position?.y ?? 0).toFixed(1) }}</td>
+                    <td>{{ (cell.frames[0]?.area ?? 0).toFixed(1) }}</td>
+                    <td>{{ (cell.frames[0]?.velocity?.speed ?? 0).toFixed(2) }}</td>
+                    <td>{{ (cell.frames[0]?.velocity?.vx ?? 0).toFixed(2) }}, {{ (cell.frames[0]?.velocity?.vy ?? 0).toFixed(2) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1248,7 +1389,16 @@ watch([recordA, recordB], () => {
               <button class="btn-control" @click="goToChartDrawing('A')">调整图例</button>
             </div>
             <div :class="['chart-placeholder', 'chart-placeholder-clickable', { 'chart-placeholder-has-image': !!chartImageA }]" @click="handleRegenerateA">
-              <img v-if="chartImageA" :src="chartImageA" :class="['compare-chart-image', { 'compare-chart-image-wide': chartRenderTypeA === 'timeSeries' || chartRenderTypeA === 'histogram' }]" alt="任务A对比图" />
+              <img
+                v-if="chartImageA"
+                :src="chartImageA"
+                :class="[
+                  'compare-chart-image',
+                  chartImageVariantA === 'wide' ? 'compare-chart-image-wide' : '',
+                  chartImageVariantA === 'square' ? 'compare-chart-image-square' : ''
+                ]"
+                alt="任务A对比图"
+              />
               <template v-else>
                 <svg
                   class="placeholder-icon"
@@ -1284,7 +1434,16 @@ watch([recordA, recordB], () => {
               <button class="btn-control" @click="goToChartDrawing('B')">调整图例</button>
             </div>
             <div :class="['chart-placeholder', 'chart-placeholder-clickable', { 'chart-placeholder-has-image': !!chartImageB }]" @click="handleRegenerateB">
-              <img v-if="chartImageB" :src="chartImageB" :class="['compare-chart-image', { 'compare-chart-image-wide': chartRenderTypeB === 'timeSeries' || chartRenderTypeB === 'histogram' }]" alt="任务B对比图" />
+              <img
+                v-if="chartImageB"
+                :src="chartImageB"
+                :class="[
+                  'compare-chart-image',
+                  chartImageVariantB === 'wide' ? 'compare-chart-image-wide' : '',
+                  chartImageVariantB === 'square' ? 'compare-chart-image-square' : ''
+                ]"
+                alt="任务B对比图"
+              />
               <template v-else>
                 <svg
                   class="placeholder-icon"
@@ -1373,16 +1532,11 @@ watch([recordA, recordB], () => {
                 <label>模式</label>
                 <select v-model="chartConfigDraft.frameMode">
                   <option value="single">单帧</option>
-                  <option value="quad">四宫格</option>
                 </select>
               </div>
-              <div class="form-item" v-if="chartConfigDraft.frameMode === 'single'">
+              <div class="form-item">
                 <label>帧号</label>
                 <input v-model.number="chartConfigDraft.selectedFrame" type="number" min="1" />
-              </div>
-              <div class="form-item" v-else>
-                <label>四帧</label>
-                <input v-model="chartConfigFramesText" type="text" placeholder="2,25,50,75" />
               </div>
               <div class="form-item">
                 <label>点大小</label>
@@ -1402,9 +1556,7 @@ watch([recordA, recordB], () => {
               <div class="form-item">
                 <label>轨迹类型</label>
                 <select v-model="chartConfigDraft.trajectoryType">
-                  <option value="normal">普通</option>
                   <option value="normalized">归一化</option>
-                  <option value="3d">3D</option>
                 </select>
               </div>
               <div class="form-item">
@@ -1890,19 +2042,26 @@ watch([recordA, recordB], () => {
 }
 
 .compare-chart-image {
-  width: auto;
+  width: 100%;
   height: auto;
   display: block;
   max-width: 100%;
-  max-height: 100%;
   object-fit: contain;
 }
 
 .compare-chart-image-wide {
   image-rendering: auto;
   max-width: 92%;
-  max-height: 92%;
+  height: auto;
   margin: auto;
+  object-fit: contain;
+}
+
+.compare-chart-image-square {
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
   object-fit: contain;
 }
 
