@@ -466,7 +466,6 @@ function resetSort() {
 }
 
 .btn-close:hover {
-  background: var(--danger-bg);
   border-color: var(--danger-light);
   color: var(--danger-light);
 }
@@ -699,7 +698,6 @@ function resetSort() {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: var(--danger-bg);
   border: 1px solid var(--danger-light);
   color: var(--danger-light);
   cursor: pointer;

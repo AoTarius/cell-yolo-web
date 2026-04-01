@@ -565,7 +565,6 @@ function handleRangeValueChange(condition: FilterCondition, index: number, newVa
 }
 
 .btn-close:hover {
-  background: var(--danger-bg);
   border-color: var(--danger-light);
   color: var(--danger-light);
 }
