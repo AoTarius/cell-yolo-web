@@ -10,6 +10,11 @@
 - **参数自定义**: 支持调整置信度阈值、图像尺寸、输出帧率等参数
 - **实时进度**: 通过 WebSocket 实时推送处理进度
 - **结果展示**: 标注视频播放、细胞统计、轨迹数据查看
+- **自由绘图**: 支持自定义 Python 代码分析细胞追踪数据
+  - 在线 Python 代码编辑器（基于 CodeMirror）
+  - 内置 10+ 数据分析示例模板
+  - 支持多种可视化类型（折线图、散点图、热力图、3D 图等）
+  - 实时代码预览和执行
 - **视频播放器功能**:
   - 双视频对比播放（原始视频 vs 标注视频）
   - 支持并排/上下布局切换
@@ -29,17 +34,26 @@ web/
 ├── backend/                 # Django 后端
 │   ├── api/                # API 应用
 │   │   ├── services/       # 业务逻辑服务
-│   │   │   ├── video_processor.py  # 视频处理服务
-│   │   │   └── convert_results.py  # YOLO 追踪结果转换
+│   │   │   └── video_processor.py  # 视频处理服务
+│   │   ├── management/     # Django 管理命令
+│   │   │   └── commands/
+│   │   │       └── purge_soft_deleted.py  # 软删除数据清理
+│   │   ├── migrations/     # 数据库迁移
 │   │   ├── views.py        # API 视图
 │   │   ├── urls.py         # API 路由
 │   │   ├── websocket.py    # WebSocket 消费者
-│   │   └── routing.py      # WebSocket 路由
+│   │   ├── routing.py      # WebSocket 路由
+│   │   └── ai.py           # AI 相关接口
 │   ├── backend/            # Django 配置
 │   │   ├── settings.py     # 设置文件（已配置 sys.path）
 │   │   ├── urls.py         # 主路由
 │   │   └── asgi.py         # ASGI 配置（WebSocket）
+│   ├── scripts/            # 数据库初始化脚本
+│   │   ├── init_db.py      # 数据库初始化
+│   │   ├── init_data.py    # 初始数据导入
+│   │   └── rebuild_db.py   # 数据库重建
 │   ├── models/             # YOLO 模型文件
+│   ├── runs/               # 模型训练输出
 │   ├── media/              # 媒体文件存储
 │   │   └── tasks/          # 任务数据
 │   ├── requirements.txt    # Python 依赖
@@ -47,7 +61,6 @@ web/
 ├── libs/                   # 本地库文件
 │   ├── ultralytics/        # YOLOv8 和 DeepSORT 库
 │   │   ├── yolo/           # YOLO 核心模块
-│   │   │   └── v8/segment/deep_sort_pytorch/  # DeepSORT 追踪
 │   │   ├── hub/            # HUB 模块
 │   │   ├── models/         # 模型定义
 │   │   ├── nn/             # 神经网络模块
@@ -62,67 +75,107 @@ web/
 │   │   ├── api/            # API 服务层
 │   │   ├── components/     # Vue 组件
 │   │   │   ├── analysis/   # 分析结果组件
-│   │   │   │   ├── AnalysisResult.vue  # 分析结果主组件
-│   │   │   │   ├── ResultHeader.vue    # 结果头部（含视图切换）
-│   │   │   │   ├── VideoPlayer.vue     # 视频播放器（双视频+控制）
-│   │   │   │   ├── CellPopulationChart.vue  # 细胞群体图表
-│   │   │   │   ├── CellDetailList.vue  # 细胞详情列表
-│   │   │   │   └── CellDetailPanel.vue # 细胞详情面板
-│   │   │   ├── common/     # 通用组件
-│   │   │   │   └── Sidebar.vue         # 侧边栏导航
-│   │   │   ├── upload/     # 上传组件
-│   │   │   │   └── UploadPanel.vue     # 上传面板
-│   │   │   └── progress/   # 进度组件
-│   │   │       └── ProgressView.vue    # 进度展示
+│   │   │   │   ├── cell-details/    # 细胞详情
+│   │   │   │   ├── chart-drawing/   # 图表绘制
+│   │   │   │   ├── frame-analysis/  # 帧分析
+│   │   │   │   ├── layout/          # 布局组件
+│   │   │   │   └── video-comparison/# 视频对比
+│   │   │   ├── ai/             # AI 相关组件
+│   │   │   ├── common/         # 通用组件
+│   │   │   └── compare/        # 对比组件
 │   │   ├── composables/    # 组合式函数
+│   │   ├── lib/            # 工具库
 │   │   ├── stores/         # Pinia 状态管理
+│   │   ├── types/          # TypeScript 类型定义
+│   │   ├── utils/          # 工具函数
 │   │   ├── views/          # 页面视图
-│   │   │   ├── CellTrackingView.vue   # 细胞追踪主视图
-│   │   │   ├── ModelUploadView.vue    # 模型上传视图
-│   │   │   └── ProgressView.vue       # 进度视图
-│   │   └── router/         # 路由配置
+│   │   │   ├── analysis/   # 分析相关页面
+│   │   │   │   ├── FreePlotView.vue    # 自由绘图
+│   │   │   │   ├── ProgressView.vue    # 进度展示
+│   │   │   │   └── UploadView.vue      # 上传页面
+│   │   │   ├── auth/       # 认证相关页面
+│   │   │   ├── compare/    # 对比相关页面
+│   │   │   ├── home/       # 首页
+│   │   │   ├── import/     # 导入相关页面
+│   │   │   └── resource/   # 资源相关页面
+│   │   ├── router/         # 路由配置
+│   │   ├── App.vue         # 根组件
+│   │   └── main.ts         # 入口文件
+│   ├── docs/               # 前端文档
+│   │   ├── API-INTEGRATION.md
+│   │   ├── colors-analysis.md
+│   │   └── DEVELOPMENT.md
 │   └── package.json        # Node 依赖
 ├── docs/                   # 项目文档
-└── .vscode/                # VSCode 配置
-    └── settings.json       # Python 路径配置
+│   ├── examples/          # 数据分析示例代码
+│   │   ├── case01_data_structure_and_basics.py
+│   │   ├── case02_histogram_speed_distribution.py
+│   │   ├── case03_scatter_multiframe_positions.py
+│   │   ├── case04_heatmap_density_multiframe.py
+│   │   ├── case05_normalized_trajectories.py
+│   │   ├── case06_multi_metric_timeseries.py
+│   │   ├── case07_distribution_panels.py
+│   │   ├── case08_trajectory_3d_lines.py
+│   │   ├── case09_histogram_3d_multiframe.py
+│   │   └── case10_shape_activity_dashboard.py
+│   ├── 软件需求分析文档_v1.md
+│   ├── 项目日志.md
+│   ├── 原型设计文档.md
+│   └── 自由绘图MVP设计说明.md
+├── .gitignore
+├── QUICK-START.md
+└── README.md
 ```
 
 ## 📚 技术栈
 
 ### 前端
-- Vue 3 (Composition API)
-- TypeScript
-- Vite
-- TailwindCSS v4
-- Vue Router
-- Pinia
-- Axios
-- VueUse
-- Lucide Icons
+- Vue 3.5.27 (Composition API)
+- TypeScript 5.9.3
+- Vite 7.3.1
+- TailwindCSS 4.1.18
+- Vue Router 5.0.1
+- Pinia 3.0.4
+- Axios 1.13.5
+- VueUse 14.2.1
+- Lucide Icons 0.563.0
+- ECharts 5.6.0 (数据可视化)
+- ECharts GL 2.0.9 (3D 可视化)
+- @codemirror/lang-python (代码编辑器)
+- highlight.js (代码高亮)
+- marked (Markdown 渲染)
+- jszip (ZIP 文件处理)
+- Node.js 版本要求: ^20.19.0 || >=22.12.0
 
 ### 后端
-- Django 5.1+
-- Django REST Framework
-- Channels (WebSocket)
-- OpenCV (cv2)
-- NumPy
-- django-cors-headers
-- python-dotenv
-- PyMySQL
+- Django 4.2.28
+- Django REST Framework 3.15.2
+- Channels 4.2.2 (WebSocket)
+- OpenCV 4.13.0.92
+- NumPy 1.24.4
+- SciPy 1.10.1
+- Pandas 2.0.3
+- Polars 1.8.2
+- django-cors-headers 4.4.0
+- python-dotenv 1.0.1
+- PyMySQL 1.1.2
 - MySQL
 
 ### AI 模型
-- **ultralytics 8.0.3** (本地库，位于 `web/libs/ultralytics`)
+- **ultralytics 8.4.21** (本地库，位于 `web/libs/ultralytics`)
   - YOLOv8 (细胞分割)
-  - DeepSORT (目标追踪)
-- PyTorch 2.4.1+
-- torchvision 0.19.1+
+- **deep-sort-realtime 1.3.2** (目标追踪)
+- PyTorch 2.4.1
+- torchvision 0.19.1
 
 ### 依赖说明
 项目使用本地化的 ultralytics 库，通过以下方式配置：
 1. `web/libs/ultralytics/` - 本地 ultralytics 源码
 2. `.pth` 文件 - 自动将 web/libs 目录添加到 Python 路径
 3. `backend/settings.py` - Django 配置中自动添加路径
+
+**Python 版本要求**: 推荐 Python 3.10-3.12
+**Node.js 版本要求**: ^20.19.0 || >=22.12.0
 
 ## 🔌 API 接口
 
@@ -137,6 +190,33 @@ web/
 | WS | `/ws/task/:task_id/` | WebSocket 实时进度 |
 
 ## 🛠️ 工具
+
+### 自由绘图功能
+
+位置: `web/docs/examples/`
+
+提供 10+ 个数据分析示例模板，支持用户使用 Python 代码自定义分析细胞追踪数据。
+
+**可用的数据变量**：
+- `task_data`: 包含完整的任务追踪数据，包括 frame、track_id、area、speed、position 等字段
+
+**示例模板**：
+- `case01_data_structure_and_basics.py` - 数据结构展示和基础处理
+- `case02_histogram_speed_distribution.py` - 速度分布直方图
+- `case03_scatter_multiframe_positions.py` - 多帧位置散点图
+- `case04_heatmap_density_multiframe.py` - 多帧密度热力图
+- `case05_normalized_trajectories.py` - 归一化轨迹分析
+- `case06_multi_metric_timeseries.py` - 多指标时间序列
+- `case07_distribution_panels.py` - 分布面板图
+- `case08_trajectory_3d_lines.py` - 3D 轨迹线
+- `case09_histogram_3d_multiframe.py` - 3D 直方图
+- `case10_shape_activity_dashboard.py` - 形状与活动仪表板
+
+**使用方法**：
+1. 在分析结果页面点击"自由绘图"按钮
+2. 从模板列表中选择一个示例或编写自定义代码
+3. 点击"运行"按钮执行代码
+4. 查看生成的可视化结果
 
 ### TIF 转 MP4 工具
 
@@ -196,32 +276,30 @@ python manage.py purge_soft_deleted --force --dry-run
 
 详细的安装和启动步骤请参考: [QUICK-START.md](./QUICK-START.md)
 
-## 📖 文档
-
-- [软件需求分析文档](./docs/软件需求分析文档_v1.md)
-- [项目日志](./docs/项目日志.md)
-- [原型设计文档](./docs/原型设计文档.md)
-
 ## ⚠️ 注意事项
 
-1. **MySQL 数据库**:
+1. **版本要求**:
+   - Python: 推荐 3.10-3.12（当前环境 3.13.11 也可使用）
+   - Node.js: ^20.19.0 || >=22.12.0
+2. **MySQL 数据库**:
    - 需要先安装并启动 MySQL 服务
    - macOS: `brew install mysql && brew services start mysql`
    - Windows: 下载 MySQL Installer 并安装
    - 配置 `.env` 文件中的数据库连接信息
    - 运行 `scripts/init_db.py` 初始化数据库表结构
-2. **YOLO 模型**: 确保 `web/backend/models/` 目录下有 `yolov8s-seg.pt` 模型文件
-3. **依赖安装**:
+3. **YOLO 模型**: 确保 `web/backend/models/` 目录下有 `yolov8s-seg.pt` 模型文件
+4. **依赖安装**:
    - 需要安装 PyMySQL 和 python-dotenv
    - 需要安装 OpenCV 和 Channels 支持 WebSocket
    - 需要安装 PyTorch 和 torchvision
-   - ultralytics 和 deep_sort_pytorch 使用本地库（`web/libs/ultralytics`）
-4. **Python 路径配置**:
+   - ultralytics 使用本地库（`web/libs/ultralytics`）或通过 pip 安装 ultralytics==8.4.21
+   - deep-sort-realtime==1.3.2
+5. **Python 路径配置**:
    - 项目自动通过 `.pth` 文件和 `settings.py` 配置 Python 路径
    - VSCode 用户：已配置 `.vscode/settings.json`，可能需要重新加载窗口
-5. **Conda 环境**: 推荐使用 Conda 虚拟环境，便于管理依赖
-6. **内存要求**: 视频处理需要较多内存，建议 8GB+ RAM
-7. **处理时间**: 视频处理可能需要几分钟到几十分钟
+6. **Conda 环境**: 推荐使用 Conda 虚拟环境，便于管理依赖
+7. **内存要求**: 视频处理需要较多内存，建议 8GB+ RAM
+8. **处理时间**: 视频处理可能需要几分钟到几十分钟
 
 ## 🤝 贡献
 

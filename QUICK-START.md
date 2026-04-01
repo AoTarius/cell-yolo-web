@@ -5,8 +5,8 @@
 使用 Conda 创建名为 `cell-yolo` 的虚拟环境：
 
 ```bash
-# 创建虚拟环境（指定 Python 版本）
-conda create -n cell-yolo python=3.8 -y
+# 创建虚拟环境（指定 Python 版本，建议 3.10-3.12）
+conda create -n cell-yolo python=3.11 -y
 
 # 激活虚拟环境
 conda activate cell-yolo
@@ -94,22 +94,27 @@ pip install -r requirements.txt
 ```
 
 需要安装的主要依赖包括：
-- Django >= 4.2.28
-- djangorestframework >= 3.15.0
-- django-cors-headers >= 4.4.0
-- python-dotenv >= 1.0.0
-- **channels >= 4.0.0** (WebSocket 支持)
-- **opencv-python >= 4.8.0** (视频处理)
-- **numpy >= 1.24.0** (数值计算)
-- **torch >= 1.7.0** (PyTorch)
-- **torchvision >= 0.8.1** (PyTorch 视觉库)
-- **psutil** (系统工具)
-- **tqdm** (进度条)
-- **scipy** (科学计算)
-- **PyYAML** (配置解析)
-- **requests** (HTTP 请求)
-- **Pillow** (图像处理)
-- **matplotlib** (绘图)
+- Django == 4.2.28
+- djangorestframework == 3.15.2
+- django-cors-headers == 4.4.0
+- python-dotenv == 1.0.1
+- **channels == 4.2.2** (WebSocket 支持)
+- **opencv-python == 4.13.0.92** (视频处理)
+- **numpy == 1.24.4** (数值计算)
+- **torch == 2.4.1** (PyTorch)
+- **torchvision == 0.19.1** (PyTorch 视觉库)
+- **ultralytics == 8.4.21** (YOLO 模型)
+- **deep-sort-realtime == 1.3.2** (目标追踪)
+- **psutil == 7.2.2** (系统工具)
+- **tqdm == 4.67.3** (进度条)
+- **scipy == 1.10.1** (科学计算)
+- **pandas == 2.0.3** (数据分析)
+- **polars == 1.8.2** (高性能数据处理)
+- **PyYAML == 6.0.3** (配置解析)
+- **requests == 2.32.4** (HTTP 请求)
+- **Pillow == 10.4.0** (图像处理)
+- **matplotlib == 3.7.5** (绘图)
+- **seaborn == 0.13.2** (统计可视化)
 
 **注意**: ultralytics 和 deep_sort_pytorch 已作为本地库包含在 `web/libs/ultralytics` 目录中，无需额外安装。项目会自动通过以下方式配置 Python 路径：
 1. `.pth` 文件（在 Conda 环境的 site-packages 中）
@@ -223,15 +228,17 @@ python init_data.py
 # 在 conda 环境中测试
 python -c "import ultralytics; print(f'ultralytics 版本: {ultralytics.__version__}')"
 python -c "from ultralytics import YOLO; print('✓ YOLO 导入成功')"
-python -c "from deep_sort_pytorch.deep_sort import DeepSort; print('✓ DeepSORT 导入成功')"
+python -c "from deep_sort_realtime.deepsort_tracker import DeepSort; print('✓ DeepSORT 导入成功')"
 ```
 
 如果遇到导入错误，请检查：
 1. 确认已激活 conda 环境：`conda activate cell-yolo`
-2. 检查 `.pth` 文件是否存在：`ls ~/miniconda3/envs/cell-yolo/lib/python3.8/site-packages/ultralytics_local.pth`
+2. 检查 `.pth` 文件是否存在：`ls ~/miniconda3/envs/cell-yolo/lib/python3.11/site-packages/ultralytics_local.pth`
 3. 如果使用 VSCode，重新加载窗口：`Cmd + Shift + P` → "Reload Window"
 
 ### 第七步：安装前端 npm 包
+
+**Node.js 版本要求**: ^20.19.0 || >=22.12.0
 
 进入 frontend 目录并安装 Node.js 依赖：
 
@@ -248,7 +255,14 @@ npm install
 - Vue Router 5.0.1
 - Pinia 3.0.4
 - Axios 1.13.5
-- **ECharts 5.x**
+- **ECharts 5.6.0** (数据可视化)
+- **ECharts GL 2.0.9** (3D 可视化)
+- **@codemirror/lang-python** (Python 代码编辑器)
+- **highlight.js** (代码高亮)
+- **marked** (Markdown 渲染)
+- **jszip** (ZIP 文件处理)
+- **@vueuse/core** (Vue 工具集)
+- **lucide-vue-next** (图标库)
 
 
 ## ▶️ 启动前后端服务
@@ -295,6 +309,67 @@ npm run dev
 | WS | `/ws/task/:task_id/` | WebSocket 实时进度 |
 
 ## 🛠️ 工具使用
+
+### 自由绘图功能
+
+系统提供自由绘图功能，允许用户使用 Python 代码自定义分析细胞追踪数据。
+
+**功能特性**：
+- 在线 Python 代码编辑器（基于 CodeMirror）
+- 内置 10+ 数据分析示例模板
+- 支持多种可视化类型（折线图、散点图、热力图、3D 图等）
+- 实时代码预览和执行
+
+**可用的数据变量**：
+- `task_data`: 包含完整的任务追踪数据，结构如下：
+  ```python
+  {
+    'task_id': str,
+    'task_name': str,
+    'video_name': str,
+    'row_count': int,
+    'truncated': bool,
+    'rows': [
+      {
+        'frame': int,
+        'track_id': int,
+        'area': float,
+        'speed': float,
+        'bb_left': float,
+        'bb_top': float,
+        'bb_width': float,
+        'bb_height': float,
+        'center_x': float,
+        'center_y': float,
+        'perimeter': float,
+        'circularity': float,
+        'aspect_ratio': float,
+        'distance': float,
+        'migration_speed': float,
+        'mean_square_displacement': float,
+      },
+      ...
+    ]
+  }
+  ```
+
+**示例模板位置**: `web/docs/examples/`
+- `case01_data_structure_and_basics.py` - 数据结构展示和基础处理
+- `case02_histogram_speed_distribution.py` - 速度分布直方图
+- `case03_scatter_multiframe_positions.py` - 多帧位置散点图
+- `case04_heatmap_density_multiframe.py` - 多帧密度热力图
+- `case05_normalized_trajectories.py` - 归一化轨迹分析
+- `case06_multi_metric_timeseries.py` - 多指标时间序列
+- `case07_distribution_panels.py` - 分布面板图
+- `case08_trajectory_3d_lines.py` - 3D 轨迹线
+- `case09_histogram_3d_multiframe.py` - 3D 直方图
+- `case10_shape_activity_dashboard.py` - 形状与活动仪表板
+
+**使用方法**：
+1. 在分析结果页面点击"自由绘图"按钮
+2. 从模板列表中选择一个示例或编写自定义代码
+3. 点击"运行"按钮执行代码
+4. 查看生成的可视化结果
 
 ### TIF 转 MP4 工具
 
@@ -363,3 +438,12 @@ python manage.py purge_soft_deleted --force
 - `--force` 参数会删除所有软删除记录，开发调试时使用
 - 默认保留30天的软删除数据，可根据业务需求调整
 - 清理前建议先备份数据库
+
+## 📚 更多文档
+
+- [自由绘图 MVP 设计说明](./docs/自由绘图MVP设计说明.md) - 自由绘图功能的详细设计说明
+- [API 集成指南](./frontend/docs/API-INTEGRATION.md) - 前端 API 集成文档
+- [前端开发文档](./frontend/docs/DEVELOPMENT.md) - 前端开发指南
+- [软件需求分析文档](./docs/软件需求分析文档_v1.md) - 完整需求文档
+- [项目日志](./docs/项目日志.md) - 项目开发日志
+- [原型设计文档](./docs/原型设计文档.md) - UI/UX 原型设计
