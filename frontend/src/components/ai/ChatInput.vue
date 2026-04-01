@@ -48,7 +48,8 @@
 import { ref, computed, watch } from 'vue'
 import { Send, Square } from 'lucide-vue-next'
 import { useAIStore } from '@/stores/aiStore'
-import { sendChatMessageStream } from '@/api/aiApi'
+import { sendChatMessageStream, checkAIConfig } from '@/api/aiApi'
+import { showToast } from '@/composables/useToast'
 
 const aiStore = useAIStore()
 const textareaRef = ref<HTMLTextAreaElement>()
@@ -89,9 +90,43 @@ const canSend = computed(() => {
          !aiStore.isLoading
 })
 
+// 检查 API 配置
+const checkApiConfiguration = async (): Promise<boolean> => {
+  // 如果已经检查过且配置有效，直接返回
+  if (aiStore.apiConfigStatus.checked && aiStore.apiConfigStatus.configured) {
+    return true
+  }
+
+  try {
+    const status = await checkAIConfig()
+    aiStore.setApiConfigStatus({
+      configured: status.configured,
+      message: status.message,
+      checked: true
+    })
+
+    if (!status.configured) {
+      showToast('请设置 API 密钥后再进行对话', 'warning', 5000)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('检查 API 配置失败:', error)
+    showToast('检查 API 配置失败，请稍后重试', 'error', 3000)
+    return false
+  }
+}
+
 // 发送消息
 const handleSend = async () => {
   if (!canSend.value) return
+
+  // 检查 API 配置
+  const isConfigured = await checkApiConfiguration()
+  if (!isConfigured) {
+    return
+  }
 
   const content = inputContent.value.trim()
   inputContent.value = ''

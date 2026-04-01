@@ -168,9 +168,9 @@ def chat_stream(request):
 def get_ai_roles(request):
     """
     获取所有可用的AI角色
-    
+
     GET /api/ai/roles
-    
+
     Returns: {
         "roles": [
             {
@@ -188,7 +188,63 @@ def get_ai_roles(request):
         }
         for role_id, role_data in AI_ROLES.items()
     ]
-    
+
     return Response({
         'roles': roles
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def check_api_config(request):
+    """
+    检查 AI API 配置是否有效
+
+    GET /api/ai/check-config
+
+    Returns: {
+        "configured": bool,
+        "message": str
+    }
+    """
+    api_key = getattr(settings, 'DEEPSEEK_API_KEY', '')
+
+    # 检查 API KEY 是否配置
+    if not api_key:
+        return Response({
+            'configured': False,
+            'message': 'API Key 未配置'
+        }, status=status.HTTP_200_OK)
+
+    # 检查是否是默认值
+    default_keys = [
+        'your_deepseek_api_key',
+        'your_api_key',
+        'your-deepseek-api-key',
+        'sk-your_deepseek_api_key',
+    ]
+
+    if api_key.lower() in [key.lower() for key in default_keys]:
+        return Response({
+            'configured': False,
+            'message': 'API Key 未设置（使用默认值）'
+        }, status=status.HTTP_200_OK)
+
+    # 检查是否以 sk- 开头（DeepSeek API Key 格式）
+    if not api_key.startswith('sk-'):
+        return Response({
+            'configured': False,
+            'message': 'API Key 格式无效'
+        }, status=status.HTTP_200_OK)
+
+    # 检查长度（DeepSeek API Key 通常较长）
+    if len(api_key) < 20:
+        return Response({
+            'configured': False,
+            'message': 'API Key 长度无效'
+        }, status=status.HTTP_200_OK)
+
+    # 配置有效
+    return Response({
+        'configured': True,
+        'message': 'API Key 配置有效'
     }, status=status.HTTP_200_OK)

@@ -1,5 +1,29 @@
 import { streamParser } from '@/lib/streamParser'
 
+export interface AIConfigStatus {
+  configured: boolean
+  message: string
+}
+
+/**
+ * 检查 AI API 配置是否有效
+ * @returns 配置状态
+ */
+export async function checkAIConfig(): Promise<AIConfigStatus> {
+  const response = await fetch('/api/ai/check-config/', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+
+  return await response.json()
+}
+
 /**
  * 流式发送聊天消息
  * @param message 用户消息内容

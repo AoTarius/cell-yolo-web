@@ -54,4 +54,5 @@ urlpatterns = [
     # AI对话接口
     path('ai/chat/stream/', ai.chat_stream, name='ai_chat_stream'),
     path('ai/roles/', ai.get_ai_roles, name='ai_roles'),
+    path('ai/check-config/', ai.check_api_config, name='ai_check_config'),
 ]
