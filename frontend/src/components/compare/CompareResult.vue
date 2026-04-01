@@ -27,7 +27,7 @@ const isModelCompareMode = computed(() => route.query.compareMode === 'model')
 // 组件挂载时，如果没有有效记录，返回对比页面
 onMounted(() => {
   if (!hasValidRecords.value) {
-    router.push({ name: isModelCompareMode.value ? 'modelUpload' : 'compare' })
+    router.push({ name: isModelCompareMode.value ? 'resourceManage' : 'compare' })
   } else {
     restoreFrameState()
     alignFrameIndexesForSync()
@@ -1036,7 +1036,7 @@ const totalFramesB = computed(() => recordB.value?.result?.total_frames || 0)
 // 处理返回对比页面
 function handleBackToCompare() {
   store.compareRecords = []
-  router.push({ name: isModelCompareMode.value ? 'modelUpload' : 'compare' })
+  router.push({ name: isModelCompareMode.value ? 'resourceManage' : 'compare' })
 }
 
 watch([recordA, recordB], () => {

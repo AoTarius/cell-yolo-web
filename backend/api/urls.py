@@ -29,6 +29,11 @@ urlpatterns = [
     path('models/delete/', views.DeleteModelView.as_view(), name='delete_model'),
     path('models/rename/', views.RenameModelView.as_view(), name='rename_model'),
 
+    # 视频管理接口
+    path('videos/', views.VideoListView.as_view(), name='video_list'),
+    path('videos/delete/', views.DeleteVideoView.as_view(), name='delete_video'),
+    path('videos/rename/', views.RenameVideoView.as_view(), name='rename_video'),
+
     # 数据导出接口
     path('export/<str:task_id>/', views.ExportDataView.as_view(), name='export_data'),
     path('export-task-data/<str:task_id>/', views.ExportTaskDataView.as_view(), name='export_task_data'),

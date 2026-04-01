@@ -295,10 +295,10 @@ function handleNewAnalysis() {
   router.push('/upload')
 }
 
-function handleModelUpload() {
+function handleResourceManage() {
   // 清除历史记录选中状态
   store.clearSelection()
-  router.push('/model-upload')
+  router.push('/resource-manage')
 }
 
 function handleCompare() {
@@ -498,19 +498,27 @@ const isSorting = computed(() => {
       <template v-if="!isCollapsed">
         <div class="action-buttons-grid">
           <button class="btn-new-analysis" @click="handleNewAnalysis">
-            <span class="icon">+</span>
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
             新建任务
           </button>
-          <button class="btn-upload-model" @click="handleModelUpload">
-            <span class="icon">⚙</span>
-            管理模型
+          <button class="btn-manage-resource" @click="handleResourceManage">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>
+            资源管理
           </button>
           <button class="btn-compare" @click="handleCompare">
-            <span class="icon">⚖</span>
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
             任务对比
           </button>
           <button class="btn-export" @click="handleExport">
-            <span class="icon">↓</span>
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
             导入任务
           </button>
         </div>
@@ -1102,17 +1110,17 @@ const isSorting = computed(() => {
 }
 
 .btn-new-analysis .icon {
-  font-size: 1.2rem;
-  font-weight: 700;
+  width: 1.2rem;
+  height: 1.2rem;
   color: #ffffff;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }
 
-.btn-upload-model {
+.btn-manage-resource {
   width: 100%;
   padding: 0.75rem 0.5rem;
   background: var(--cyan-primary);
-  color: var(--cyan-text);
+  color: #ffffff;
   border: 2px solid var(--cyan-dark);
   border-radius: 8px;
   font-size: 0.9rem;
@@ -1127,33 +1135,33 @@ const isSorting = computed(() => {
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.14);
 }
 
-.btn-upload-model:hover {
+.btn-manage-resource:hover {
   background: var(--cyan-light);
   border-color: var(--cyan-light);
   transform: translateY(-2px);
-  box-shadow: 0 4px 0 var(--cyan-dark), 0 6px 12px rgba(8, 145, 178, 0.25);
+  box-shadow: 0 4px 0 var(--cyan-dark), 0 6px 12px rgba(139, 92, 246, 0.3);
 }
 
-.btn-upload-model:active {
+.btn-manage-resource:active {
   transform: translateY(0);
   box-shadow: 0 0 0 var(--cyan-dark);
 }
 
-:global(:root:not(.dark)) .btn-upload-model {
-  background: var(--cyan-primary);
+:global(:root:not(.dark)) .btn-manage-resource {
+  background: linear-gradient(135deg, var(--cyan-primary) 0%, var(--accent-purple) 100%);
   border-color: var(--cyan-dark);
   box-shadow: 0 2px 0 var(--cyan-dark);
 }
 
-:global(:root:not(.dark)) .btn-upload-model:hover {
-  background: var(--cyan-dark);
+:global(:root:not(.dark)) .btn-manage-resource:hover {
+  background: linear-gradient(135deg, var(--cyan-dark) 0%, #7c3aed 100%);
   border-color: var(--cyan-dark);
-  box-shadow: 0 4px 0 #155e75, 0 6px 12px rgba(8, 145, 178, 0.3);
+  box-shadow: 0 4px 0 #6d28d9, 0 6px 12px rgba(139, 92, 246, 0.3);
 }
 
-.btn-upload-model .icon {
-  font-size: 1.2rem;
-  font-weight: 700;
+.btn-manage-resource .icon {
+  width: 1.2rem;
+  height: 1.2rem;
   color: #ffffff;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }
@@ -1202,8 +1210,8 @@ const isSorting = computed(() => {
 }
 
 .btn-compare .icon {
-  font-size: 1.2rem;
-  font-weight: 700;
+  width: 1.2rem;
+  height: 1.2rem;
   color: #ffffff;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }
@@ -1252,8 +1260,8 @@ const isSorting = computed(() => {
 }
 
 .btn-export .icon {
-  font-size: 1.2rem;
-  font-weight: 700;
+  width: 1.2rem;
+  height: 1.2rem;
   color: #ffffff;
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1));
 }

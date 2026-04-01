@@ -21,6 +21,11 @@ const isDragging = ref(false)
 const showAdvancedSettings = ref(false)
 const currentOutputPath = ref('')
 
+// 视频相关
+const videos = ref<Array<{ id: number; name: string; size_mb: number; duration: number; total_frames: number }>>([])
+const selectedVideo = ref<number | null>(null)
+const isLoadingVideos = ref(false)
+
 // 模型相关
 const models = ref<Array<{ name: string; size_mb: number; path: string }>>([])
 const selectedModel = ref('')  // 改为空字符串，表示未选择
@@ -33,6 +38,13 @@ function isImportedTaskModelName(name: string): boolean {
   const normalized = raw.replace(/\\/g, '/')
   // 约定：导入任务遗留模型通常为路径或带文件后缀的名称，不作为“我自己的可用模型”
   return normalized.includes('/') || /^[a-zA-Z]:/.test(raw) || /\.pt$/i.test(raw)
+}
+
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds <= 0) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 // 模型参数
@@ -54,6 +66,31 @@ const uploadStage = ref<string>('')
 const uploadMessage = ref<string>('')
 const currentFrame = ref<number | null>(null)
 const totalFrames = ref<number | null>(null)
+
+// 加载视频列表
+async function loadVideos() {
+  try {
+    isLoadingVideos.value = true
+
+    if (!userStore.currentUser?.username) {
+      videos.value = []
+      selectedVideo.value = null
+      return
+    }
+
+    const username = userStore.currentUser.username
+    const response = await axios.get('/api/videos/', { params: { username } })
+    const videoList = response.data?.videos
+    videos.value = Array.isArray(videoList) ? videoList : []
+    selectedVideo.value = null
+  } catch (error) {
+    console.error('加载视频列表失败:', error)
+    videos.value = []
+    selectedVideo.value = null
+  } finally {
+    isLoadingVideos.value = false
+  }
+}
 
 // 加载模型列表
 async function loadModels() {
@@ -81,8 +118,9 @@ async function loadModels() {
   }
 }
 
-// 组件挂载时加载模型列表
+// 组件挂载时加载视频和模型列表
 onMounted(() => {
+  loadVideos()
   loadModels()
 
   // 获取用户的output_base_path
@@ -118,7 +156,10 @@ function handleDragLeave(event: DragEvent) {
 }
 
 async function submitUpload() {
-  if (!selectedFile.value) return
+  if (!selectedVideo.value) {
+    uploadError.value = '请先选择一个视频'
+    return
+  }
 
   if (!selectedModel.value) {
     uploadError.value = '请先选择一个模型'
@@ -137,30 +178,21 @@ async function submitUpload() {
 
     const username = userStore.currentUser.username
 
-    // 1. 上传视频
-    const formData = new FormData()
-    formData.append('video', selectedFile.value)
-    formData.append('username', username)
+    // 获取选择的视频信息
+    const selectedVideoInfo = videos.value.find(v => v.id === selectedVideo.value)
+    if (!selectedVideoInfo) {
+      uploadError.value = '未找到选择的视频'
+      return
+    }
 
-    const uploadResponse = await axios.post('/api/upload/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-        }
-      },
-    })
-
-    taskId.value = uploadResponse.data.task_id
-    const videoId = uploadResponse.data.video_id
+    // 生成任务ID
+    taskId.value = crypto.randomUUID()
     uploadStatus.value = 'processing'
 
-    // 2. 启动处理任务
+    // 启动处理任务（直接使用已存在的视频ID）
     await axios.post('/api/process/', {
       task_id: taskId.value!,
-      video_id: videoId,
+      video_id: selectedVideo.value,
       conf: modelParams.value.conf,
       imgsz: modelParams.value.imgsz,
       fps: modelParams.value.fps,
@@ -168,26 +200,25 @@ async function submitUpload() {
       username: username,
     })
 
-    // 3. 添加处理中记录到 store（store 会自动轮询进度）
-    const fileName = selectedFile.value.name
+    // 添加处理中记录到 store（store 会自动轮询进度）
     store.addProcessingRecord({
       task_id: taskId.value!,
-      video_name: fileName,
-      video_path: uploadResponse.data.video_path || '',
+      video_name: selectedVideoInfo.name,
+      video_path: '',
       status: 'processing',
       progress: 0,
       start_time: new Date(),
     })
 
-    // 4. 重置表单状态
+    // 重置表单状态
     showAdvancedSettings.value = false
-    selectedFile.value = null
+    selectedVideo.value = null
     uploadStatus.value = 'idle'
     uploadProgress.value = 0
     taskId.value = null
 
     // 显示成功提示
-    showToast(`分析任务已启动！视频 "${fileName}" 正在处理中...`, 'success')
+    showToast(`分析任务已启动！视频 "${selectedVideoInfo.name}" 正在处理中...`, 'success')
 
     // 5. 跳转到主页并选中该任务
     router.push('/').then(() => {
@@ -249,73 +280,24 @@ function getStageLabel(stage: string): string {
         </div>
       </div>
 
-      <div
-        class="upload-area"
-        :class="{ dragging: isDragging, 'has-file': selectedFile }"
-        @drop.prevent="handleDrop"
-        @dragover.prevent="handleDragOver"
-        @dragleave="handleDragLeave"
-      >
-        <div v-if="!selectedFile" class="upload-placeholder">
-          <svg
-            class="upload-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            ></path>
-          </svg>
-          <p class="upload-text">拖拽视频文件到此处，或点击选择</p>
-          <p class="upload-hint">支持 MP4, AVI, MOV 等格式</p>
-          <input
-            type="file"
-            accept="video/*"
-            class="file-input"
-            @change="handleFileSelect"
-          />
-        </div>
-
-        <div v-else class="file-info">
-          <svg
-            class="file-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-            ></path>
-          </svg>
-          <div class="file-details">
-            <p class="file-name">{{ selectedFile?.name }}</p>
-            <p class="file-size">{{ selectedFile ? (selectedFile.size / 1024 / 1024).toFixed(2) : '0' }} MB</p>
-          </div>
-          <button class="btn-clear" @click="clearFile">
-            <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              ></path>
-            </svg>
-          </button>
-        </div>
+      <div class="video-selector">
+        <label for="video-select" class="video-label">选择视频</label>
+        <select
+          id="video-select"
+          v-model="selectedVideo"
+          class="video-select"
+          :disabled="isLoadingVideos || uploadStatus !== 'idle'"
+        >
+          <option :value="null" disabled>请选择视频</option>
+          <option v-if="isLoadingVideos" :value="null" disabled>加载中...</option>
+          <option v-if="!isLoadingVideos && videos.length === 0" :value="null" disabled>暂无可用视频</option>
+          <option v-for="video in videos" :key="video.id" :value="video.id">
+            {{ video.name }} ({{ video.size_mb }} MB, {{ formatDuration(video.duration) }}, {{ video.total_frames }} 帧)
+          </option>
+        </select>
+        <p v-if="!isLoadingVideos && videos.length === 0" class="video-warning">
+          ⚠️ 检测到没有可用的视频文件，请在"资源管理"中上传视频。
+        </p>
       </div>
 
       <!-- 模型选择 -->
@@ -453,7 +435,7 @@ function getStageLabel(stage: string): string {
       <div class="upload-actions">
         <button
           class="btn-submit"
-          :disabled="!selectedFile || uploadStatus === 'uploading' || uploadStatus === 'processing' || !selectedModel"
+          :disabled="!selectedVideo || uploadStatus === 'uploading' || uploadStatus === 'processing' || !selectedModel"
           @click="submitUpload"
         >
           {{
@@ -754,6 +736,63 @@ h2 {
 .btn-clear svg {
   width: 16px;
   height: 16px;
+}
+
+.video-selector {
+  margin-top: 1.5rem;
+}
+
+.video-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  transition: color 0.3s;
+}
+
+:global(:root:not(.dark)) .video-label {
+  color: var(--text-primary-light);
+}
+
+.video-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238b949e' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1rem center !important;
+  padding-right: 2.5rem;
+}
+
+:global(:root:not(.dark)) .video-select {
+  background: var(--bg-card-light);
+  border-color: var(--border-color-light);
+  color: var(--text-primary-light);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+}
+
+.video-select:hover:not(:disabled) {
+  background: var(--bg-input);
+  border-color: var(--accent-blue);
+}
+
+:global(:root:not(.dark)) .video-select:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+}
+
+.video-warning {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--warning-light);
+  line-height: 1.4;
 }
 
 .model-selector {

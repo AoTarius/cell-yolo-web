@@ -3,7 +3,7 @@ import { useUserStore } from '@/stores/userStore'
 import CellTrackingView from '../views/home/CellTrackingView.vue'
 import UploadView from '../views/analysis/UploadView.vue'
 import ProgressView from '../views/analysis/ProgressView.vue'
-import ModelUploadView from '../views/models/ModelUploadView.vue'
+import ResourceView from '../views/resource/ResourceView.vue'
 import CompareView from '../views/compare/CompareView.vue'
 import CompareResult from '../components/compare/CompareResult.vue'
 import LoginView from '../views/auth/LoginView.vue'
@@ -49,9 +49,9 @@ const router = createRouter({
       component: ProgressView,
     },
     {
-      path: '/model-upload',
-      name: 'modelUpload',
-      component: ModelUploadView,
+      path: '/resource-manage',
+      name: 'resourceManage',
+      component: ResourceView,
     },
     {
       path: '/compare',
