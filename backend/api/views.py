@@ -130,31 +130,47 @@ class UploadVideoView(APIView):
                     user_id = user['id']
                     output_base_path = Path(user['output_base_path'])
 
-                    # 检查视频是否已存在（同一用户下视频名称唯一）
-                    check_sql = "SELECT id, video_path FROM videos WHERE user_id = %s AND video_name = %s AND is_deleted = FALSE"
+                    # 检查视频是否已存在（包含软删除记录，避免唯一键冲突）
+                    check_sql = "SELECT id, video_path, is_deleted FROM videos WHERE user_id = %s AND video_name = %s"
                     cursor.execute(check_sql, (user_id, video_file.name))
                     existing_video = cursor.fetchone()
 
                     if existing_video:
-                        # 视频已存在，直接返回现有视频信息
-                        video_id = existing_video['id']
-                        task_id = str(uuid.uuid4())
-                        return Response({
-                            'task_id': task_id,
-                            'video_id': video_id,
-                            'video_name': video_file.name,
-                            'status': 'existing',
-                            'message': '视频已存在，将使用现有视频'
-                        }, status=status.HTTP_200_OK)
+                        if not existing_video['is_deleted']:
+                            # 视频已存在，直接返回现有视频信息
+                            video_id = existing_video['id']
+                            task_id = str(uuid.uuid4())
+                            return Response({
+                                'task_id': task_id,
+                                'video_id': video_id,
+                                'video_name': video_file.name,
+                                'status': 'existing',
+                                'message': '视频已存在，将使用现有视频'
+                            }, status=status.HTTP_200_OK)
 
-                    # 创建 videos 记录
-                    insert_sql = """
-                    INSERT INTO videos (user_id, video_name, video_path, created_at, updated_at, is_deleted, deleted_at)
-                    VALUES (%s, %s, %s, NOW(), NOW(), FALSE, NULL)
-                    """
-                    cursor.execute(insert_sql, (user_id, video_file.name, ''))
-                    connection.commit()
-                    video_id = cursor.lastrowid
+                        # 已软删除：恢复原记录并复用原 video_id
+                        video_id = existing_video['id']
+                        restore_sql = """
+                        UPDATE videos
+                        SET is_deleted = FALSE,
+                            deleted_at = NULL,
+                            updated_at = NOW(),
+                            total_frames = NULL,
+                            video_duration = NULL,
+                            file_size = NULL
+                        WHERE id = %s
+                        """
+                        cursor.execute(restore_sql, (video_id,))
+                        connection.commit()
+                    else:
+                        # 创建 videos 记录
+                        insert_sql = """
+                        INSERT INTO videos (user_id, video_name, video_path, created_at, updated_at, is_deleted, deleted_at)
+                        VALUES (%s, %s, %s, NOW(), NOW(), FALSE, NULL)
+                        """
+                        cursor.execute(insert_sql, (user_id, video_file.name, ''))
+                        connection.commit()
+                        video_id = cursor.lastrowid
 
                     # 生成视频路径：videos/{video_id}/{video_name}
                     video_path_relative = f"videos/{video_id}/{video_file.name}"
