@@ -2045,12 +2045,12 @@ class RegisterView(APIView):
 
             try:
                 with connection.cursor() as cursor:
-                    # 检查用户名是否已存在
-                    check_sql = "SELECT id FROM users WHERE username = %s AND is_deleted = FALSE"
+                    # 检查用户名记录（包含软删除用户）
+                    check_sql = "SELECT id, is_deleted FROM users WHERE username = %s"
                     cursor.execute(check_sql, (username,))
                     existing_user = cursor.fetchone()
 
-                    if existing_user:
+                    if existing_user and not existing_user['is_deleted']:
                         return Response(
                             {'error': '用户名已存在'},
                             status=status.HTTP_400_BAD_REQUEST
@@ -2061,23 +2061,44 @@ class RegisterView(APIView):
                     salt = bcrypt.gensalt()
                     hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
 
-                    # 创建新用户
-                    insert_sql = """
-                    INSERT INTO users (username, password_hash, model_base_path, output_base_path, dark_mode, created_at, updated_at, is_deleted, deleted_at)
-                    VALUES (%s, %s, %s, %s, TRUE, NOW(), NOW(), FALSE, NULL)
-                    """
-                    cursor.execute(insert_sql, (username, hashed_password, model_base_path, output_base_path))
-                    connection.commit()
+                    if existing_user and existing_user['is_deleted']:
+                        # 用户曾被软删除，允许同名重新注册（恢复账号）
+                        restore_sql = """
+                        UPDATE users
+                        SET password_hash = %s,
+                            model_base_path = %s,
+                            output_base_path = %s,
+                            dark_mode = TRUE,
+                            is_deleted = FALSE,
+                            deleted_at = NULL,
+                            updated_at = NOW()
+                        WHERE id = %s
+                        """
+                        cursor.execute(restore_sql, (hashed_password, model_base_path, output_base_path, existing_user['id']))
+                        connection.commit()
+                        user_id = existing_user['id']
+                        message = '注册成功（已恢复历史账号）'
+                        response_status = status.HTTP_200_OK
+                    else:
+                        # 创建新用户
+                        insert_sql = """
+                        INSERT INTO users (username, password_hash, model_base_path, output_base_path, dark_mode, created_at, updated_at, is_deleted, deleted_at)
+                        VALUES (%s, %s, %s, %s, TRUE, NOW(), NOW(), FALSE, NULL)
+                        """
+                        cursor.execute(insert_sql, (username, hashed_password, model_base_path, output_base_path))
+                        connection.commit()
+                        user_id = cursor.lastrowid
+                        message = '注册成功'
+                        response_status = status.HTTP_201_CREATED
 
-                    # 获取新创建的用户信息
-                    user_id = cursor.lastrowid
+                    # 获取最终用户信息
                     select_sql = "SELECT * FROM users WHERE id = %s"
                     cursor.execute(select_sql, (user_id,))
                     new_user = cursor.fetchone()
 
                     return Response({
                         'status': 'success',
-                        'message': '注册成功',
+                        'message': message,
                         'user': {
                             'id': new_user['id'],
                             'username': new_user['username'],
@@ -2086,7 +2107,7 @@ class RegisterView(APIView):
                             'model_base_path': new_user['model_base_path'],
                             'output_base_path': new_user['output_base_path']
                         }
-                    }, status=status.HTTP_201_CREATED)
+                    }, status=response_status)
 
             finally:
                 connection.close()
@@ -2095,6 +2116,16 @@ class RegisterView(APIView):
             return Response(
                 {'error': '无效的 JSON 格式'},
                 status=status.HTTP_400_BAD_REQUEST
+            )
+        except pymysql.IntegrityError as e:
+            if e.args and e.args[0] == 1062:
+                return Response(
+                    {'error': '用户名已存在'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            return Response(
+                {'error': f'注册失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         except Exception as e:
             return Response(
