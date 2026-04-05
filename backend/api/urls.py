@@ -10,6 +10,7 @@ urlpatterns = [
     path('register/', views.RegisterView.as_view(), name='register'),
     path('update-user/', views.UpdateUserView.as_view(), name='update_user'),
     path('update-user-paths/', views.UpdateUserPathsView.as_view(), name='update_user_paths'),
+    path('users/delete/', views.DeleteUserView.as_view(), name='delete_user'),
     # 视频处理相关接口
     path('upload/', views.UploadVideoView.as_view(), name='upload_video'),
     path('process/', views.ProcessTaskView.as_view(), name='process_task'),

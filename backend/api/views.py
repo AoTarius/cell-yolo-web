@@ -1972,6 +1972,117 @@ class UpdateUserPathsView(APIView):
             )
 
 
+class DeleteUserView(APIView):
+    """删除用户接口"""
+
+    def delete(self, request):
+        """删除指定用户及其相关数据"""
+        try:
+            import shutil
+
+            username = request.GET.get('username')
+
+            if not username:
+                return Response(
+                    {'error': '未提供用户名'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                connection = pymysql.connect(
+                    host=os.getenv('DB_HOST', 'localhost'),
+                    port=int(os.getenv('DB_PORT', 3306)),
+                    user=os.getenv('DB_USER', 'root'),
+                    password=os.getenv('DB_PASSWORD', ''),
+                    database=os.getenv('DB_NAME', 'cell_tracking'),
+                    cursorclass=pymysql.cursors.DictCursor
+                )
+            except pymysql.Error as e:
+                return Response(
+                    {'error': f'数据库连接失败: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            try:
+                with connection.cursor() as cursor:
+                    user_sql = """
+                    SELECT id, model_base_path, output_base_path
+                    FROM users
+                    WHERE username = %s
+                    """
+                    cursor.execute(user_sql, (username,))
+                    user = cursor.fetchone()
+
+                    if not user:
+                        return Response(
+                            {'error': '用户不存在'},
+                            status=status.HTTP_404_NOT_FOUND
+                        )
+
+                    user_id = user['id']
+                    model_base_path = user['model_base_path']
+                    output_base_path = user['output_base_path']
+
+                    # 先删除用户相关的任务状态和细胞数据
+                    delete_cells_sql = """
+                    DELETE c
+                    FROM cells c
+                    JOIN tasks t ON c.task_id = t.id
+                    WHERE t.user_id = %s
+                    """
+                    cursor.execute(delete_cells_sql, (user_id,))
+
+                    delete_task_status_sql = """
+                    DELETE ts
+                    FROM task_status ts
+                    JOIN tasks t ON ts.task_id = t.task_id
+                    WHERE t.user_id = %s
+                    """
+                    cursor.execute(delete_task_status_sql, (user_id,))
+
+                    # 再删除任务、视频、模型
+                    delete_tasks_sql = "DELETE FROM tasks WHERE user_id = %s"
+                    cursor.execute(delete_tasks_sql, (user_id,))
+
+                    delete_videos_sql = "DELETE FROM videos WHERE user_id = %s"
+                    cursor.execute(delete_videos_sql, (user_id,))
+
+                    delete_models_sql = "DELETE FROM models WHERE user_id = %s"
+                    cursor.execute(delete_models_sql, (user_id,))
+
+                    # 最后删除用户本身
+                    delete_user_sql = "DELETE FROM users WHERE id = %s"
+                    cursor.execute(delete_user_sql, (user_id,))
+
+                    connection.commit()
+
+                # 删除用户目录（数据库已提交后再清理文件）
+                for path_str in [model_base_path, output_base_path]:
+                    if not path_str:
+                        continue
+                    path_obj = Path(path_str)
+                    if path_obj.exists() and path_obj.is_dir():
+                        shutil.rmtree(path_obj)
+
+                return Response(
+                    {
+                        'status': 'success',
+                        'message': '用户及其相关数据已删除',
+                        'username': username,
+                    },
+                    status=status.HTTP_200_OK
+                )
+
+            finally:
+                connection.close()
+
+        except Exception as e:
+            return Response(
+                {'error': f'删除用户失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class RegisterView(APIView):
     """用户注册接口"""
 
