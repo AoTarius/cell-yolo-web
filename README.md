@@ -32,6 +32,7 @@
 ```
 web/
 ├── backend/                 # Django 后端
+│   ├── .user-storage/      # 默认用户信息存储文件夹
 │   ├── api/                # API 应用
 │   │   ├── services/       # 业务逻辑服务
 │   │   │   └── video_processor.py  # 视频处理服务
@@ -52,7 +53,6 @@ web/
 │   │   ├── init_db.py      # 数据库初始化
 │   │   ├── init_data.py    # 初始数据导入
 │   │   └── rebuild_db.py   # 数据库重建
-│   ├── models/             # YOLO 模型文件
 │   ├── runs/               # 模型训练输出
 │   ├── media/              # 媒体文件存储
 │   │   └── tasks/          # 任务数据
@@ -287,19 +287,18 @@ python manage.py purge_soft_deleted --force --dry-run
    - Windows: 下载 MySQL Installer 并安装
    - 配置 `.env` 文件中的数据库连接信息
    - 运行 `scripts/init_db.py` 初始化数据库表结构
-3. **YOLO 模型**: 确保 `web/backend/models/` 目录下有 `yolov8s-seg.pt` 模型文件
-4. **依赖安装**:
+3. **依赖安装**:
    - 需要安装 PyMySQL 和 python-dotenv
    - 需要安装 OpenCV 和 Channels 支持 WebSocket
    - 需要安装 PyTorch 和 torchvision
    - ultralytics 使用本地库（`web/libs/ultralytics`）或通过 pip 安装 ultralytics==8.4.21
    - deep-sort-realtime==1.3.2
-5. **Python 路径配置**:
+4. **Python 路径配置**:
    - 项目自动通过 `.pth` 文件和 `settings.py` 配置 Python 路径
    - VSCode 用户：已配置 `.vscode/settings.json`，可能需要重新加载窗口
-6. **Conda 环境**: 推荐使用 Conda 虚拟环境，便于管理依赖
-7. **内存要求**: 视频处理需要较多内存，建议 8GB+ RAM
-8. **处理时间**: 视频处理可能需要几分钟到几十分钟
+5. **Conda 环境**: 推荐使用 Conda 虚拟环境，便于管理依赖
+6. **内存要求**: 视频处理需要较多内存，建议 8GB+ RAM
+7. **处理时间**: 视频处理可能需要几分钟到几十分钟
 
 ## 🤝 贡献
 

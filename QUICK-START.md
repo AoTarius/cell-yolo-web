@@ -195,18 +195,6 @@ python init_data.py
 ==================================================
 ```
 
-虽然已经使用 `init_db.py` 初始化了数据库表结构，但仍需执行 Django 迁移以确保 Django 管理后台等功能正常工作：
-```bash
-cd ../backend
-python manage.py migrate
-```
-
-初始化数据库基本信息
-```bash
-cd ../scripts
-python init_data.py
-```
-
 **注意**：如果脚本运行失败，请检查：
 1. 数据库是否已正确初始化。
 2. `.env` 文件中的配置是否正确。
