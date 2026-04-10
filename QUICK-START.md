@@ -1,5 +1,40 @@
 ## 🚀 快速开始
 
+### 🤖 自动化安装（推荐）
+
+我们提供了自动化安装脚本，可以一键完成所有配置：
+
+**macOS/Linux 用户**:
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+**Windows 用户**:
+```powershell
+.\setup.ps1
+```
+
+自动化脚本会自动执行以下步骤：
+- ✓ 检查系统环境（conda、MySQL、Node.js）
+- ✓ 创建/激活 Python 虚拟环境
+- ✓ 配置环境变量（.env 文件）
+- ✓ 安装 Python 和 npm 依赖
+- ✓ 初始化数据库
+- ✓ 安装前端依赖
+
+在需要手动配置的地方，脚本会提示你输入：
+- MySQL root 密码
+- DeepSeek API 密钥（可选）
+
+如果自动化脚本遇到问题，请参考下面的手动安装步骤。
+
+---
+
+### 📝 手动安装步骤
+
+如果自动化脚本无法满足你的需求，可以按照以下步骤手动安装：
+
 ### 第一步：创建并激活 Python 虚拟环境
 
 使用 Conda 创建名为 `cell-yolo` 的虚拟环境：
@@ -117,9 +152,8 @@ pip install -r requirements.txt
 - **seaborn == 0.13.2** (统计可视化)
 
 **注意**: ultralytics 和 deep_sort_pytorch 已作为本地库包含在 `web/libs/ultralytics` 目录中，无需额外安装。项目会自动通过以下方式配置 Python 路径：
-1. `.pth` 文件（在 Conda 环境的 site-packages 中）
-2. `backend/settings.py` 中的 sys.path 配置
-3. VSCode 的 `.vscode/settings.json` 配置
+1. `backend/settings.py` 中的 sys.path 配置
+2. VSCode 的 `.vscode/settings.json` 配置
 
 ### 第五步：初始化数据库
 
@@ -221,8 +255,7 @@ python -c "from deep_sort_realtime.deepsort_tracker import DeepSort; print('✓ 
 
 如果遇到导入错误，请检查：
 1. 确认已激活 conda 环境：`conda activate cell-yolo`
-2. 检查 `.pth` 文件是否存在：`ls ~/miniconda3/envs/cell-yolo/lib/python3.11/site-packages/ultralytics_local.pth`
-3. 如果使用 VSCode，重新加载窗口：`Cmd + Shift + P` → "Reload Window"
+2. 如果使用 VSCode，重新加载窗口：`Cmd + Shift + P` → "Reload Window"
 
 ### 第七步：安装前端 npm 包
 
