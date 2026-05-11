@@ -1,6 +1,6 @@
 ## 🚀 快速开始
 
-### 🤖 自动化安装（推荐）
+### 🤖 自动化安装
 
 我们提供了自动化安装脚本，可以一键完成所有配置：
 
@@ -31,7 +31,7 @@ chmod +x setup.sh
 
 ---
 
-### 📝 手动安装步骤
+### 📝 手动安装（推荐）
 
 如果自动化脚本无法满足你的需求，可以按照以下步骤手动安装：
 
@@ -40,8 +40,8 @@ chmod +x setup.sh
 使用 Conda 创建名为 `cell-yolo` 的虚拟环境：
 
 ```bash
-# 创建虚拟环境（指定 Python 版本，建议 3.10-3.12）
-conda create -n cell-yolo python=3.11 -y
+# 创建虚拟环境（指定 Python 版本）
+conda create -n cell-yolo python=3.8 -y
 
 # 激活虚拟环境
 conda activate cell-yolo
