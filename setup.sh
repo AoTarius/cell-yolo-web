@@ -31,7 +31,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # 配置变量
 CONDA_ENV_NAME="cell-yolo"
-PYTHON_VERSION="3.11"
+PYTHON_VERSION="3.8"
 DB_NAME="cell_tracking"
 BACKEND_DIR="$PROJECT_ROOT/web/backend"
 FRONTEND_DIR="$PROJECT_ROOT/web/frontend"

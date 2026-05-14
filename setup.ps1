@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 
 # 配置变量
 $CONDA_ENV_NAME = "cell-yolo"
-$PYTHON_VERSION = "3.11"
+$PYTHON_VERSION = "3.8"
 $DB_NAME = "cell_tracking"
 $PROJECT_ROOT = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $BACKEND_DIR = Join-Path $PROJECT_ROOT "web\backend"
