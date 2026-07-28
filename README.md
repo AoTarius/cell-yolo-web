@@ -40,7 +40,15 @@ web/
 │   │   │   └── commands/
 │   │   │       └── purge_soft_deleted.py  # 软删除数据清理
 │   │   ├── migrations/     # 数据库迁移
-│   │   ├── views.py        # API 视图
+│   │   ├── views/           # API 视图包（按功能拆分）
+│   │   │   ├── __init__.py      # 包初始化，重导出所有视图
+│   │   │   ├── _helpers.py      # 公共工具函数
+│   │   │   ├── auth.py          # 用户认证视图
+│   │   │   ├── video.py         # 视频管理视图
+│   │   │   ├── task.py          # 任务处理视图
+│   │   │   ├── model.py         # 模型管理视图
+│   │   │   ├── data.py          # 数据访问与可视化视图
+│   │   │   └── free_plot.py     # 自由绘图视图
 │   │   ├── urls.py         # API 路由
 │   │   ├── websocket.py    # WebSocket 消费者
 │   │   ├── routing.py      # WebSocket 路由
@@ -174,7 +182,7 @@ web/
 2. `.pth` 文件 - 自动将 web/libs 目录添加到 Python 路径
 3. `backend/settings.py` - Django 配置中自动添加路径
 
-**Python 版本要求**: 推荐 Python 3.10-3.12
+**Python 版本要求**: 推荐使用 Python 3.8
 **Node.js 版本要求**: ^20.19.0 || >=22.12.0
 
 ## 🔌 API 接口
