@@ -170,11 +170,20 @@ web/
 - MySQL
 
 ### AI 模型
+
+#### 当前启用（默认追踪引擎）
 - **ultralytics 8.4.21** (本地库，位于 `web/libs/ultralytics`)
-  - YOLOv8 (细胞分割)
+  - YOLOv8 (细胞分割/检测)
 - **deep-sort-realtime 1.3.2** (目标追踪)
 - PyTorch 2.4.1
 - torchvision 0.19.1
+
+#### 已实现，待条件成熟后启用
+- **HFM-Tracker** (Hybrid Feature Matching Tracker)
+  - 专为细胞追踪设计的检测+跟踪一体化算法
+  - 核心模块：Contour Attention (CA) 轮廓检测 + Adaptive Confusion Matrix (ACM) 自适应匹配
+  - 暂未启用的原因：C 扩展编译复杂、硬件要求较高（推荐 32GB RAM），与项目"科研人员便捷可用"理念暂有冲突
+  - 详见：[`docs/v2/HFMTracker技术笔记.md`](./docs/v2/HFMTracker技术笔记.md)
 
 ### 依赖说明
 项目使用本地化的 ultralytics 库，通过以下方式配置：

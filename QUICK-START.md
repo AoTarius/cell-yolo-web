@@ -1,39 +1,47 @@
-## 🚀 快速开始
+### 📝 手动安装（推荐）
+### 第〇步：开始前的准备
 
-### 🤖 自动化安装
+在开始安装之前，请确认以下前置条件已经满足，并**先将终端切换到项目根目录**。
 
-我们提供了自动化安装脚本，可以一键完成所有配置：
+#### 0.1 前置软件检查
 
-**macOS/Linux 用户**:
+本项目需要以下三个基础软件，请确认均已安装：
+
+| 软件 | 用途 | 检查命令 | 未安装？ |
+|------|------|----------|----------|
+| Python / Conda | 后端运行环境 | `python --version` 或 `conda --version` | 推荐安装 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) |
+| Node.js | 前端运行环境 | `node --version` | 下载安装 [Node.js](https://nodejs.org/)（需要 ^20.19.0 或 >=22.12.0） |
+| MySQL | 数据库 | `mysql --version` | [macOS 用 Homebrew](#macos-用户安装步骤) / [Windows 下载安装](#windows-用户安装步骤) |
+
+> ⚠️ **特别注意：Miniconda 用户**
+> Miniconda 默认**不包含** Node.js。如果你只安装了 Miniconda，需要单独前往 [nodejs.org](https://nodejs.org/) 下载安装 Node.js，否则后续 `npm install` 和 `npm run dev` 命令将无法执行。
+
+#### 0.2 切换到项目根目录（重要！）
+
+打开终端（macOS/Linux）或 PowerShell / Anaconda Prompt（Windows）后，**默认当前目录是用户主目录（如 `C:\Users\lenovo` 或 `/Users/xxx`）**。
+
+在继续之前，请先用 `cd` 命令进入本项目的根目录：
+
 ```bash
-chmod +x setup.sh
-./setup.sh
+# 请将下面路径替换为你电脑上本项目的实际位置
+cd /path/to/cell-yolo-web
 ```
 
-**Windows 用户**:
-```powershell
-.\setup.ps1
+> 💡 **Windows 用户特别注意**：如果你不先执行 `cd` 切换到项目根目录，后续的 `cd backend`、`cd frontend`、`cd scripts` 等命令会报"找不到路径/文件"的错误。这不是安装失败，只是终端当前所在的目录不对。
+
+**验证是否在正确目录下**：执行 `ls`（macOS/Linux）或 `dir`（Windows），应该能看到 `README.md`、`QUICK-START.md` 以及 `web` 文件夹。
+
+```bash
+# macOS/Linux
+ls
+# 输出应包含: README.md  QUICK-START.md  web  ...
+
+# Windows PowerShell
+dir
+# 输出应包含: README.md  QUICK-START.md  web  ...
 ```
-
-自动化脚本会自动执行以下步骤：
-- ✓ 检查系统环境（conda、MySQL、Node.js）
-- ✓ 创建/激活 Python 虚拟环境
-- ✓ 配置环境变量（.env 文件）
-- ✓ 安装 Python 和 npm 依赖
-- ✓ 初始化数据库
-- ✓ 安装前端依赖
-
-在需要手动配置的地方，脚本会提示你输入：
-- MySQL root 密码
-- DeepSeek API 密钥（可选）
-
-如果自动化脚本遇到问题，请参考下面的手动安装步骤。
 
 ---
-
-### 📝 手动安装（推荐）
-
-如果自动化脚本无法满足你的需求，可以按照以下步骤手动安装：
 
 ### 第一步：创建并激活 Python 虚拟环境
 
@@ -309,6 +317,14 @@ npm run dev
 
 前端将运行在: http://localhost:5173
 
+> ⚠️ **偶尔启动失败属于正常现象**。如果前端页面显示 `Request failed with status code 500` 或类似错误，最简单的解决方法是：
+> 1. 在终端 1 中按 `Ctrl+C` 停止后端
+> 2. 在终端 2 中按 `Ctrl+C` 停止前端
+> 3. 重新依次启动后端和前端（先启动后端，再启动前端）
+> 4. 刷新浏览器页面
+>
+> 大部分情况下重启即可恢复正常，无需重新安装或修改配置。
+
 ## 🌐 计问应用
 
 启动成功后，可以通过以下地址访问：
@@ -459,6 +475,35 @@ python manage.py purge_soft_deleted --force
 - `--force` 参数会删除所有软删除记录，开发调试时使用
 - 默认保留30天的软删除数据，可根据业务需求调整
 - 清理前建议先备份数据库
+
+### 🤖 自动化安装
+
+我们提供了自动化安装脚本，可以一键完成所有配置，但目前的测试中，无法保证在所有客户端稳定运行，因此还是推荐您手动进行安装：
+
+**macOS/Linux 用户**:
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+**Windows 用户**:
+```powershell
+.\setup.ps1
+```
+
+自动化脚本会自动执行以下步骤：
+- ✓ 检查系统环境（conda、MySQL、Node.js）
+- ✓ 创建/激活 Python 虚拟环境
+- ✓ 配置环境变量（.env 文件）
+- ✓ 安装 Python 和 npm 依赖
+- ✓ 初始化数据库
+- ✓ 安装前端依赖
+
+在需要手动配置的地方，脚本会提示你输入：
+- MySQL root 密码
+- DeepSeek API 密钥（可选）
+
+---
 
 ## 📚 更多文档
 
