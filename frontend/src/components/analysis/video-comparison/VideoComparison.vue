@@ -19,6 +19,22 @@ const annotatedVideoRef = ref<HTMLVideoElement | null>(null)
 const originalVideoError = ref(false)
 const annotatedVideoError = ref(false)
 
+// 视频布局模式：'side-by-side' (并排) 或 'stacked' (上下)
+const videoLayoutMode = ref<'side-by-side' | 'stacked'>('side-by-side')
+
+// 播放速率选项
+const playbackRates = [0.25, 0.5, 1, 2]
+const currentPlaybackRate = ref(1)
+const showRateMenu = ref(false)
+
+function getNativePlaybackRate(displayRate: number): number {
+  if (displayRate === 2) return 1
+  if (displayRate === 1) return 0.5
+  if (displayRate === 0.5) return 0.25
+  if (displayRate === 0.25) return 0.125
+  return 1
+}
+
 // 监听record.task_id变化，切换记录卡时重置播放速率
 watch(() => props.record.task_id, () => {
   currentPlaybackRate.value = 1
@@ -32,35 +48,9 @@ watch(() => props.record.task_id, () => {
   }
 })
 
-// 计算视频帧率（基于总帧数和时长）
-function getVideoFps(): number {
-  const totalFrames = props.record.result?.total_frames || 0
-  const duration = props.record.result?.video_duration || 0
-  if (duration > 0 && totalFrames > 0) {
-    return totalFrames / duration
-  }
-  return 10 // 默认帧率
-}
-
-// 视频布局模式：'side-by-side' (并排) 或 'stacked' (上下)
-const videoLayoutMode = ref<'side-by-side' | 'stacked'>('side-by-side')
-
 // 切换视频布局模式
 function toggleVideoLayout() {
   videoLayoutMode.value = videoLayoutMode.value === 'side-by-side' ? 'stacked' : 'side-by-side'
-}
-
-// 播放速率选项
-const playbackRates = [0.25, 0.5, 1, 2]
-const currentPlaybackRate = ref(1)
-const showRateMenu = ref(false)
-
-function getNativePlaybackRate(displayRate: number): number {
-  if (displayRate === 2) return 1
-  if (displayRate === 1) return 0.5
-  if (displayRate === 0.5) return 0.25
-  if (displayRate === 0.25) return 0.125
-  return 1
 }
 
 // 切换速率菜单显示
@@ -113,33 +103,15 @@ function handleRewindBoth() {
   }
 }
 
-// 前进一帧功能
-function handleForwardFrame() {
-  const fps = getVideoFps()
-  const frameDuration = 1 / fps
-  if (originalVideoRef.value) {
-    originalVideoRef.value.currentTime += frameDuration
-    originalVideoRef.value.pause()
-  }
-  if (annotatedVideoRef.value) {
-    annotatedVideoRef.value.currentTime += frameDuration
-    annotatedVideoRef.value.pause()
-  }
-}
-
-// 后退一帧功能
-function handleBackwardFrame() {
-  const fps = getVideoFps()
-  const frameDuration = 1 / fps
-  if (originalVideoRef.value) {
-    originalVideoRef.value.currentTime = Math.max(0, originalVideoRef.value.currentTime - frameDuration)
-    originalVideoRef.value.pause()
-  }
-  if (annotatedVideoRef.value) {
-    annotatedVideoRef.value.currentTime = Math.max(0, annotatedVideoRef.value.currentTime - frameDuration)
-    annotatedVideoRef.value.pause()
-  }
-}
+/*
+ * 前进/后退一帧功能已移除。
+ *
+ * 原因：HTML5 video.currentTime 的帧级跳转仅在 Safari (macOS) 上可靠，
+ * Chrome / Firefox / Edge 会吸附到最近的关键帧 (keyframe)，无法精确逐帧定位。
+ *
+ * 替代方案：使用"细化视图"中的 FrameAnalysis 组件——
+ * 它通过后端 /api/frame/ 接口加载静态帧图片，全平台通用。
+ */
 
 // 获取视频 URL
 function getVideoUrl(taskId: string): string {
@@ -370,38 +342,23 @@ function handleVideoError(event: Event) {
         </svg>
         同时暂停
       </button>
+      <!--
+        前进/后退一帧按钮已移除。
+        原因：HTML5 video.currentTime 的帧级跳转仅在 Safari 上可靠，
+        Chrome/Firefox/Edge 会吸附到最近的关键帧，无法精确逐帧。
+        替代方案：使用"细化视图"中的 FrameAnalysis 组件——它通过
+        后端 /api/frame/ 接口加载静态帧图片，全平台通用。
+      -->
+      <!--
       <button class="btn-control" @click="handleBackwardFrame">
-        <svg
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"
-          ></path>
-        </svg>
+        ...
         后退一帧
       </button>
       <button class="btn-control" @click="handleForwardFrame">
-        <svg
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"
-          ></path>
-        </svg>
+        ...
         前进一帧
       </button>
+      -->
       <button class="btn-control" @click="handleRewindBoth">
         <svg
           fill="none"
@@ -602,6 +559,7 @@ function handleVideoError(event: Event) {
 .video-controls-bar {
   display: flex;
   gap: 0.75rem;
+  width: fit-content;
   margin-bottom: 2rem;
   padding: 1rem;
   background: var(--bg-card);
