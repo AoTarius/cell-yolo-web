@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>CellTrack Web 快速开始指南</title>
+<style>
+  @page { size: 16cm 21cm; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+    font-size: 15px; line-height: 1.55; color: #333; background: #e8e8e8;
+  }
+  .slide {
+    width: 16cm; min-height: 20.5cm; margin: 0.6cm auto;
+    padding: 1.2cm 1.6cm 1cm 1.6cm; background: #fff;
+    box-shadow: 0 0 8px rgba(0,0,0,.15);
+    page-break-after: always; position: relative; overflow: hidden;
+  }
+  @media print {
+    body { background: #fff; }
+    .slide { box-shadow: none; margin: 0; width: 100%; min-height: 100vh; }
+  }
+  .slide-title {
+    font-size: 26px; font-weight: 700; color: #1a5276;
+    border-bottom: 3px solid #2980b9; padding-bottom: 6px; margin-bottom: 14px;
+  }
+  .step-num {
+    display: inline-block; background: #2980b9; color: #fff;
+    width: 26px; height: 26px; border-radius: 50%; text-align: center;
+    line-height: 26px; font-size: 14px; font-weight: 700; margin-right: 5px;
+  }
+  h3 { font-size: 18px; color: #1a5276; margin: 14px 0 6px 0; }
+  h4 { font-size: 16px; color: #2c3e50; margin: 10px 0 5px 0; }
+  p  { margin-bottom: 7px; }
+  pre {
+    background: #f5f6fa; border: 1px solid #dcdde1; border-left: 4px solid #2980b9;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 12px; padding: 8px 12px; margin: 5px 0 10px 0;
+    white-space: pre-wrap; word-break: break-all; border-radius: 4px;
+  }
+  code {
+    background: #f0f0f0; padding: 1px 4px; border-radius: 2px;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace; font-size: 12px;
+  }
+  table {
+    width: 100%; border-collapse: collapse; margin: 6px 0 10px 0; font-size: 13px;
+  }
+  th {
+    background: #1a5276; color: #fff; padding: 6px 10px; text-align: left; font-weight: 600;
+  }
+  td { padding: 5px 10px; border-bottom: 1px solid #ddd; }
+  tr:nth-child(even) td { background: #f8f9fa; }
+  .info-box {
+    background: #eaf2f8; border-left: 4px solid #2980b9;
+    padding: 8px 12px; margin: 6px 0 10px 0; font-size: 13px; border-radius: 4px;
+  }
+  .warn-box {
+    background: #fef9e7; border-left: 4px solid #f39c12;
+    padding: 8px 12px; margin: 6px 0 10px 0; font-size: 13px; border-radius: 4px;
+  }
+  .danger-box {
+    background: #fdedec; border-left: 4px solid #e74c3c;
+    padding: 8px 12px; margin: 6px 0 10px 0; font-size: 13px; border-radius: 4px;
+  }
+  .slide > img {
+    display: block; max-width: 100%; margin: 6px 0; border: 1px solid #e0e0e0; border-radius: 4px;
+  }
+  ul, ol { margin: 4px 0 8px 20px; }
+  li { margin-bottom: 3px; font-size: 14px; }
+  .page-num {
+    position: absolute; bottom: 14px; right: 24px; font-size: 11px; color: #999;
+  }
+  .highlight { background: #fff3cd; padding: 1px 3px; border-radius: 2px; }
+  .cover { text-align: center; padding-top: 3.5cm; }
+  .cover h1 { font-size: 36px; color: #1a5276; margin-bottom: 8px; }
+  .cover .ver  { font-size: 17px; color: #888; margin-bottom: 28px; }
+  .cover .desc { font-size: 15px; color: #555; max-width: 70%; margin: 0 auto; }
+  .cover .logo  { font-size: 56px; margin-bottom: 18px; }
+  .toc-item { display: flex; align-items: baseline; margin-bottom: 8px; }
+  .toc-num { font-weight: 700; color: #2980b9; min-width: 48px; font-size: 15px; }
+  .toc-text { font-size: 15px; }
+  .two-col { display: flex; gap: 20px; }
+  .two-col > div { flex: 1; }
+  .tip-icon { color: #2980b9; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ================================================================== -->
+<!-- Slide  1: 封面 -->
+<!-- ================================================================== -->
+<div class="slide cover">
+  <div class="logo">🔬</div>
+  <h1>CellTrack Web</h1>
+  <p class="ver">快速开始指南 &nbsp;|&nbsp; v1.0</p>
+  <p class="desc">细胞分割与追踪系统 — 基于 YOLOv8 + DeepSORT<br>本指南帮助你在 15 分钟内完成环境搭建并启动应用</p>
+  <p style="margin-top:40px;color:#999;font-size:13px;">
+    适用平台：Windows / macOS / Linux<br>
+    Python 3.8+ &nbsp;|&nbsp; Node.js ≥20.19 &nbsp;|&nbsp; MySQL
+  </p>
+  <div class="page-num">1</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  2: 目录 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title">📋 目录</div>
+
+  <div class="toc-item"><span class="toc-num">第〇步</span><span class="toc-text">开始前的准备 — 前置软件 &amp; 项目目录切换</span></div>
+  <div class="toc-item"><span class="toc-num">第一步</span><span class="toc-text">创建并激活 Python 虚拟环境 (Conda)</span></div>
+  <div class="toc-item"><span class="toc-num">第二步</span><span class="toc-text">安装 MySQL 数据库</span></div>
+  <div class="toc-item"><span class="toc-num">第三步</span><span class="toc-text">配置环境变量 (.env 文件)</span></div>
+  <div class="toc-item"><span class="toc-num">第四步</span><span class="toc-text">安装 Python 依赖</span></div>
+  <div class="toc-item"><span class="toc-num">第五步</span><span class="toc-text">初始化数据库</span></div>
+  <div class="toc-item"><span class="toc-num">第六步</span><span class="toc-text">验证 ultralytics 本地库（可选）</span></div>
+  <div class="toc-item"><span class="toc-num">第七步</span><span class="toc-text">安装前端 npm 包</span></div>
+  <div class="toc-item"><span class="toc-num">启动</span><span class="toc-text">启动前后端服务 + 故障排查 + 访问地址</span></div>
+
+  <div class="info-box" style="margin-top:18px;">
+    💡 <strong>提示：</strong>如果遇到问题，本指南末尾附带常见故障排查。
+  </div>
+
+  <p style="margin-top:24px;font-size:13px;color:#888;">安装步骤一览：</p>
+  <table>
+    <tr><th style="width:8%">步骤</th><th style="width:28%">做什么</th><th style="width:28%">关键命令</th><th>预计耗时</th></tr>
+    <tr><td>〇</td><td>检查环境 + 进入项目目录</td><td><code>cd /path/to/cell-yolo-web</code></td><td>1 min</td></tr>
+    <tr><td>一</td><td>创建 conda 环境</td><td><code>conda create -n cell-yolo python=3.8</code></td><td>3 min</td></tr>
+    <tr><td>二</td><td>安装 MySQL</td><td><code>brew install mysql</code> 或下载安装包</td><td>5 min</td></tr>
+    <tr><td>三</td><td>配置 .env</td><td><code>cp .env.example .env</code> → 编辑密码</td><td>2 min</td></tr>
+    <tr><td>四</td><td>安装 Python 包</td><td><code>pip install -r requirements.txt</code></td><td>5 min</td></tr>
+    <tr><td>五</td><td>初始化数据库</td><td><code>python init_db.py</code> → migrate → init_data</td><td>2 min</td></tr>
+    <tr><td>六+七</td><td>验证本地库 + 安装前端</td><td><code>npm install</code></td><td>3 min</td></tr>
+  </table>
+  <div class="page-num">2</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  3: 第〇步 — 前置软件检查 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">0</span> 开始前的准备 — 前置软件检查</div>
+
+  <p>在开始安装之前，请确认以下三个基础软件均已安装：</p>
+
+  <table>
+    <tr><th style="width:22%">软件</th><th style="width:22%">用途</th><th style="width:26%">检查命令</th><th style="width:30%">未安装？</th></tr>
+    <tr>
+      <td><strong>Python / Conda</strong></td><td>后端运行环境</td>
+      <td><code>python --version</code></td>
+      <td>安装 <a href="https://docs.conda.io/en/latest/miniconda.html" style="color:#2980b9;">Miniconda</a></td>
+    </tr>
+    <tr>
+      <td><strong>Node.js</strong></td><td>前端运行环境</td>
+      <td><code>node --version</code></td>
+      <td>安装 <a href="https://nodejs.org/" style="color:#2980b9;">Node.js</a>（需 ≥20.19）</td>
+    </tr>
+    <tr>
+      <td><strong>MySQL</strong></td><td>数据库</td>
+      <td><code>mysql --version</code></td>
+      <td>见第二步安装指引</td>
+    </tr>
+  </table>
+
+  <div class="danger-box">
+    ⚠️ <strong>Miniconda 用户特别注意：</strong>Miniconda <strong>不包含</strong> Node.js！<br>
+    如果你只安装了 Miniconda，必须单独前往 <code>nodejs.org</code> 下载安装 Node.js，<br>
+    否则 <code>npm install</code> 和 <code>npm run dev</code> 将无法执行。
+  </div>
+
+  <img src="imgs/1.png" alt="Node.js 下载页面">
+
+  <div class="page-num">3</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  4: 第〇步 — 切换目录 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">0</span> 切换到项目根目录（重要！）</div>
+
+  <div class="warn-box">
+    ⚠️ 打开终端后，<strong>默认目录是用户主目录</strong>（如 <code>C:\Users\lenovo</code> 或 <code>/Users/xxx</code>）。<br>
+    必须先 <code>cd</code> 到项目根目录，否则后续所有 <code>cd backend</code> 都会报"找不到路径"！
+  </div>
+
+  <h4>① 使用 cd 命令进入项目目录</h4>
+  <pre># 请替换为你电脑上本项目的实际路径
+cd /path/to/cell-yolo-web</pre>
+
+  <img src="imgs/2.png" alt="cd 命令截图">
+
+  <h4>② 验证是否在正确目录</h4>
+  <pre>ls      # macOS/Linux → 应输出 README.md  QUICK-START.md  web
+dir     # Windows → 应输出 README.md  QUICK-START.md  web</pre>
+
+  <img src="imgs/3.png" alt="ls 命令输出">
+
+  <div class="info-box">
+    💡 看到 <code>README.md</code>、<code>QUICK-START.md</code> 和 <code>web</code> 文件夹，说明目录正确。
+  </div>
+  <div class="page-num">4</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  5: 第一步 — 虚拟环境 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">1</span> 创建并激活 Python 虚拟环境</div>
+
+  <p>使用 Conda 创建名为 <code>cell-yolo</code> 的虚拟环境（推荐 Python 3.8）：</p>
+
+  <pre>conda create -n cell-yolo python=3.8 -y   # 创建环境
+conda activate cell-yolo                    # 激活环境
+python --version                            # 验证版本</pre>
+
+  <img src="imgs/4.1.png" alt="conda create 执行过程">
+
+  <img src="imgs/4.2.png" alt="环境激活后显示 (cell-yolo) 前缀">
+
+  <div class="info-box">
+    💡 成功激活后，终端提示符前面会出现 <code>(cell-yolo)</code> 前缀。<br>
+    <strong>注意：</strong>每次打开新终端启动项目前，都需要先执行 <code>conda activate cell-yolo</code>。
+  </div>
+  <div class="page-num">5</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  6: 第二步 — MySQL (macOS + Windows 合并) -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">2</span> 安装 MySQL 数据库</div>
+
+  <div class="two-col">
+    <div>
+      <h4>🍎 macOS</h4>
+      <pre>brew install mysql
+brew services start mysql
+mysql_secure_installation</pre>
+      <p style="font-size:13px;color:#888;">按提示设置 root 密码即可。</p>
+    </div>
+    <div>
+      <h4>🪟 Windows</h4>
+      <ol style="font-size:13px;">
+        <li>下载 MySQL Installer：<br><a href="https://dev.mysql.com/downloads/installer/" style="color:#2980b9;">dev.mysql.com/downloads/installer/</a></li>
+        <li>运行安装程序，选择 <strong>"Developer Default"</strong></li>
+        <li>按提示完成，<strong>记住 root 密码</strong></li>
+        <li><code>Win+R</code> → <code>services.msc</code> → 找到 MySQL → 右键"启动"</li>
+      </ol>
+    </div>
+  </div>
+
+  <h4 style="margin-top:12px;">创建数据库（可选，初始化脚本会自动创建）</h4>
+  <pre>mysql -u root -p
+CREATE DATABASE cell_tracking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;</pre>
+
+  <div class="info-box">
+    💡 <strong>验证 MySQL 是否启动成功：</strong><br>
+    macOS：<code>brew services list | grep mysql</code> &nbsp;|&nbsp;
+    Windows：打开服务管理器查看 MySQL 服务状态
+  </div>
+
+  <div class="page-num">6</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  7: 第三步 — .env -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">3</span> 配置环境变量 (.env 文件)</div>
+
+  <p>在 <code>backend</code> 目录下创建 <code>.env</code> 文件：</p>
+  <pre>cd backend
+cp .env.example .env    # macOS/Linux
+# Windows：手动复制 .env.example 并重命名为 .env</pre>
+
+  <img src="imgs/5.png" alt=".env 文件位置">
+
+  <p>编辑 <code>.env</code>，填入以下内容（<strong>替换密码和 API 密钥</strong>）：</p>
+  <pre>SECRET_KEY=django-insecure-changeme-in-production
+DEBUG=True
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=<span class="highlight">your_password</span>        ← 替换为你的 MySQL 密码
+DB_NAME=cell_tracking
+
+DEEPSEEK_API_KEY=<span class="highlight">your_deepseek_api_key</span>  ← 替换为你的 API 密钥
+DEEPSEEK_API_BASE=https://api.deepseek.com/v1</pre>
+
+  <div class="warn-box">
+    ⚠️ <strong>Windows 注意：</strong>在记事本中保存时选择"所有文件"类型，避免保存为 <code>.env.txt</code>。<br>
+    路径中使用正斜杠 <code>/</code> 或双反斜杠 <code>\\</code>。
+  </div>
+  <div class="page-num">7</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  8: 第四步 — Python 依赖 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">4</span> 安装 Python 依赖</div>
+
+  <p>确保在 <code>backend</code> 目录下，且已激活 conda 环境：</p>
+  <pre>pip install -r requirements.txt</pre>
+
+  <h4>主要依赖一览</h4>
+  <table>
+    <tr><th>类别</th><th>包名</th><th>版本</th><th>说明</th></tr>
+    <tr><td>Web 框架</td><td>Django</td><td>4.2.28</td><td>后端框架</td></tr>
+    <tr><td>REST API</td><td>djangorestframework</td><td>3.15.2</td><td>API 接口</td></tr>
+    <tr><td>WebSocket</td><td>channels</td><td>4.2.2</td><td>实时进度推送</td></tr>
+    <tr><td>视频处理</td><td>opencv-python</td><td>4.13.0</td><td>视频读写</td></tr>
+    <tr><td>深度学习</td><td>torch / torchvision</td><td>2.4.1</td><td>神经网络推理</td></tr>
+    <tr><td>YOLO</td><td>ultralytics</td><td>8.4.21</td><td>本地库，无需 pip</td></tr>
+    <tr><td>追踪</td><td>deep-sort-realtime</td><td>1.3.2</td><td>多目标跟踪</td></tr>
+    <tr><td>数据处理</td><td>numpy / pandas / scipy</td><td>1.24 / 2.0 / 1.10</td><td>数据分析</td></tr>
+  </table>
+
+  <div class="info-box">
+    💡 ultralytics 已作为本地库放在 <code>web/libs/ultralytics</code>，通过 <code>settings.py</code> 中的 <code>sys.path</code> 自动配置，无需额外安装。
+  </div>
+  <div class="page-num">8</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide  9: 第五步-1 — 创建数据库 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">5</span> 初始化数据库 — 创建数据库 &amp; Django 迁移</div>
+
+  <h4>① 创建数据库</h4>
+  <pre>cd scripts
+python init_db.py</pre>
+  <p style="font-size:13px;">成功输出：<code>✓ 数据库 'cell_tracking' 创建成功或已存在</code></p>
+
+  <h4>② 执行 Django 迁移（创建表结构）</h4>
+  <pre>cd ../backend
+python manage.py migrate</pre>
+
+  <div class="warn-box">
+    ⚠️ <strong>如果报错：</strong>通常是 MySQL 服务未启动或 <code>.env</code> 中密码错误。<br>
+    检查方法：① MySQL 服务是否运行 &nbsp; ② <code>.env</code> 中 <code>DB_PASSWORD</code> 是否正确<br>
+    <strong>这一步报错是正常情况</strong>，后续会进行补齐，不要慌张。
+  </div>
+
+  <div class="page-num">9</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide 10: 第五步-2 — 初始化数据 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">5</span> 初始化数据库 — 初始化数据</div>
+
+  <h4>③ 运行数据初始化脚本</h4>
+  <pre>cd ../scripts
+python init_data.py</pre>
+
+  <p>脚本会自动完成：</p>
+  <table>
+    <tr><th style="width:6%">步骤</th><th style="width:22%">做什么</th><th>说明</th></tr>
+    <tr><td>1</td><td>检查数据库表结构</td><td>检查 users / tasks / videos 等表的字段是否完整，自动修复缺失字段</td></tr>
+    <tr><td>2</td><td>创建 root 用户</td><td>用户名 <code>root</code>，密码 <code>password</code></td></tr>
+    <tr><td>3</td><td>导入默认模型</td><td>在 models 表中创建初始模型记录</td></tr>
+  </table>
+
+  <p>成功后关键输出：</p>
+  <pre>✓ root 用户创建成功 (ID: 1)
+  用户名: root    密码: password
+✓ 导入 model 创建成功
+✓ 初始化完成！</pre>
+
+  <div class="info-box">
+    💡 <strong>初始账户：</strong><code>root</code> / <code>password</code> — 可用于登录系统和 Django 管理后台。
+  </div>
+  <div class="page-num">10</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide 11: 第六步 — 验证 + 第七步 — 前端 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title"><span class="step-num">6</span> 验证本地库（可选） &nbsp;+&nbsp; <span class="step-num">7</span> 安装前端 npm 包</div>
+
+  <h4>第六步：验证 YOLO 和 DeepSORT 导入</h4>
+  <pre>python -c "import ultralytics; print(f'ultralytics: {ultralytics.__version__}')"
+python -c "from ultralytics import YOLO; print('✓ YOLO OK')"
+python -c "from deep_sort_realtime.deepsort_tracker import DeepSort; print('✓ DeepSORT OK')"</pre>
+  <div class="info-box" style="font-size:12px;">
+    💡 导入失败？确认已 <code>conda activate cell-yolo</code>。VSCode 用户：<code>Cmd+Shift+P</code> → Reload Window。
+  </div>
+
+  <h4>第七步：安装前端 npm 包</h4>
+  <pre>cd ../frontend
+npm install</pre>
+
+  <table>
+    <tr><th>类别</th><th>包</th><th>版本</th><th>类别</th><th>包</th><th>版本</th></tr>
+    <tr><td>框架</td><td>Vue 3</td><td>3.5</td><td>样式</td><td>TailwindCSS</td><td>4.1</td></tr>
+    <tr><td>构建</td><td>Vite</td><td>7.3</td><td>路由</td><td>Vue Router</td><td>5.0</td></tr>
+    <tr><td>语言</td><td>TypeScript</td><td>5.9</td><td>图表</td><td>ECharts</td><td>5.6</td></tr>
+    <tr><td>状态</td><td>Pinia</td><td>3.0</td><td>编辑器</td><td>CodeMirror</td><td>—</td></tr>
+  </table>
+  <div class="warn-box">
+    ⚠️ <strong>Node.js 版本要求：</strong>^20.19.0 或 ≥22.12.0。<br>
+    如果 <code>npm install</code> 报错，先检查 <code>node --version</code>。
+  </div>
+  <div class="page-num">11</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide 12: 启动服务 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title">▶️ 启动前后端服务</div>
+
+  <p>在 <code>web</code> 目录下，<strong>打开两个终端</strong>：</p>
+
+  <table>
+    <tr><th style="width:50%">终端 1 — 后端</th><th style="width:50%">终端 2 — 前端</th></tr>
+    <tr>
+      <td style="vertical-align:top;"><pre>cd backend
+conda activate cell-yolo
+python manage.py runserver</pre>
+        <p style="font-size:12px;color:#888;">→ http://localhost:8000</p>
+      </td>
+      <td style="vertical-align:top;"><pre>cd frontend
+npm run dev</pre>
+        <p style="font-size:12px;color:#888;">→ http://localhost:5173</p>
+      </td>
+    </tr>
+  </table>
+
+  <img src="imgs/6.1.png" alt="后端启动成功截图">
+  <img src="imgs/6.2.png" alt="前端启动成功截图">
+
+  <div class="page-num">12</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide 13: 故障排查 -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title">⚠️ 启动故障排查</div>
+
+  <div class="warn-box" style="font-size:14px;">
+    <strong>偶尔启动失败属于正常现象！</strong>大多数情况重启即可解决。
+  </div>
+
+  <p>如果前端页面显示 <code>Request failed with status code 500</code> 或类似错误：</p>
+
+  <h4>📋 重启四步法</h4>
+  <table>
+    <tr><td style="width:36px;text-align:center;font-weight:700;">①</td><td>在终端 1 中按 <code>Ctrl+C</code> 停止后端</td></tr>
+    <tr><td style="text-align:center;font-weight:700;">②</td><td>在终端 2 中按 <code>Ctrl+C</code> 停止前端</td></tr>
+    <tr><td style="text-align:center;font-weight:700;">③</td><td><strong>先</strong>启动后端（<code>python manage.py runserver</code>）→ <strong>再</strong>启动前端（<code>npm run dev</code>）</td></tr>
+    <tr><td style="text-align:center;font-weight:700;">④</td><td>刷新浏览器页面（<code>F5</code>）</td></tr>
+  </table>
+
+  <div class="info-box" style="margin-top:10px;">
+    💡 <strong>大部分情况下重启即可恢复正常，无需重新安装或修改任何配置。</strong>
+  </div>
+
+  <h4>其他常见问题速查</h4>
+  <table>
+    <tr><th style="width:28%">错误现象</th><th style="width:28%">可能原因</th><th>检查方法</th></tr>
+    <tr><td>"找不到路径/文件"</td><td>终端不在项目根目录</td><td><code>pwd</code> (macOS) 或 <code>cd</code> (Win) 查看当前路径</td></tr>
+    <tr><td>"conda: command not found"</td><td>conda 未安装/未配置 PATH</td><td>重新打开 Anaconda Prompt</td></tr>
+    <tr><td>"npm: command not found"</td><td>Node.js 未安装</td><td><code>node --version</code> 检查</td></tr>
+    <tr><td>数据库连接失败</td><td>MySQL 服务未启动</td><td>检查服务管理器 / <code>brew services list</code></td></tr>
+    <tr><td>"ModuleNotFoundError"</td><td>未激活 conda 环境</td><td><code>conda activate cell-yolo</code></td></tr>
+    <tr><td>"Access denied for user"</td><td>.env 中密码错误</td><td>检查 <code>.env</code> 中 <code>DB_PASSWORD</code></td></tr>
+  </table>
+  <div class="page-num">13</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide 14: 访问地址 + API -->
+<!-- ================================================================== -->
+<div class="slide">
+  <div class="slide-title">🌐 访问地址 &amp; API 接口</div>
+
+  <p>启动成功后，可通过以下地址访问：</p>
+  <table>
+    <tr><th style="width:22%">服务</th><th style="width:34%">地址</th><th>说明</th></tr>
+    <tr><td><strong>前端应用</strong></td><td><code>http://localhost:5173</code></td><td>用户界面</td></tr>
+    <tr><td><strong>后端 API</strong></td><td><code>http://localhost:8000/api/test/</code></td><td>API 测试端点</td></tr>
+    <tr><td><strong>Django 后台</strong></td><td><code>http://localhost:8000/admin/</code></td><td>管理后台（root / password）</td></tr>
+  </table>
+
+  <h4>主要 API 接口</h4>
+  <table>
+    <tr><th>方法</th><th>路径</th><th>说明</th></tr>
+    <tr><td>GET</td><td><code>/api/test/</code></td><td>测试接口</td></tr>
+    <tr><td>POST</td><td><code>/api/upload/</code></td><td>上传视频</td></tr>
+    <tr><td>POST</td><td><code>/api/process/</code></td><td>启动处理任务</td></tr>
+    <tr><td>GET</td><td><code>/api/status/:task_id/</code></td><td>查询任务状态</td></tr>
+    <tr><td>GET</td><td><code>/api/result/:task_id/</code></td><td>获取处理结果</td></tr>
+    <tr><td>GET</td><td><code>/api/video/:task_id/</code></td><td>获取标注视频</td></tr>
+    <tr><td>WS</td><td><code>/ws/task/:task_id/</code></td><td>WebSocket 实时进度</td></tr>
+  </table>
+
+  <img src="imgs/7.png" alt="前端首页截图">
+
+  <div class="page-num">14</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- Slide 15: 封底 -->
+<!-- ================================================================== -->
+<div class="slide cover" style="padding-top:2.5cm;">
+  <div style="font-size:56px;">✅</div>
+  <h1 style="margin-top:16px;">安装完成！</h1>
+
+  <p style="font-size:17px;color:#555;margin-top:24px;">
+    打开浏览器访问<br>
+    <code style="font-size:22px;background:#eaf2f8;padding:6px 16px;border-radius:6px;">http://localhost:5173</code>
+  </p>
+
+  <div style="margin-top:40px;text-align:left;margin-left:2cm;font-size:14px;line-height:2;">
+    <p>📌 <strong>快速链接：</strong></p>
+    <p>&nbsp;&nbsp;• 登录账号：<code>root</code> / <code>password</code></p>
+    <p>&nbsp;&nbsp;• 项目 README：<code>README.md</code></p>
+    <p>&nbsp;&nbsp;• 技术笔记：<code>docs/v2/</code></p>
+    <p>&nbsp;&nbsp;• 改进路线：<code>docs/v2/改进方向与技术路线.md</code></p>
+    <p>&nbsp;&nbsp;• 算法答辩准备：<code>docs/v2/具体要求.md</code></p>
+  </div>
+
+  <p style="margin-top:36px;color:#999;font-size:12px;">🧪 CellTrack Web — 让细胞追踪触手可及</p>
+  <div class="page-num">15</div>
+</div>
+
+</body>
+</html>

@@ -37,6 +37,7 @@ dist-ssr/
 *.swo
 *~
 .DS_Store
+.claude
 
 # Environment
 .env
