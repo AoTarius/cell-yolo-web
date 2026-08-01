@@ -39,6 +39,7 @@
 </template>
 
 <script setup lang="ts">
+import { watch, nextTick } from 'vue'
 import { Bot, User } from 'lucide-vue-next'
 import { marked } from 'marked'
 import { useAIStore } from '@/stores/aiStore'
@@ -51,6 +52,35 @@ marked.setOptions({
 })
 
 const aiStore = useAIStore()
+
+// 新消息到来时自动滚动到底部（含流式内容更新）
+watch(
+  () => aiStore.messages.length,
+  () => {
+    nextTick(() => {
+      const container = document.querySelector('.chat-messages')
+      if (container) {
+        container.scrollTop = container.scrollHeight
+      }
+    })
+  }
+)
+
+// 流式更新内容时也保持滚动到底部
+watch(
+  () => {
+    const streaming = aiStore.messages.find(m => m.id === 'streaming')
+    return streaming?.content ?? ''
+  },
+  () => {
+    nextTick(() => {
+      const container = document.querySelector('.chat-messages')
+      if (container) {
+        container.scrollTop = container.scrollHeight
+      }
+    })
+  }
+)
 
 // Markdown渲染
 const renderMarkdown = (content: string) => {

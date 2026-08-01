@@ -69,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import MessageList from '@/components/ai/MessageList.vue'
 import ChatInput from '@/components/ai/ChatInput.vue'
 
@@ -158,6 +158,23 @@ const toggleChat = () => {
     isExpanded.value = !isExpanded.value
   }
 }
+
+// 滚动聊天消息到底部
+function scrollChatToBottom() {
+  nextTick(() => {
+    const container = document.querySelector('.chat-messages')
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  })
+}
+
+// 打开聊天窗口时自动滚到底部
+watch(isExpanded, (val) => {
+  if (val) {
+    scrollChatToBottom()
+  }
+})
 
 const handleClickOutside = (e: MouseEvent) => {
   const target = e.target as HTMLElement
