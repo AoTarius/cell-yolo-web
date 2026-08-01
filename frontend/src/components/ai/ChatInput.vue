@@ -148,12 +148,18 @@ const handleSend = async () => {
     timestamp: new Date()
   })
 
+  // 构建当前会话的完整对话历史（排除 streaming 占位消息）
+  // 对话历史存于前端内存，刷新页面自动清空 → 新对话
+  const history = aiStore.messages
+    .filter(m => m.id !== 'streaming')
+    .map(m => ({ role: m.role, content: m.content }))
+
   aiStore.isLoading = true
 
   try {
-    // 流式获取AI回复
+    // 流式获取AI回复（传入完整对话历史，实现上下文感知）
     const finalContent = await sendChatMessageStream(
-      content,
+      history,
       aiStore.currentRole,
       (partialContent) => {
         // 实时更新消息

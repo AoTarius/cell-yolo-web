@@ -39,40 +39,46 @@ def get_system_prompt(role: str) -> str:
     return AI_ROLES[role]['system_prompt']
 
 
-def generate_ai_response_stream(message: str, role: str) -> Generator[str, None, None]:
+def generate_ai_response_stream(messages: list, role: str) -> Generator[str, None, None]:
     """
     生成AI响应流
-    
+
     Args:
-        message: 用户消息
+        messages: 完整的对话消息列表 [{"role": "user/assistant", "content": "..."}, ...]
         role: AI角色ID
-        
+
     Yields:
         SSE格式的数据块
     """
     # 获取系统提示词
     system_prompt = get_system_prompt(role)
-    
+
     # 构建DeepSeek API请求
     api_base = getattr(settings, 'DEEPSEEK_API_BASE', 'https://api.deepseek.com/v1')
     api_url = f"{api_base}/chat/completions"
     api_key = getattr(settings, 'DEEPSEEK_API_KEY', '')
-    
+
     if not api_key:
         yield 'data: {"error": "DeepSeek API Key未配置"}\n\n'
         return
-    
+
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}"
     }
-    
+
+    # 构建完整的消息列表：system prompt + 对话历史
+    api_messages = [{"role": "system", "content": system_prompt}]
+    for msg in messages:
+        msg_role = msg.get('role', 'user')
+        msg_content = msg.get('content', '')
+        # 只接受 user 和 assistant 角色
+        if msg_role in ('user', 'assistant') and msg_content:
+            api_messages.append({"role": msg_role, "content": msg_content})
+
     payload = {
         "model": "deepseek-chat",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
-        ],
+        "messages": api_messages,
         "temperature": 0.7,
         "stream": True
     }
@@ -113,36 +119,44 @@ def generate_ai_response_stream(message: str, role: str) -> Generator[str, None,
 @api_view(['POST'])
 def chat_stream(request):
     """
-    流式AI对话接口
-    
+    流式AI对话接口（支持上下文感知）
+
     POST /api/ai/chat/stream
     Body: {
-        "message": "用户消息",
-        "role": "AI角色ID"
+        "messages": [
+            {"role": "user", "content": "你好"},
+            {"role": "assistant", "content": "你好！"},
+            {"role": "user", "content": "刚才说了什么？"}
+        ],
+        "role": "cell-analyst"
     }
-    
+
+    前端将当前会话的完整对话历史通过 messages 字段传入，
+    后端原样转发给 DeepSeek API，实现页面内上下文感知。
+    刷新页面后前端内存清空，自动开始新对话。
+
     Returns: SSE流式响应
     """
     try:
         # 解析请求数据
         data = json.loads(request.body)
-        message = data.get('message', '').strip()
-        role = data.get('role', 'general')
-        
-        # 验证消息
-        if not message:
+        messages = data.get('messages', [])
+        role = data.get('role', 'cell-analyst')
+
+        # 验证消息列表
+        if not messages or not isinstance(messages, list):
             return Response(
-                {'error': '消息内容不能为空'},
+                {'error': '消息列表不能为空'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # 验证角色
         if role not in AI_ROLES:
-            role = 'general'
-        
+            role = 'cell-analyst'
+
         # 返回流式响应
         response = StreamingHttpResponse(
-            generate_ai_response_stream(message, role),
+            generate_ai_response_stream(messages, role),
             content_type='text/event-stream'
         )
 
@@ -151,7 +165,7 @@ def chat_stream(request):
         response['X-Accel-Buffering'] = 'no'  # 禁用nginx缓冲（生产环境有效）
 
         return response
-        
+
     except json.JSONDecodeError:
         return Response(
             {'error': '无效的JSON数据'},
