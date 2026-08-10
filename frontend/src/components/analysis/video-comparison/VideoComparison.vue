@@ -427,7 +427,7 @@ function handleVideoError(event: Event) {
 .video-comparison {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0.7rem;
 }
 
 .stats-grid {
@@ -558,13 +558,13 @@ function handleVideoError(event: Event) {
 
 .video-controls-bar {
   display: flex;
-  gap: 0.75rem;
-  width: fit-content;
-  margin-bottom: 2rem;
-  padding: 1rem;
+  justify-content: space-evenly;
+  width: 80%;
+  margin: 0 auto 0.01rem auto;
+  padding: 1.25rem;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 10px;
   transition: background 0.3s, border-color 0.3s;
 }
 
@@ -574,17 +574,17 @@ function handleVideoError(event: Event) {
 }
 
 .btn-control {
-  padding: 0.5rem 1rem;
+  padding: 0.625rem 1.25rem;
   background: var(--bg-input);
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 :global(:root:not(.dark)) .btn-control {
@@ -604,8 +604,8 @@ function handleVideoError(event: Event) {
 }
 
 .btn-control svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .btn-control-primary {
